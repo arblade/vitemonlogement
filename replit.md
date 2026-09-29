@@ -1,44 +1,50 @@
-# [Project name]
+# Logiscope
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Une recherche immobilière en langage naturel, avec résultats Le Bon Coin fournis par Apify et observations IA vérifiables.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — API server (managed workflow)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The product uses SQLite via Node's built-in `node:sqlite`; no PostgreSQL migration is needed for Logiscope.
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
+- Product DB: SQLite (`.data/logiscope.sqlite`, or `LOGISCOPE_SQLITE_PATH`); the workspace's unused PostgreSQL package remains untouched.
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Frontend: `artifacts/logiscope/src/`
+- API: `artifacts/api-server/src/routes/housing/`
+- API contract: `lib/api-spec/openapi.yaml`
+- SQLite tables and persistence: `artifacts/api-server/src/routes/housing/store.ts`
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Apify is accessed only from the API server using the connected `apify` connector, never from the browser.
+- Never trigger a billable actor run during verification unless the user explicitly asks. Actor runs have a hard maximum of 10 results per search and a separate global daily cap of 5 searches; seller profiles and phone lookup are disabled.
+- SQLite is appropriate for this single-instance proof of concept; before publishing a multi-instance or ephemeral server, choose durable file storage or migrate the data layer with the user's agreement.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Describe a housing wish, review/edit interpreted filters, search up to 10 matching announcements, compare listings, optionally analyze descriptions with AI and see exact textual evidence, revisit search history.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep Apify usage small to protect the user's account: only 5–10 results per search; current implementation caps at 10.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- The actor is `clearpath/leboncoin-api`, not `clearpath/leboncoin` (the latter returned 404).
+- OpenAI access uses Replit AI Integrations; no personal OpenAI key is needed. Usage consumes credits.
+- The SQLite file is local to the running API service; its persistence across deployment environments has not been verified.
 
 ## Pointers
 

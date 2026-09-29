@@ -1,22 +1,18 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API Logiscope
 servers:
   - url: /api
-    description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: housing
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +20,167 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /housing/interpret:
+    post:
+      operationId: interpretHousingRequest
+      tags: [housing]
+      summary: Interpret a French natural-language housing request into editable criteria
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HousingPrompt"
+      responses:
+        "200":
+          description: Interpreted criteria
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingCriteria"
+  /housing/searches:
+    get:
+      operationId: listHousingSearches
+      tags: [housing]
+      responses:
+        "200":
+          description: Recent searches
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HousingSearchSummary"
+    post:
+      operationId: createHousingSearch
+      tags: [housing]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HousingSearchInput"
+      responses:
+        "201":
+          description: Search started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchDetail"
+  /housing/searches/{id}:
+    get:
+      operationId: getHousingSearch
+      tags: [housing]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Search and listings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchDetail"
+  /housing/searches/{id}/analyze:
+    post:
+      operationId: analyzeHousingSearch
+      tags: [housing]
+      summary: Enrich a completed search with AI text-based observations
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated search and listings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchDetail"
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+    HousingPrompt:
+      type: object
+      required: [prompt]
+      properties:
+        prompt: { type: string, minLength: 10, maxLength: 1000 }
+    HousingCriteria:
+      type: object
+      required: [location, intent, keywords]
+      properties:
+        location: { type: string }
+        intent: { type: string, enum: [rent, buy] }
+        maxPrice: { type: ["integer", "null"] }
+        minArea: { type: ["integer", "null"] }
+        minRooms: { type: ["integer", "null"] }
+        radius: { type: integer, minimum: 0, maximum: 200 }
+        keywords: { type: string }
+        wishes:
+          type: array
+          items: { type: string }
+    HousingSearchInput:
+      type: object
+      required: [prompt, criteria]
+      properties:
+        prompt: { type: string, minLength: 10, maxLength: 1000 }
+        criteria:
+          $ref: "#/components/schemas/HousingCriteria"
+    HousingSearchSummary:
+      type: object
+      required: [id, prompt, criteria, status, count, createdAt, analyzed]
+      properties:
+        id: { type: integer }
+        prompt: { type: string }
+        criteria:
+          $ref: "#/components/schemas/HousingCriteria"
+        status: { type: string, enum: [running, completed, failed] }
+        count: { type: integer }
+        createdAt: { type: string }
+        analyzed: { type: boolean }
+        error: { type: ["string", "null"] }
+    HousingFeature:
+      type: object
+      required: [label, value, source, evidence]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        source: { type: string, enum: [annonce, ia] }
+        evidence: { type: string }
+    HousingListing:
+      type: object
+      required: [id, title, url, description, features, score]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        url: { type: string }
+        description: { type: string }
+        price: { type: ["number", "null"] }
+        area: { type: ["number", "null"] }
+        rooms: { type: ["integer", "null"] }
+        location: { type: ["string", "null"] }
+        image: { type: ["string", "null"] }
+        score: { type: integer }
+        features:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousingFeature"
+    HousingSearchDetail:
+      allOf:
+        - $ref: "#/components/schemas/HousingSearchSummary"
+        - type: object
+          required: [listings]
+          properties:
+            listings:
+              type: array
+              items:
+                $ref: "#/components/schemas/HousingListing"

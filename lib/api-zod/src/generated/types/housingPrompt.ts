@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface HousingPrompt {
+  /**
+     * @minLength 10
+     * @maxLength 1000
+     */
+  prompt: string;
 }
