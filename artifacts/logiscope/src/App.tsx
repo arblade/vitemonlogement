@@ -6,7 +6,9 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SiteShell } from '@/components/site-shell';
 import Home from '@/pages/home';
+import Searches from '@/pages/searches';
 import SearchDetail from '@/pages/search-detail';
+import Likes from '@/pages/likes';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } });
@@ -19,7 +21,9 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 function AppRoutes() {
   return <SiteShell><RoutedErrorBoundary><Switch>
     <Route path="/" component={Home}/>
+    <Route path="/searches" component={Searches}/>
     <Route path="/searches/:id" component={SearchDetail}/>
+    <Route path="/likes" component={Likes}/>
     <Route component={NotFound}/>
   </Switch></RoutedErrorBoundary></SiteShell>;
 }
