@@ -102,6 +102,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HousingSearchDetail"
+  /housing/searches/{id}/refresh:
+    post:
+      operationId: refreshHousingSearch
+      tags: [housing]
+      summary: Fetch up to five new ads and merge with persisted results without duplicates
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Refresh started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchDetail"
 components:
   schemas:
     HealthStatus:
@@ -120,21 +138,33 @@ components:
       properties:
         location: { type: string }
         intent: { type: string, enum: [rent, buy] }
+        minPrice: { type: ["integer", "null"] }
         maxPrice: { type: ["integer", "null"] }
         minArea: { type: ["integer", "null"] }
+        maxArea: { type: ["integer", "null"] }
         minRooms: { type: ["integer", "null"] }
         radius: { type: integer, minimum: 0, maximum: 200 }
         keywords: { type: string }
         wishes:
           type: array
           items: { type: string }
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousingCriterion"
+    HousingCriterion:
+      type: object
+      required: [id, label, availability]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        availability: { type: string, enum: [api, hybrid, description] }
+        apiField: { type: ["string", "null"] }
     HousingSearchInput:
       type: object
-      required: [prompt, criteria]
+      required: [prompt]
       properties:
         prompt: { type: string, minLength: 10, maxLength: 1000 }
-        criteria:
-          $ref: "#/components/schemas/HousingCriteria"
     HousingSearchSummary:
       type: object
       required: [id, prompt, criteria, status, count, createdAt, analyzed]
@@ -144,6 +174,7 @@ components:
         criteria:
           $ref: "#/components/schemas/HousingCriteria"
         status: { type: string, enum: [running, completed, failed] }
+        stage: { type: string, enum: [interpreting, searching, analyzing, ready, failed] }
         count: { type: integer }
         createdAt: { type: string }
         analyzed: { type: boolean }
@@ -156,9 +187,19 @@ components:
         value: { type: string }
         source: { type: string, enum: [annonce, ia] }
         evidence: { type: string }
+    HousingCriterionResult:
+      type: object
+      required: [id, label, status, source, value, evidence]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        status: { type: string, enum: [confirmed, contradicted, unknown] }
+        source: { type: string, enum: [api, description, unknown] }
+        value: { type: string }
+        evidence: { type: string }
     HousingListing:
       type: object
-      required: [id, title, url, description, features, score]
+      required: [id, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
       properties:
         id: { type: integer }
         title: { type: string }
@@ -169,11 +210,22 @@ components:
         rooms: { type: ["integer", "null"] }
         location: { type: ["string", "null"] }
         image: { type: ["string", "null"] }
+        images:
+          type: array
+          items: { type: string }
+        aiSummary: { type: ["string", "null"] }
+        summaryEvidence:
+          type: array
+          items: { type: string }
         score: { type: integer }
         features:
           type: array
           items:
             $ref: "#/components/schemas/HousingFeature"
+        criterionResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousingCriterionResult"
     HousingSearchDetail:
       allOf:
         - $ref: "#/components/schemas/HousingSearchSummary"

@@ -1,16 +1,37 @@
+import { createClient } from "@libsql/client/web";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { isHousingListingUrl } from "./housing-search";
+
+export type Criterion = {
+  id: string;
+  label: string;
+  availability: "api" | "hybrid" | "description";
+  apiField?: string | null;
+};
+
+export type CriterionResult = {
+  id: string;
+  label: string;
+  status: "confirmed" | "contradicted" | "unknown";
+  source: "api" | "description" | "unknown";
+  value: string;
+  evidence: string;
+};
 
 export type Criteria = {
   location: string;
   intent: "rent" | "buy";
+  minPrice?: number | null;
   maxPrice?: number | null;
   minArea?: number | null;
+  maxArea?: number | null;
   minRooms?: number | null;
   radius?: number;
   keywords: string;
   wishes?: string[];
+  checks?: Criterion[];
 };
 
 export type Feature = {
@@ -30,8 +51,12 @@ export type Listing = {
   rooms: number | null;
   location: string | null;
   image: string | null;
+  images: string[];
+  aiSummary: string | null;
+  summaryEvidence: string[];
   score: number;
   features: Feature[];
+  criterionResults: CriterionResult[];
 };
 
 type SearchRow = {
@@ -39,126 +64,204 @@ type SearchRow = {
   prompt: string;
   criteria: string;
   status: "running" | "completed" | "failed";
+  stage: "interpreting" | "searching" | "analyzing" | "ready" | "failed";
   run_id: string | null;
   error: string | null;
   analyzed: number;
   created_at: string;
 };
-type ListingRow = Omit<Listing, "features"> & { features: string };
+type ListingRow = Omit<Listing, "features" | "images" | "summaryEvidence" | "aiSummary" | "criterionResults"> & {
+  features: string; images: string; ai_summary: string | null; summary_evidence: string; criterion_results: string;
+};
+type Args = (string | number | null)[];
+type Statement = { sql: string; args: Args };
 
+const remoteUrl = process.env.TURSO_DATABASE_URL;
+const remoteToken = process.env.TURSO_AUTH_TOKEN;
+const useRemote = process.env.NODE_ENV === "production" || process.env.LOGISCOPE_USE_TURSO === "1";
+if (process.env.NODE_ENV === "production" && (!remoteUrl || !remoteToken)) {
+  throw new Error("La production nécessite TURSO_DATABASE_URL et TURSO_AUTH_TOKEN : un fichier SQLite local n'est pas persistant sur le déploiement.");
+}
+if (useRemote && Boolean(remoteUrl) !== Boolean(remoteToken)) {
+  throw new Error("TURSO_DATABASE_URL et TURSO_AUTH_TOKEN doivent être configurés ensemble.");
+}
+if (useRemote && remoteUrl && !/^libsql:\/\/[a-z0-9.-]+\.turso\.io\/?$/i.test(remoteUrl)) {
+  throw new Error("TURSO_DATABASE_URL doit être une URL valide de base Turso au format libsql://...turso.io.");
+}
 const filename = process.env.LOGISCOPE_SQLITE_PATH || path.resolve(process.cwd(), ".data/logiscope.sqlite");
-mkdirSync(path.dirname(filename), { recursive: true });
-const db = new DatabaseSync(filename);
-db.exec(`
-  PRAGMA journal_mode=WAL;
-  CREATE TABLE IF NOT EXISTS housing_searches (
+if (!useRemote) mkdirSync(path.dirname(filename), { recursive: true });
+const remote = useRemote && remoteUrl ? createClient({ url: remoteUrl, authToken: remoteToken }) : null;
+const local = remote ? null : new DatabaseSync(filename);
+
+async function query(sql: string, args: Args = []) {
+  if (remote) return remote.execute({ sql, args });
+  const statement = local!.prepare(sql);
+  if (/^\s*(SELECT|PRAGMA)/i.test(sql)) {
+    return { rows: statement.all(...args), rowsAffected: 0, lastInsertRowid: null };
+  }
+  const result = statement.run(...args);
+  return { rows: [], rowsAffected: result.changes, lastInsertRowid: result.lastInsertRowid };
+}
+
+async function batch(statements: Statement[]) {
+  if (remote) {
+    await remote.batch(statements, "write");
+    return;
+  }
+  local!.exec("BEGIN");
+  try {
+    for (const item of statements) await query(item.sql, item.args);
+    local!.exec("COMMIT");
+  } catch (error) {
+    local!.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+const ready = (async () => {
+  await query(`CREATE TABLE IF NOT EXISTS housing_searches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     prompt TEXT NOT NULL,
     criteria TEXT NOT NULL,
     status TEXT NOT NULL,
+    stage TEXT NOT NULL DEFAULT 'interpreting',
     run_id TEXT,
     error TEXT,
     analyzed INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-  CREATE TABLE IF NOT EXISTS housing_listings (
+  )`);
+  await query(`CREATE TABLE IF NOT EXISTS housing_listings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     search_id INTEGER NOT NULL REFERENCES housing_searches(id),
-    title TEXT NOT NULL,
-    url TEXT NOT NULL,
-    description TEXT NOT NULL,
-    price REAL,
-    area REAL,
-    rooms INTEGER,
-    location TEXT,
-    image TEXT,
-    score INTEGER NOT NULL,
-    features TEXT NOT NULL,
+    title TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL,
+    price REAL, area REAL, rooms INTEGER, location TEXT, image TEXT,
+    score INTEGER NOT NULL, features TEXT NOT NULL,
+    images TEXT NOT NULL DEFAULT '[]', ai_summary TEXT,
+    summary_evidence TEXT NOT NULL DEFAULT '[]',
+    criterion_results TEXT NOT NULL DEFAULT '[]',
     UNIQUE(search_id, url)
-  );
-  CREATE TABLE IF NOT EXISTS housing_usage (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    kind TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-`);
+  )`);
+  // Local databases created by the earlier prototype did not have a stage column.
+  const columns = await query("PRAGMA table_info(housing_searches)");
+  if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "stage")) {
+    await query("ALTER TABLE housing_searches ADD COLUMN stage TEXT NOT NULL DEFAULT 'ready'");
+  }
+  const listingColumns = await query("PRAGMA table_info(housing_listings)");
+  const names = new Set(listingColumns.rows.map(row => String((row as unknown as { name: unknown }).name)));
+  if (!names.has("images")) await query("ALTER TABLE housing_listings ADD COLUMN images TEXT NOT NULL DEFAULT '[]'");
+  if (!names.has("ai_summary")) await query("ALTER TABLE housing_listings ADD COLUMN ai_summary TEXT");
+  if (!names.has("summary_evidence")) await query("ALTER TABLE housing_listings ADD COLUMN summary_evidence TEXT NOT NULL DEFAULT '[]'");
+  if (!names.has("criterion_results")) await query("ALTER TABLE housing_listings ADD COLUMN criterion_results TEXT NOT NULL DEFAULT '[]'");
+})();
 
-export function reserveUsage(kind: "search" | "interpret", dailyLimit: number) {
-  const row = db.prepare("SELECT COUNT(*) AS count FROM housing_usage WHERE kind = ? AND date(created_at) = date('now')").get(kind) as { count: number };
-  if (row.count >= dailyLimit) return false;
-  db.prepare("INSERT INTO housing_usage (kind) VALUES (?)").run(kind);
-  return true;
+async function execute(sql: string, args: (string | number | null)[] = []) {
+  await ready;
+  return query(sql, args);
 }
 
-function summary(row: SearchRow) {
-  const count = db.prepare("SELECT COUNT(*) AS count FROM housing_listings WHERE search_id = ?").get(row.id) as { count: number };
+export async function createSearch(prompt: string) {
+  const placeholder: Criteria = { location: "", intent: "rent", keywords: "", radius: 5, wishes: [] };
+  const result = await execute("INSERT INTO housing_searches (prompt, criteria, status, stage) VALUES (?, ?, 'running', 'interpreting')", [prompt, JSON.stringify(placeholder)]);
+  return Number(result.lastInsertRowid);
+}
+
+export async function setCriteria(id: number, criteria: Criteria) {
+  await execute("UPDATE housing_searches SET criteria = ?, stage = 'searching' WHERE id = ?", [JSON.stringify(criteria), id]);
+}
+
+export async function setRun(id: number, runId: string) {
+  await execute("UPDATE housing_searches SET run_id = ?, stage = 'searching' WHERE id = ?", [runId, id]);
+}
+
+export async function setAnalyzing(id: number) {
+  await execute("UPDATE housing_searches SET stage = 'analyzing' WHERE id = ?", [id]);
+}
+
+export async function setFailure(id: number, message: string, refresh = false) {
+  await execute("UPDATE housing_searches SET status = ?, stage = ?, error = ? WHERE id = ?",
+    [refresh ? "completed" : "failed", refresh ? "ready" : "failed", message.slice(0, 500), id]);
+}
+
+export async function beginRefresh(id: number) {
+  const result = await execute(`UPDATE housing_searches
+    SET status = 'running', stage = 'searching', run_id = NULL, error = NULL
+    WHERE id = ? AND status = 'completed'`, [id]);
+  return result.rowsAffected === 1;
+}
+
+export async function getSearchRow(id: number) {
+  const result = await execute("SELECT * FROM housing_searches WHERE id = ?", [id]);
+  return result.rows[0] as unknown as SearchRow | undefined;
+}
+
+async function summary(row: SearchRow) {
+  const result = await execute("SELECT url FROM housing_listings WHERE search_id = ?", [row.id]);
   return {
-    id: row.id,
+    id: Number(row.id),
     prompt: row.prompt,
     criteria: JSON.parse(row.criteria) as Criteria,
     status: row.status,
-    count: count.count,
+    stage: row.stage,
+    count: (result.rows as unknown as { url: string }[]).filter(listing => isHousingListingUrl(listing.url)).length,
     createdAt: row.created_at,
     analyzed: Boolean(row.analyzed),
     error: row.error,
   };
 }
 
-export function createSearch(prompt: string, criteria: Criteria) {
-  const result = db.prepare("INSERT INTO housing_searches (prompt, criteria, status) VALUES (?, ?, 'running')").run(prompt, JSON.stringify(criteria));
-  return Number(result.lastInsertRowid);
+export async function listSearches() {
+  const result = await execute("SELECT * FROM housing_searches ORDER BY id DESC LIMIT 30");
+  return Promise.all((result.rows as unknown as SearchRow[]).map(summary));
 }
 
-export function setRun(id: number, runId: string) {
-  db.prepare("UPDATE housing_searches SET run_id = ? WHERE id = ?").run(runId, id);
-}
-
-export function setFailure(id: number, message: string) {
-  db.prepare("UPDATE housing_searches SET status = 'failed', error = ? WHERE id = ?").run(message.slice(0, 500), id);
-}
-
-export function getSearchRow(id: number) {
-  return db.prepare("SELECT * FROM housing_searches WHERE id = ?").get(id) as SearchRow | undefined;
-}
-
-export function listSearches() {
-  return (db.prepare("SELECT * FROM housing_searches ORDER BY id DESC LIMIT 30").all() as SearchRow[]).map(summary);
-}
-
-export function getSearch(id: number) {
-  const row = getSearchRow(id);
+export async function getSearch(id: number) {
+  const row = await getSearchRow(id);
   if (!row) return null;
-  const listings = (db.prepare("SELECT id, title, url, description, price, area, rooms, location, image, score, features FROM housing_listings WHERE search_id = ? ORDER BY score DESC, id ASC").all(id) as ListingRow[])
-    .map((listing) => ({ ...listing, features: JSON.parse(listing.features) as Feature[] }));
-  return { ...summary(row), listings };
+  const result = await execute(`SELECT id, title, url, description, price, area, rooms, location, image, score, features
+    , images, ai_summary, summary_evidence, criterion_results
+    FROM housing_listings WHERE search_id = ? ORDER BY score DESC, id ASC`, [id]);
+  const listings = (result.rows as unknown as ListingRow[])
+    .filter(listing => isHousingListingUrl(listing.url))
+    .map(({ ai_summary, summary_evidence, criterion_results, ...listing }) => ({
+      ...listing,
+      images: JSON.parse(listing.images) as string[],
+      aiSummary: ai_summary,
+      summaryEvidence: JSON.parse(summary_evidence) as string[],
+      criterionResults: JSON.parse(criterion_results) as CriterionResult[],
+      features: JSON.parse(listing.features) as Feature[],
+    }));
+  return { ...await summary(row), listings };
 }
 
-export function completeSearch(id: number, listings: Omit<Listing, "id">[]) {
-  db.exec("BEGIN");
-  try {
-    const insert = db.prepare(`INSERT OR IGNORE INTO housing_listings
-      (search_id, title, url, description, price, area, rooms, location, image, score, features)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-    for (const item of listings.slice(0, 10)) {
-      insert.run(id, item.title, item.url, item.description, item.price, item.area, item.rooms, item.location, item.image, item.score, JSON.stringify(item.features));
-    }
-    db.prepare("UPDATE housing_searches SET status = 'completed' WHERE id = ?").run(id);
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+export async function completeSearch(id: number, listings: Omit<Listing, "id">[]) {
+  await ready;
+  const statements: Statement[] = listings.slice(0, 5).map(item => ({
+    sql: `INSERT INTO housing_listings
+      (search_id, title, url, description, price, area, rooms, location, image, score, features, images, ai_summary, summary_evidence, criterion_results)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(search_id, url) DO UPDATE SET
+      image = COALESCE(housing_listings.image, excluded.image),
+      features = excluded.features,
+      images = CASE WHEN housing_listings.images = '[]' THEN excluded.images ELSE housing_listings.images END,
+      ai_summary = COALESCE(housing_listings.ai_summary, excluded.ai_summary),
+      summary_evidence = CASE WHEN housing_listings.summary_evidence = '[]' THEN excluded.summary_evidence ELSE housing_listings.summary_evidence END,
+      criterion_results = excluded.criterion_results`,
+    args: [id, item.title, item.url, item.description, item.price, item.area, item.rooms,
+      item.location, item.image, item.score, JSON.stringify(item.features), JSON.stringify(item.images),
+      item.aiSummary, JSON.stringify(item.summaryEvidence), JSON.stringify(item.criterionResults)],
+  }));
+  statements.push({ sql: "UPDATE housing_searches SET status = 'completed', stage = 'ready', run_id = NULL, analyzed = 1, error = NULL WHERE id = ?",
+    args: [id] });
+  await batch(statements);
 }
 
-export function saveAnalysis(id: number, enriched: { id: number; features: Feature[] }[]) {
-  db.exec("BEGIN");
-  try {
-    const update = db.prepare("UPDATE housing_listings SET features = ? WHERE id = ? AND search_id = ?");
-    for (const item of enriched) update.run(JSON.stringify(item.features), item.id, id);
-    db.prepare("UPDATE housing_searches SET analyzed = 1 WHERE id = ?").run(id);
-    db.exec("COMMIT");
-  } catch (error) {
-    db.exec("ROLLBACK");
-    throw error;
-  }
+export async function saveAnalysis(id: number, enriched: { id: number; features: Feature[]; aiSummary: string | null; summaryEvidence: string[]; criterionResults: CriterionResult[]; score: number; price: number | null; area: number | null; rooms: number | null; location: string | null }[]) {
+  await ready;
+  const statements: Statement[] = enriched.map(item => ({
+    sql: "UPDATE housing_listings SET features = ?, ai_summary = ?, summary_evidence = ?, criterion_results = ?, score = ?, price = COALESCE(price, ?), area = COALESCE(area, ?), rooms = COALESCE(rooms, ?), location = COALESCE(location, ?) WHERE id = ? AND search_id = ?",
+    args: [JSON.stringify(item.features), item.aiSummary, JSON.stringify(item.summaryEvidence), JSON.stringify(item.criterionResults), item.score,
+      item.price, item.area, item.rooms, item.location, item.id, id],
+  }));
+  statements.push({ sql: "UPDATE housing_searches SET analyzed = 1 WHERE id = ?", args: [id] });
+  await batch(statements);
 }

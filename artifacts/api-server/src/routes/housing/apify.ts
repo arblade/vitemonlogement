@@ -1,9 +1,13 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { completeSearch, getSearchRow, setFailure, type Criteria, type Feature, type Listing } from "./store";
+import { completeSearch, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type Listing } from "./store";
+import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
+import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
+import { housingActorInput, isHousingListingUrl } from "./housing-search";
 
 const ACTOR = "clearpath~leboncoin-api";
-const LIMIT = 10;
+const RESULT_LIMIT = 5;
+const CANDIDATE_LIMIT = 10;
 const connectors = new ReplitConnectors();
 const polling = new Set<number>();
 
@@ -34,6 +38,7 @@ function text(value: unknown): string {
 }
 
 function number(value: unknown): number | null {
+  if (Array.isArray(value)) return number(value[0]);
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "string") {
     const n = Number(value.replace(/[^\d.,]/g, "").replace(",", "."));
@@ -43,72 +48,116 @@ function number(value: unknown): number | null {
   return null;
 }
 
-function getImage(value: unknown): string | null {
-  const img = Array.isArray(value) ? value[0] : value;
-  const url = typeof img === "string" ? img : text(first(object(img), ["url", "imageUrl", "large", "medium"]));
-  return /^https?:\/\//i.test(url) ? url : null;
+function getImages(value: unknown): string[] {
+  const image = object(value);
+  // clearpath/leboncoin-api supplies images as an object containing urls_large
+  // and urls, not as an array. Prefer full-size photos over thumbnails.
+  const candidates = [
+    image.urls_large, image.urls, image.urls_thumb, image.classifications,
+    image.small_url, image.thumb_url, value,
+  ];
+  for (const source of candidates) {
+    const values = Array.isArray(source) ? source : [source];
+    const urls = values.map(item => typeof item === "string" ? item
+      : text(first(object(item), ["url", "imageUrl", "large", "medium", "thumb_url"])))
+      .filter(url => {
+        try { return new URL(url).protocol === "https:"; } catch { return false; }
+      });
+    if (urls.length) return [...new Set(urls)].slice(0, 12);
+  }
+  return [];
 }
 
-function scoreListing(item: Omit<Listing, "id" | "score">, criteria: Criteria) {
+function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
   let score = 60;
+  if (criteria.minPrice != null && item.price != null) score += item.price >= criteria.minPrice ? 8 : -18;
   if (criteria.maxPrice != null && item.price != null) score += item.price <= criteria.maxPrice ? 12 : -24;
   if (criteria.minArea != null && item.area != null) score += item.area >= criteria.minArea ? 10 : -15;
+  if (criteria.maxArea != null && item.area != null) score += item.area <= criteria.maxArea ? 8 : -15;
   if (criteria.minRooms != null && item.rooms != null) score += item.rooms >= criteria.minRooms ? 8 : -12;
   const haystack = `${item.title} ${item.description}`.toLocaleLowerCase("fr");
   for (const wish of (criteria.wishes ?? []).slice(0, 4)) {
-    if (wish.length > 2 && haystack.includes(wish.toLocaleLowerCase("fr"))) score += 3;
+    const terms = wish.toLocaleLowerCase("fr").split(/[^\p{L}]+/u).filter(term => term.length > 5);
+    if (terms.some(term => haystack.includes(term))) score += 3;
   }
   return Math.max(0, Math.min(100, score));
 }
 
-function normalize(raw: unknown, criteria: Criteria): Omit<Listing, "id"> | null {
+const extraFields = [
+  { keys: ["nb_parkings"], label: "Stationnement", count: "place(s)" },
+  { keys: ["furnished"], label: "Meublé", yesNo: true },
+  { keys: ["elevator"], label: "Ascenseur", yesNo: true },
+  { keys: ["balcony"], label: "Balcon", yesNo: true },
+  { keys: ["terrace"], label: "Terrasse", yesNo: true },
+  { keys: ["garden"], label: "Jardin", yesNo: true },
+  { keys: ["floor"], label: "Étage" },
+  { keys: ["bedrooms", "nb_bedrooms"], label: "Chambres" },
+  { keys: ["bathrooms", "nb_bathrooms"], label: "Salles de bain" },
+  { keys: ["energy_rate", "energy_class"], label: "Classe énergie" },
+  { keys: ["ges", "ges_rate"], label: "Émissions GES" },
+  { keys: ["heating"], label: "Chauffage" },
+  { keys: ["exposure"], label: "Exposition" },
+  { keys: ["charges"], label: "Charges" },
+] as const;
+
+function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Feature[] {
+  const requestedFields = new Set(checksFor(criteria).map(check => check.apiField));
+  const features: Feature[] = [];
+  for (const spec of extraFields) {
+    const key = spec.keys.find(candidate => apiValue(data, candidate) != null);
+    if (!key) continue;
+    const field = key === "nb_parkings" ? "parking" : key;
+    if (requestedFields.has(field)) continue;
+    const raw = apiValue(data, key);
+    if (typeof raw !== "string" && typeof raw !== "number" && typeof raw !== "boolean") continue;
+    let value = String(raw).trim();
+    if (!value || value.length > 70) continue;
+    if ("yesNo" in spec && spec.yesNo) {
+      if (raw === true || raw === 1 || /^(oui|yes|true|1|meubl[eé])$/i.test(value)) value = "Oui";
+      else if (raw === false || raw === 0 || /^(non|no|false|0|non[\s-]*meubl[eé])$/i.test(value)) value = "Non";
+      else continue;
+    }
+    if ("count" in spec && spec.count) {
+      const count = Number(raw);
+      if (!Number.isFinite(count) || count < 0) continue;
+      value = `${count} ${spec.count}`;
+    }
+    features.push({ label: spec.label, value, source: "annonce",
+      evidence: `Champ structuré « ${key} » fourni par l’API de l’annonce.` });
+  }
+  return features;
+}
+
+export function normalize(raw: unknown, criteria: Criteria): Omit<Listing, "id"> | null {
   const source = object(raw);
   const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
   const url = text(first(data, ["url", "link", "adUrl", "ad_url", "listingUrl"]));
-  try {
-    const parsed = new URL(url);
-    if (!/(^|\.)leboncoin\.fr$/i.test(parsed.hostname) || !/^https?:$/.test(parsed.protocol)) return null;
-  } catch { return null; }
+  if (!isHousingListingUrl(url)) return null;
   const title = text(first(data, ["title", "subject", "name"])).slice(0, 250);
   if (!title) return null;
   const description = text(first(data, ["description", "body", "text", "content"])).slice(0, 10000);
   const attrs = object(first(data, ["attributes", "details", "criteria"]));
-  const price = number(first(data, ["price", "price_value", "priceValue"]));
-  const area = number(first(data, ["surface", "area", "livingArea", "squareMeters"])) ?? number(first(attrs, ["surface", "area", "livingArea"]));
+  const price = number(first(data, ["price_euros", "price", "price_value", "priceValue"]));
+  const area = number(first(data, ["square", "surface", "area", "livingArea", "squareMeters"])) ?? number(first(attrs, ["surface", "area", "livingArea"]));
   const rooms = number(first(data, ["rooms", "nbRooms", "roomCount", "pieces"])) ?? number(first(attrs, ["rooms", "nbRooms", "pieces"]));
   const locationData = first(data, ["location", "city", "localisation", "city_name"]);
   const location = text(typeof locationData === "object" ? first(object(locationData), ["city", "name", "label"]) : locationData) || null;
-  const image = getImage(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
-  const features: Feature[] = [];
-  if (price !== null) features.push({ label: "Prix", value: `${price} €`, source: "annonce", evidence: "Champ prix fourni par l'annonce" });
-  if (area !== null) features.push({ label: "Surface", value: `${area} m²`, source: "annonce", evidence: "Champ surface fourni par l'annonce" });
-  if (rooms !== null) features.push({ label: "Pièces", value: String(rooms), source: "annonce", evidence: "Champ pièces fourni par l'annonce" });
-  const listing = { title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, features };
-  return { ...listing, score: scoreListing(listing, criteria) };
+  const images = getImages(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
+  const image = images[0] ?? null;
+  const features = otherApiFeatures(data, criteria);
+  const listing = { title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features };
+  const criterionResults = evaluateStructured(criteria, listing, data);
+  return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
 
 export async function startSearch(criteria: Criteria) {
-  // The actor enforces a minimum adLimit of 10. Both the actor and Apify billing
-  // options are capped; no phone/profile enrichment or monitoring is enabled.
-  const searchQuery = [
-    criteria.intent === "rent" ? "location" : "vente",
-    "immobilier",
-    criteria.keywords || "appartement",
-  ].join(" ");
-  const response = object(await apify(`/v2/actors/${ACTOR}/runs?maxItems=${LIMIT}&maxTotalChargeUsd=0.10&timeout=120`, {
+  // The actor requires adLimit >= 10. Inspect up to ten rental candidates so
+  // price/area checks don't turn five imperfect hits into an empty result.
+  // Only five matching homes are analyzed and returned.
+  const response = object(await apify(`/v2/actors/${ACTOR}/runs?maxItems=${CANDIDATE_LIMIT}&maxTotalChargeUsd=0.10&timeout=120`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      searchQuery,
-      location: criteria.location,
-      radius: Math.max(0, Math.min(200, criteria.radius ?? 5)),
-      ...(criteria.maxPrice != null ? { price_max_filter: criteria.maxPrice } : {}),
-      adLimit: LIMIT,
-      mode: "standard",
-      includeSeller: false,
-      includePhone: false,
-      shippable: false,
-    }),
+    body: JSON.stringify(housingActorInput(criteria)),
   }));
   const runId = text(object(response.data).id);
   if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
@@ -116,7 +165,7 @@ export async function startSearch(criteria: Criteria) {
 }
 
 export async function syncSearch(id: number, criteria: Criteria) {
-  const row = getSearchRow(id);
+  const row = await getSearchRow(id);
   if (!row || row.status !== "running" || !row.run_id || polling.has(id)) return;
   polling.add(id);
   try {
@@ -126,21 +175,53 @@ export async function syncSearch(id: number, criteria: Criteria) {
     if (status === "SUCCEEDED") {
       const datasetId = text(run.defaultDatasetId);
       if (!datasetId) throw new Error("L'exécution Apify n'a pas de jeu de résultats.");
-      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${LIMIT}`);
+      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${CANDIDATE_LIMIT}`);
       if (!Array.isArray(items)) throw new Error("Le format des résultats Apify est inattendu.");
+      const existing = await getSearch(id);
+      const oldUrls = new Set(existing?.listings.map(item => item.url) ?? []);
       const seen = new Set<string>();
       const listings = items.map(item => normalize(item, criteria)).filter((item): item is Omit<Listing, "id"> => {
-        if (!item || seen.has(item.url)) return false;
+        if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria)) return false;
         seen.add(item.url);
         return true;
       });
-      completeSearch(id, listings.slice(0, LIMIT));
+      await setAnalyzing(id);
+      try {
+        // The completed state is published only after the AI observations and
+        // listings are committed together; polling never exposes partial results.
+        const candidates = listings.slice(0, RESULT_LIMIT).filter(item =>
+          !oldUrls.has(item.url) || !existing?.listings.find(previous => previous.url === item.url)?.criterionResults.length)
+          .map((item, index) => ({ ...item, id: -(index + 1) }));
+        const enriched = await analyze(candidates, criteria);
+        await completeSearch(id, listings.slice(0, RESULT_LIMIT).map(item => {
+          const enrichedItem = candidates.find(candidate => candidate.url === item.url);
+          const observations = enriched.find(result => result.id === enrichedItem?.id);
+          const previous = existing?.listings.find(result => result.url === item.url);
+          const criterionResults = observations?.criterionResults ?? item.criterionResults.map(check =>
+            check.source === "api" ? check : previous?.criterionResults.find(old => old.id === check.id) ?? check);
+          const additions = observations?.features ?? item.features;
+          const features = [...(previous?.features ?? []), ...additions.filter(feature =>
+            !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
+          return {
+          title: item.title, url: item.url, description: item.description,
+          price: observations?.price ?? item.price, area: observations?.area ?? item.area,
+          rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
+          image: item.image, images: item.images, score: observations?.score ?? item.score,
+          aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
+          features,
+          criterionResults,
+        }; }).filter(item => !item.criterionResults.some(check =>
+          ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")));
+      } catch (error) {
+        await setFailure(id, error instanceof Error ? error.message : "L'analyse des annonces a échoué.", Boolean(row.analyzed));
+        throw error;
+      }
     } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
-      setFailure(id, text(run.statusMessage) || `Exécution Apify : ${status}`);
+      await setFailure(id, text(run.statusMessage) || `Exécution Apify : ${status}`, Boolean(row.analyzed));
     }
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");
-    // Transient polling failures should not erase an ongoing run.
+    // A transient Apify or AI failure remains retriable on the next poll.
     throw error;
   } finally {
     polling.delete(id);

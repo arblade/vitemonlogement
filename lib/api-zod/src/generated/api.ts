@@ -33,12 +33,20 @@ export const interpretHousingRequestResponseRadiusMax = 200;
 export const InterpretHousingRequestResponse = zod.object({
   "location": zod.string(),
   "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
   "maxPrice": zod.number().int().nullish(),
   "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
   "minRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(interpretHousingRequestResponseRadiusMin).max(interpretHousingRequestResponseRadiusMax).optional(),
   "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
 })
 
 
@@ -53,14 +61,23 @@ export const ListHousingSearchesResponseItem = zod.object({
   "criteria": zod.object({
   "location": zod.string(),
   "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
   "maxPrice": zod.number().int().nullish(),
   "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
   "minRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(listHousingSearchesResponseCriteriaRadiusMin).max(listHousingSearchesResponseCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -72,23 +89,10 @@ export const ListHousingSearchesResponse = zod.array(ListHousingSearchesResponse
 export const createHousingSearchBodyPromptMin = 10;
 export const createHousingSearchBodyPromptMax = 1000;
 
-export const createHousingSearchBodyCriteriaRadiusMin = 0;
-export const createHousingSearchBodyCriteriaRadiusMax = 200;
-
 
 
 export const CreateHousingSearchBody = zod.object({
-  "prompt": zod.string().min(createHousingSearchBodyPromptMin).max(createHousingSearchBodyPromptMax),
-  "criteria": zod.object({
-  "location": zod.string(),
-  "intent": zod.enum(['rent', 'buy']),
-  "maxPrice": zod.number().int().nullish(),
-  "minArea": zod.number().int().nullish(),
-  "minRooms": zod.number().int().nullish(),
-  "radius": zod.number().int().min(createHousingSearchBodyCriteriaRadiusMin).max(createHousingSearchBodyCriteriaRadiusMax).optional(),
-  "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
-})
+  "prompt": zod.string().min(createHousingSearchBodyPromptMin).max(createHousingSearchBodyPromptMax)
 })
 
 export const createHousingSearchResponseOneCriteriaRadiusMin = 0;
@@ -102,14 +106,23 @@ export const CreateHousingSearchResponse = zod.object({
   "criteria": zod.object({
   "location": zod.string(),
   "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
   "maxPrice": zod.number().int().nullish(),
   "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
   "minRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(createHousingSearchResponseOneCriteriaRadiusMin).max(createHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -125,11 +138,22 @@ export const CreateHousingSearchResponse = zod.object({
   "rooms": zod.number().int().nullish(),
   "location": zod.string().nullish(),
   "image": zod.string().nullish(),
+  "images": zod.array(zod.string()),
+  "aiSummary": zod.string().nullable(),
+  "summaryEvidence": zod.array(zod.string()),
   "score": zod.number().int(),
   "features": zod.array(zod.object({
   "label": zod.string(),
   "value": zod.string(),
   "source": zod.enum(['annonce', 'ia']),
+  "evidence": zod.string()
+})),
+  "criterionResults": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "status": zod.enum(['confirmed', 'contradicted', 'unknown']),
+  "source": zod.enum(['api', 'description', 'unknown']),
+  "value": zod.string(),
   "evidence": zod.string()
 }))
 }))
@@ -151,14 +175,23 @@ export const GetHousingSearchResponse = zod.object({
   "criteria": zod.object({
   "location": zod.string(),
   "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
   "maxPrice": zod.number().int().nullish(),
   "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
   "minRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(getHousingSearchResponseOneCriteriaRadiusMin).max(getHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -174,11 +207,22 @@ export const GetHousingSearchResponse = zod.object({
   "rooms": zod.number().int().nullish(),
   "location": zod.string().nullish(),
   "image": zod.string().nullish(),
+  "images": zod.array(zod.string()),
+  "aiSummary": zod.string().nullable(),
+  "summaryEvidence": zod.array(zod.string()),
   "score": zod.number().int(),
   "features": zod.array(zod.object({
   "label": zod.string(),
   "value": zod.string(),
   "source": zod.enum(['annonce', 'ia']),
+  "evidence": zod.string()
+})),
+  "criterionResults": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "status": zod.enum(['confirmed', 'contradicted', 'unknown']),
+  "source": zod.enum(['api', 'description', 'unknown']),
+  "value": zod.string(),
   "evidence": zod.string()
 }))
 }))
@@ -203,14 +247,23 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "criteria": zod.object({
   "location": zod.string(),
   "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
   "maxPrice": zod.number().int().nullish(),
   "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
   "minRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(analyzeHousingSearchResponseOneCriteriaRadiusMin).max(analyzeHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
-  "wishes": zod.array(zod.string()).optional()
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -226,11 +279,94 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "rooms": zod.number().int().nullish(),
   "location": zod.string().nullish(),
   "image": zod.string().nullish(),
+  "images": zod.array(zod.string()),
+  "aiSummary": zod.string().nullable(),
+  "summaryEvidence": zod.array(zod.string()),
   "score": zod.number().int(),
   "features": zod.array(zod.object({
   "label": zod.string(),
   "value": zod.string(),
   "source": zod.enum(['annonce', 'ia']),
+  "evidence": zod.string()
+})),
+  "criterionResults": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "status": zod.enum(['confirmed', 'contradicted', 'unknown']),
+  "source": zod.enum(['api', 'description', 'unknown']),
+  "value": zod.string(),
+  "evidence": zod.string()
+}))
+}))
+}))
+
+
+/**
+ * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ */
+export const RefreshHousingSearchParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const refreshHousingSearchResponseOneCriteriaRadiusMin = 0;
+export const refreshHousingSearchResponseOneCriteriaRadiusMax = 200;
+
+
+
+export const RefreshHousingSearchResponse = zod.object({
+  "id": zod.number().int(),
+  "prompt": zod.string(),
+  "criteria": zod.object({
+  "location": zod.string(),
+  "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
+  "maxPrice": zod.number().int().nullish(),
+  "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
+  "minRooms": zod.number().int().nullish(),
+  "radius": zod.number().int().min(refreshHousingSearchResponseOneCriteriaRadiusMin).max(refreshHousingSearchResponseOneCriteriaRadiusMax).optional(),
+  "keywords": zod.string(),
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional()
+}),
+  "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "count": zod.number().int(),
+  "createdAt": zod.string(),
+  "analyzed": zod.boolean(),
+  "error": zod.string().nullish()
+}).and(zod.object({
+  "listings": zod.array(zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "url": zod.string(),
+  "description": zod.string(),
+  "price": zod.number().nullish(),
+  "area": zod.number().nullish(),
+  "rooms": zod.number().int().nullish(),
+  "location": zod.string().nullish(),
+  "image": zod.string().nullish(),
+  "images": zod.array(zod.string()),
+  "aiSummary": zod.string().nullable(),
+  "summaryEvidence": zod.array(zod.string()),
+  "score": zod.number().int(),
+  "features": zod.array(zod.object({
+  "label": zod.string(),
+  "value": zod.string(),
+  "source": zod.enum(['annonce', 'ia']),
+  "evidence": zod.string()
+})),
+  "criterionResults": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "status": zod.enum(['confirmed', 'contradicted', 'unknown']),
+  "source": zod.enum(['api', 'description', 'unknown']),
+  "value": zod.string(),
   "evidence": zod.string()
 }))
 }))

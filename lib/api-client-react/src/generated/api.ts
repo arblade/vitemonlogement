@@ -512,3 +512,77 @@ export const useAnalyzeHousingSearch = <TError = ErrorType<unknown>,
       return useMutation(getAnalyzeHousingSearchMutationOptions(options));
     }
 
+export const getRefreshHousingSearchUrl = (id: number,) => {
+
+
+
+
+  return `/api/housing/searches/${id}/refresh`
+}
+
+/**
+ * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ */
+export const refreshHousingSearch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchDetail> => {
+
+  return customFetch<HousingSearchDetail>(getRefreshHousingSearchUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRefreshHousingSearchMutationKey = () => ['refreshHousingSearch'] as const;
+
+export const getRefreshHousingSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshHousingSearch>>, TError,RefreshHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof refreshHousingSearch>>, TError,RefreshHousingSearchMutationVariables, TContext> => {
+
+const mutationKey = getRefreshHousingSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refreshHousingSearch>>, RefreshHousingSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  refreshHousingSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshHousingSearchMutationResult = NonNullable<Awaited<ReturnType<typeof refreshHousingSearch>>>
+
+    export type RefreshHousingSearchMutationError = ErrorType<unknown>
+    export type RefreshHousingSearchMutationVariables = {id: number}
+
+    /**
+ * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ */
+export const useRefreshHousingSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshHousingSearch>>, TError,RefreshHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof refreshHousingSearch>>,
+        TError,
+        RefreshHousingSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRefreshHousingSearchMutationOptions(options));
+    }
+

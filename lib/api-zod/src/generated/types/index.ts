@@ -9,6 +9,11 @@
 export * from './healthStatus';
 export * from './housingCriteria';
 export * from './housingCriteriaIntent';
+export * from './housingCriterion';
+export * from './housingCriterionAvailability';
+export * from './housingCriterionResult';
+export * from './housingCriterionResultSource';
+export * from './housingCriterionResultStatus';
 export * from './housingFeature';
 export * from './housingFeatureSource';
 export * from './housingListing';
@@ -16,4 +21,5 @@ export * from './housingPrompt';
 export * from './housingSearchDetail';
 export * from './housingSearchInput';
 export * from './housingSearchSummary';
+export * from './housingSearchSummaryStage';
 export * from './housingSearchSummaryStatus';

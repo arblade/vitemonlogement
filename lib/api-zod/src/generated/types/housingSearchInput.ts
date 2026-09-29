@@ -5,7 +5,6 @@
  * API Logiscope
  * OpenAPI spec version: 0.1.0
  */
-import type { HousingCriteria } from './housingCriteria';
 
 export interface HousingSearchInput {
   /**
@@ -13,5 +12,4 @@ export interface HousingSearchInput {
      * @maxLength 1000
      */
   prompt: string;
-  criteria: HousingCriteria;
 }

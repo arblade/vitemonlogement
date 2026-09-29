@@ -5,6 +5,7 @@
  * API Logiscope
  * OpenAPI spec version: 0.1.0
  */
+import type { HousingCriterionResult } from './housingCriterionResult';
 import type { HousingFeature } from './housingFeature';
 
 export interface HousingListing {
@@ -22,6 +23,11 @@ export interface HousingListing {
   location?: string | null;
   /** @nullable */
   image?: string | null;
+  images: string[];
+  /** @nullable */
+  aiSummary: string | null;
+  summaryEvidence: string[];
   score: number;
   features: HousingFeature[];
+  criterionResults: HousingCriterionResult[];
 }

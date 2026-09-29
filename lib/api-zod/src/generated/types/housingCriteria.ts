@@ -6,14 +6,19 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingCriteriaIntent } from './housingCriteriaIntent';
+import type { HousingCriterion } from './housingCriterion';
 
 export interface HousingCriteria {
   location: string;
   intent: HousingCriteriaIntent;
   /** @nullable */
+  minPrice?: number | null;
+  /** @nullable */
   maxPrice?: number | null;
   /** @nullable */
   minArea?: number | null;
+  /** @nullable */
+  maxArea?: number | null;
   /** @nullable */
   minRooms?: number | null;
   /**
@@ -23,4 +28,5 @@ export interface HousingCriteria {
   radius?: number;
   keywords: string;
   wishes?: string[];
+  checks?: HousingCriterion[];
 }

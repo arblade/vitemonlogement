@@ -25,13 +25,34 @@ export const HousingCriteriaIntent = {
   buy: 'buy',
 } as const;
 
+export type HousingCriterionAvailability = typeof HousingCriterionAvailability[keyof typeof HousingCriterionAvailability];
+
+
+export const HousingCriterionAvailability = {
+  api: 'api',
+  hybrid: 'hybrid',
+  description: 'description',
+} as const;
+
+export interface HousingCriterion {
+  id: string;
+  label: string;
+  availability: HousingCriterionAvailability;
+  /** @nullable */
+  apiField?: string | null;
+}
+
 export interface HousingCriteria {
   location: string;
   intent: HousingCriteriaIntent;
   /** @nullable */
+  minPrice?: number | null;
+  /** @nullable */
   maxPrice?: number | null;
   /** @nullable */
   minArea?: number | null;
+  /** @nullable */
+  maxArea?: number | null;
   /** @nullable */
   minRooms?: number | null;
   /**
@@ -41,6 +62,7 @@ export interface HousingCriteria {
   radius?: number;
   keywords: string;
   wishes?: string[];
+  checks?: HousingCriterion[];
 }
 
 export interface HousingSearchInput {
@@ -49,7 +71,6 @@ export interface HousingSearchInput {
      * @maxLength 1000
      */
   prompt: string;
-  criteria: HousingCriteria;
 }
 
 export type HousingSearchSummaryStatus = typeof HousingSearchSummaryStatus[keyof typeof HousingSearchSummaryStatus];
@@ -61,11 +82,23 @@ export const HousingSearchSummaryStatus = {
   failed: 'failed',
 } as const;
 
+export type HousingSearchSummaryStage = typeof HousingSearchSummaryStage[keyof typeof HousingSearchSummaryStage];
+
+
+export const HousingSearchSummaryStage = {
+  interpreting: 'interpreting',
+  searching: 'searching',
+  analyzing: 'analyzing',
+  ready: 'ready',
+  failed: 'failed',
+} as const;
+
 export interface HousingSearchSummary {
   id: number;
   prompt: string;
   criteria: HousingCriteria;
   status: HousingSearchSummaryStatus;
+  stage?: HousingSearchSummaryStage;
   count: number;
   createdAt: string;
   analyzed: boolean;
@@ -88,6 +121,33 @@ export interface HousingFeature {
   evidence: string;
 }
 
+export type HousingCriterionResultStatus = typeof HousingCriterionResultStatus[keyof typeof HousingCriterionResultStatus];
+
+
+export const HousingCriterionResultStatus = {
+  confirmed: 'confirmed',
+  contradicted: 'contradicted',
+  unknown: 'unknown',
+} as const;
+
+export type HousingCriterionResultSource = typeof HousingCriterionResultSource[keyof typeof HousingCriterionResultSource];
+
+
+export const HousingCriterionResultSource = {
+  api: 'api',
+  description: 'description',
+  unknown: 'unknown',
+} as const;
+
+export interface HousingCriterionResult {
+  id: string;
+  label: string;
+  status: HousingCriterionResultStatus;
+  source: HousingCriterionResultSource;
+  value: string;
+  evidence: string;
+}
+
 export interface HousingListing {
   id: number;
   title: string;
@@ -103,8 +163,13 @@ export interface HousingListing {
   location?: string | null;
   /** @nullable */
   image?: string | null;
+  images: string[];
+  /** @nullable */
+  aiSummary: string | null;
+  summaryEvidence: string[];
   score: number;
   features: HousingFeature[];
+  criterionResults: HousingCriterionResult[];
 }
 
 export type HousingSearchDetail = HousingSearchSummary & {
