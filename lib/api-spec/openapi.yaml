@@ -175,10 +175,23 @@ components:
           $ref: "#/components/schemas/HousingCriteria"
         status: { type: string, enum: [running, completed, failed] }
         stage: { type: string, enum: [interpreting, searching, analyzing, ready, failed] }
+        phase: { type: string, enum: [focused, broad] }
+        searchRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousingSearchRequest"
+        focusedMatches: { type: ["integer", "null"] }
         count: { type: integer }
         createdAt: { type: string }
         analyzed: { type: boolean }
         error: { type: ["string", "null"] }
+    HousingSearchRequest:
+      type: object
+      required: [batch, path, input]
+      properties:
+        batch: { type: string, enum: [focused, broad] }
+        path: { type: string }
+        input: { type: string }
     HousingFeature:
       type: object
       required: [label, value, source, evidence]
@@ -199,9 +212,10 @@ components:
         evidence: { type: string }
     HousingListing:
       type: object
-      required: [id, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
+      required: [id, batch, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
       properties:
         id: { type: integer }
+        batch: { type: string, enum: [focused, broad] }
         title: { type: string }
         url: { type: string }
         description: { type: string }

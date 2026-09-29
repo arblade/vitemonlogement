@@ -7,9 +7,11 @@
  */
 import type { HousingCriterionResult } from './housingCriterionResult';
 import type { HousingFeature } from './housingFeature';
+import type { HousingListingBatch } from './housingListingBatch';
 
 export interface HousingListing {
   id: number;
+  batch: HousingListingBatch;
   title: string;
   url: string;
   description: string;

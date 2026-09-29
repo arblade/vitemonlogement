@@ -78,6 +78,13 @@ export const ListHousingSearchesResponseItem = zod.object({
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
   "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -123,6 +130,13 @@ export const CreateHousingSearchResponse = zod.object({
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
   "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -130,6 +144,7 @@ export const CreateHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
   "description": zod.string(),
@@ -192,6 +207,13 @@ export const GetHousingSearchResponse = zod.object({
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
   "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -199,6 +221,7 @@ export const GetHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
   "description": zod.string(),
@@ -264,6 +287,13 @@ export const AnalyzeHousingSearchResponse = zod.object({
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
   "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -271,6 +301,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
   "description": zod.string(),
@@ -336,6 +367,13 @@ export const RefreshHousingSearchResponse = zod.object({
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
   "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
@@ -343,6 +381,7 @@ export const RefreshHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
   "description": zod.string(),

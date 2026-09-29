@@ -10,6 +10,7 @@ import { ListingGallery } from '@/components/listing-gallery';
 import { ListingDetail } from '@/components/listing-detail';
 import { listingFacts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
+import { SearchRequestDebug } from '@/components/search-request-debug';
 
 function sourceName(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -87,12 +88,25 @@ export default function SearchDetail() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [sort, setSort] = useState<'score'|'price'|'area'>('score');
   const [refreshError, setRefreshError] = useState('');
+  const perCallLimit = import.meta.env.DEV ? 5 : 100;
   const search = useGetHousingSearch(id, { query: { queryKey: getGetHousingSearchQueryKey(id), enabled: validId, refetchInterval: query => query.state.data?.status === 'running' ? 3500 : false } });
   const refresh = useRefreshHousingSearch();
   const data = search.data;
   const listings = [...(data?.listings || [])].sort((a,b)=>sort==='price'?(a.price ?? Infinity)-(b.price ?? Infinity):sort==='area'?(b.area ?? -1)-(a.area ?? -1):b.score-a.score);
+  const focusedListings = listings.filter(item => item.batch !== 'broad');
+  const broadListings = listings.filter(item => item.batch === 'broad');
   const selected = listings.filter(item=>selectedIds.includes(item.id));
   const toggle = (listingId: number) => setSelectedIds(current=>current.includes(listingId)?current.filter(id=>id!==listingId):current.length<3?[...current,listingId]:current);
+  const focusedResults = focusedListings.length > 0 && <section aria-label="Résultats de la recherche ciblée">
+    <h3 className="mb-2 text-xl font-semibold">Recherche ciblée · {focusedListings.length}</h3>
+    <p className="mb-5 text-xs text-[#77746a]">Filtres de location et, si disponible, mot-clé prioritaire. Une mention ne confirme pas à elle seule le critère : vérifiez les preuves dans chaque fiche.</p>
+    <div className="space-y-5">{focusedListings.map((listing,index)=><ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3} onSelect={()=>toggle(listing.id)}/>)}</div>
+  </section>;
+  const broadResults = broadListings.length > 0 && <section aria-label="Résultats de la recherche élargie">
+    <h3 className="mb-2 text-xl font-semibold">Recherche élargie · {broadListings.length}</h3>
+    <p className="mb-5 text-xs text-[#77746a]">Mêmes critères de lieu et de budget, sans le mot-clé prioritaire. Un équipement non mentionné reste à vérifier.</p>
+    <div className="space-y-5">{broadListings.map((listing,index)=><ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} index={focusedListings.length+index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3} onSelect={()=>toggle(listing.id)}/>)}</div>
+  </section>;
   const onRefresh = async () => {
     if (!validId || refresh.isPending || data?.status !== 'completed') return;
     setRefreshError('');
@@ -120,13 +134,14 @@ export default function SearchDetail() {
       {search.isError && <div className="max-w-2xl"><ErrorNotice message="Impossible de retrouver cette recherche. Vérifiez votre connexion puis réessayez." retry={()=>search.refetch()}/><Link href="/" data-testid="link-error-home" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4"><ArrowLeft size={15}/> Revenir à l’accueil</Link></div>}
       {search.isLoading && <div className="space-y-5"><div className="flex justify-between"><Skeleton className="h-12 w-48 bg-[#e6e4d8]"/><Skeleton className="h-12 w-40 bg-[#e6e4d8]"/></div>{[0,1,2].map(i=><Skeleton key={i} className="h-72 rounded-2xl bg-[#e6e4d8]"/>)}</div>}
       {data && <>
+        <SearchRequestDebug requests={data.searchRequests} focusedMatches={data.focusedMatches} status={data.status} phase={data.phase} error={data.error}/>
         <div className="mb-9 flex flex-col justify-between gap-6 border-b border-[#d9d6c9] pb-8 md:flex-row md:items-end">
-           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-[38px] font-semibold leading-tight tracking-[-.055em] md:text-[52px]">{data.status==='running'||refresh.isPending?'On cherche pour vous':`${data.count} annonce${data.count>1?'s':''} à explorer`}<span className="font-editorial font-normal italic text-[#899259]">.</span></h2><p className="mt-2 text-xs text-[#77746a]">5 nouvelles annonces maximum par appel · Les anciennes restent disponibles, sans doublons</p></div>
+           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-[38px] font-semibold leading-tight tracking-[-.055em] md:text-[52px]">{data.status==='running'||refresh.isPending?'On cherche pour vous':`${data.count} annonce${data.count>1?'s':''} à explorer`}<span className="font-editorial font-normal italic text-[#899259]">.</span></h2><p className="mt-2 text-xs text-[#77746a]">{perCallLimit} nouvelles annonces maximum par appel · Les anciennes restent disponibles, sans doublons</p></div>
            {data.status==='completed' && !refresh.isPending && <div className="flex flex-wrap items-center gap-3"><Button type="button" data-testid="button-refresh" onClick={onRefresh} className="h-10 rounded-lg bg-[#292635] px-5 text-xs font-semibold text-[#e2eaa5] hover:bg-[#454050]"><RefreshCw size={15} className="mr-2"/> Refresh</Button>{listings.length>0 && <><label htmlFor="sort-results" className="font-data text-[10px] uppercase tracking-[.08em] text-[#77746a]">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#d6d2c5] bg-[#fbfaf5] px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#9aa464]"><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></>}</div>}
         </div>
          {(data.status==='running'||refresh.isPending) && <div role="status" aria-live="polite" aria-label="Progression de la recherche" className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div><SearchProgress stage={data.stage ?? 'interpreting'}/><div className="mt-5 space-y-3">{[0,1].map(i=><Skeleton key={i} className="h-32 rounded-2xl bg-[#e8e6db]"/>)}</div></div>
-           <aside className="h-fit rounded-xl bg-[#e9ebdc] p-6"><Search size={22} className="text-[#7b8755]"/><h3 className="mt-5 text-lg font-semibold">Une sélection, pas une avalanche.</h3><p className="mt-3 text-xs leading-relaxed text-[#6d705d]">Jusqu’à cinq nouvelles annonces par appel. Les résultats déjà trouvés sont conservés et les doublons écartés. Chaque annonce vous renverra vers sa source.</p>{data.listings.length>0 && <p className="mt-5 border-t border-[#c9cfb4] pt-4 text-xs font-semibold">{data.listings.length} annonce{data.listings.length>1?'s':''} déjà conservée{data.listings.length>1?'s':''}.</p>}</aside>
+             <div><SearchProgress stage={data.stage ?? 'interpreting'} phase={data.phase}/>{data.phase === 'broad' && focusedListings.length > 0 && <div className="mt-8">{focusedResults}</div>}<div className="mt-5 space-y-3">{[0,1].map(i=><Skeleton key={i} className="h-32 rounded-2xl bg-[#e8e6db]"/>)}</div></div>
+            <aside className="h-fit rounded-xl bg-[#e9ebdc] p-6"><Search size={22} className="text-[#7b8755]"/><h3 className="mt-5 text-lg font-semibold">Une sélection, pas une avalanche.</h3><p className="mt-3 text-xs leading-relaxed text-[#6d705d]">Jusqu’à {perCallLimit} nouvelles annonces par appel. Les résultats déjà trouvés sont conservés et les doublons écartés. Chaque annonce vous renverra vers sa source.</p>{data.listings.length>0 && <p className="mt-5 border-t border-[#c9cfb4] pt-4 text-xs font-semibold">{data.listings.length} annonce{data.listings.length>1?'s':''} déjà conservée{data.listings.length>1?'s':''}.</p>}</aside>
          </div>}
         {data.status==='failed' && <div className="max-w-2xl"><ErrorNotice message={data.error || 'La recherche n’a pas pu se terminer. Essayez une nouvelle description.'}/><Link href="/" data-testid="link-new-after-failure" className="mt-6 inline-flex items-center gap-2 text-sm font-bold underline underline-offset-4">Faire une nouvelle recherche <ArrowRight size={15}/></Link></div>}
         {(refreshError || (data.status==='completed' && data.error)) && <div role="alert" className="mb-7 max-w-2xl"><ErrorNotice message={refreshError || data.error || ''}/></div>}
@@ -136,7 +151,7 @@ export default function SearchDetail() {
           </div>
           {listings.length===0 ? <div className="rounded-2xl border border-dashed border-[#c9c8b9] bg-[#eeeee5] px-7 py-14 md:px-12"><div className="mb-6 grid size-12 place-items-center rounded-full bg-[#dfe6b8]"><Search size={21}/></div><h3 className="text-xl font-semibold">Aucune annonce dans cette sélection.</h3><p className="mt-2 max-w-md text-sm leading-relaxed text-[#77746a]">Le marché bouge vite. Essayez d’élargir la zone, de revoir le budget ou de simplifier vos critères.</p><Link href="/" data-testid="link-empty-new-search" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4">Repartir d’une description <ArrowRight size={15}/></Link></div> :
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[minmax(0,1fr)_290px]">
-             <div className="space-y-5">{listings.map((listing,index)=><ListingCard key={listing.id} listing={listing} checks={data.criteria.checks || []} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3} onSelect={()=>toggle(listing.id)}/>)}</div>
+              <div className="space-y-10">{focusedResults}{broadResults}</div>
             <aside className="h-fit rounded-2xl border border-[#d9d6c9] bg-[#fbfaf5] p-6 lg:sticky lg:top-6"><span className="font-data text-[10px] uppercase tracking-[.13em] text-[#7b8559]">Votre boussole</span><h3 className="mt-4 font-editorial text-[28px] italic leading-tight">Les critères qui ont guidé cette sélection.</h3><div className="mt-6 space-y-3 border-t border-[#e4e1d6] pt-5 text-xs">{[
                 ['Projet','Location'],['Lieu',data.criteria.location],['Budget min.',data.criteria.minPrice!=null?formatPrice(data.criteria.minPrice):'Non précisé'],['Budget max.',data.criteria.maxPrice!=null?formatPrice(data.criteria.maxPrice):'Non précisé'],['Surface min.',data.criteria.minArea!=null?`${data.criteria.minArea} m²`:'Non précisée'],['Surface max.',data.criteria.maxArea!=null?`${data.criteria.maxArea} m²`:'Non précisé'],['Pièces min.',data.criteria.minRooms!=null?String(data.criteria.minRooms):'Non précisées'],['Rayon',data.criteria.radius?`${data.criteria.radius} km`:'Non précisé'],['Mots-clés',data.criteria.keywords||'Aucun']
              ].map(([label,value])=><div key={label} className="flex justify-between gap-4"><span className="text-[#858277]">{label}</span><strong className="max-w-[155px] text-right font-semibold">{value}</strong></div>)}</div>{!!data.criteria.wishes?.length && <div className="mt-5 border-t border-[#e4e1d6] pt-5"><span className="text-xs text-[#858277]">Souhaits</span><p className="mt-2 text-xs font-semibold">{data.criteria.wishes.join(' · ')}</p></div>}

@@ -2,11 +2,11 @@ import { Check, LoaderCircle, Search, Sparkles, ScanSearch } from 'lucide-react'
 
 const steps = [
   { key: 'interpreting', label: 'Comprendre votre demande', detail: 'Votre description devient des critères de recherche.', icon: Sparkles },
-  { key: 'searching', label: 'Chercher les logements', detail: 'Jusqu’à cinq nouvelles annonces immobilières sont récupérées.', icon: Search },
+  { key: 'searching', label: 'Chercher les logements', detail: 'La sélection ciblée est prioritaire ; une recherche élargie peut la compléter.', icon: Search },
   { key: 'analyzing', label: 'Vérifier les annonces', detail: 'Les logements sont analysés et leurs sources restent visibles.', icon: ScanSearch },
 ] as const;
 
-export function SearchProgress({ stage }: { stage: string }) {
+export function SearchProgress({ stage, phase = 'focused' }: { stage: string; phase?: 'focused' | 'broad' }) {
   const activeIndex = Math.max(0, steps.findIndex(step => step.key === stage));
   const progress = `${((activeIndex + 1) / steps.length) * 100}%`;
 
@@ -17,7 +17,7 @@ export function SearchProgress({ stage }: { stage: string }) {
       </div>
       <div className="min-w-0">
         <div className="font-data text-[10px] uppercase tracking-[.12em] text-[#66704d]">Étape {activeIndex + 1} sur {steps.length}</div>
-        <h3 className="mt-1 text-lg font-semibold">La recherche suit son cours.</h3>
+        <h3 className="mt-1 text-lg font-semibold">{phase === 'broad' ? 'Recherche élargie en cours.' : 'Recherche ciblée en cours.'}</h3>
         <p className="mt-1 text-xs text-[#626b51]">Vous pouvez laisser cette page ouverte : elle se met à jour automatiquement.</p>
       </div>
     </div>

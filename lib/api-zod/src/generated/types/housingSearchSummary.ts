@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingCriteria } from './housingCriteria';
+import type { HousingSearchRequest } from './housingSearchRequest';
+import type { HousingSearchSummaryPhase } from './housingSearchSummaryPhase';
 import type { HousingSearchSummaryStage } from './housingSearchSummaryStage';
 import type { HousingSearchSummaryStatus } from './housingSearchSummaryStatus';
 
@@ -15,6 +17,10 @@ export interface HousingSearchSummary {
   criteria: HousingCriteria;
   status: HousingSearchSummaryStatus;
   stage?: HousingSearchSummaryStage;
+  phase?: HousingSearchSummaryPhase;
+  searchRequests?: HousingSearchRequest[];
+  /** @nullable */
+  focusedMatches?: number | null;
   count: number;
   createdAt: string;
   analyzed: boolean;

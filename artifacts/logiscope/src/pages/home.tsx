@@ -75,7 +75,7 @@ export default function Home() {
           </Form>
         </div>
         {localError && <div role="alert" className="mt-5 max-w-[1000px]"><ErrorNotice message={localError}/></div>}
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-[#aaa8ae]"><span className="font-data uppercase tracking-[.12em] text-[#dfe89b]">À savoir</span><span>Entrée pour rechercher · Maj + Entrée pour une nouvelle ligne</span><span className="hidden sm:inline">·</span><span>5 nouvelles annonces maximum par appel, sans perdre les anciennes</span></div>
+         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-[#aaa8ae]"><span className="font-data uppercase tracking-[.12em] text-[#dfe89b]">À savoir</span><span>Entrée pour rechercher · Maj + Entrée pour une nouvelle ligne</span><span className="hidden sm:inline">·</span><span>{import.meta.env.DEV ? 5 : 100} nouvelles annonces maximum par appel, sans perdre les anciennes</span></div>
       </div>
     </section>
 

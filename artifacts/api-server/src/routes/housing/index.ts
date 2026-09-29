@@ -37,8 +37,8 @@ async function beginSearch(id: number) {
       criteria = { ...criteria, intent: "rent" };
       await setCriteria(id, criteria);
     }
-    const runId = await startSearch(criteria);
-    await setRun(id, runId);
+    const { runId, request } = await startSearch(criteria, row.phase);
+    await setRun(id, runId, request);
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to start housing search");
     await setFailure(id, error instanceof Error ? error.message : "La recherche a échoué.", isRefresh);
@@ -73,7 +73,7 @@ router.get("/housing/searches/:id", async (req, res): Promise<void> => {
   if (row.status === "running") {
     if (row.run_id) {
       // Polling must not hold the HTTP request open during Apify or LLM work.
-      void syncSearch(row.id, JSON.parse(row.criteria) as Criteria).catch(error => {
+      void syncSearch(row.id, JSON.parse(row.criteria) as Criteria, () => beginSearch(row.id)).catch(error => {
         logger.error({ err: error, searchId: row.id }, "Search synchronization failed");
       });
     } else {

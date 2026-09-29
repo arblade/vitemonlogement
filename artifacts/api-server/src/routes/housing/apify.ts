@@ -3,11 +3,10 @@ import { completeSearch, getSearch, getSearchRow, setAnalyzing, setFailure, type
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
-import { housingActorInput, isHousingListingUrl } from "./housing-search";
+import { actorRequest, focusedSearchTerm, isHousingListingUrl, shouldRunBroad, type SearchBatch } from "./housing-search";
 
-const ACTOR = "clearpath~leboncoin-api";
-const RESULT_LIMIT = 5;
-const CANDIDATE_LIMIT = 10;
+const RESULT_LIMIT = process.env.NODE_ENV === "production" ? 100 : 5;
+const CANDIDATE_LIMIT = process.env.NODE_ENV === "production" ? 100 : 10;
 const connectors = new ReplitConnectors();
 const polling = new Set<number>();
 
@@ -128,7 +127,7 @@ function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Fe
   return features;
 }
 
-export function normalize(raw: unknown, criteria: Criteria): Omit<Listing, "id"> | null {
+export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch = "focused"): Omit<Listing, "id"> | null {
   const source = object(raw);
   const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
   const url = text(first(data, ["url", "link", "adUrl", "ad_url", "listingUrl"]));
@@ -145,28 +144,31 @@ export function normalize(raw: unknown, criteria: Criteria): Omit<Listing, "id">
   const images = getImages(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
   const image = images[0] ?? null;
   const features = otherApiFeatures(data, criteria);
-  const listing = { title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features };
+  const listing = { batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features };
   const criterionResults = evaluateStructured(criteria, listing, data);
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
 
-export async function startSearch(criteria: Criteria) {
-  // The actor requires adLimit >= 10. Inspect up to ten rental candidates so
-  // price/area checks don't turn five imperfect hits into an empty result.
-  // Only five matching homes are analyzed and returned.
-  const response = object(await apify(`/v2/actors/${ACTOR}/runs?maxItems=${CANDIDATE_LIMIT}&maxTotalChargeUsd=0.10&timeout=120`, {
+export async function startSearch(criteria: Criteria, batch: SearchBatch = "focused") {
+  // The actor requires adLimit >= 10. In development inspect ten candidates
+  // but retain at most five per run. Production can inspect/retain up to 100.
+  const chargeCap = process.env.NODE_ENV === "production" ? "0.25" : "0.10";
+  const timeout = process.env.NODE_ENV === "production" ? 300 : 120;
+  const request = actorRequest(criteria, batch, CANDIDATE_LIMIT, chargeCap, timeout);
+  const response = object(await apify(request.path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(housingActorInput(criteria)),
+    body: request.input,
   }));
   const runId = text(object(response.data).id);
   if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
-  return runId;
+  return { runId, request };
 }
 
-export async function syncSearch(id: number, criteria: Criteria) {
+export async function syncSearch(id: number, criteria: Criteria, continueSearch: () => Promise<void>) {
   const row = await getSearchRow(id);
   if (!row || row.status !== "running" || !row.run_id || polling.has(id)) return;
+  const phase: SearchBatch = row.phase === "broad" ? "broad" : "focused";
   polling.add(id);
   try {
     const result = object(await apify(`/v2/actor-runs/${encodeURIComponent(row.run_id)}`));
@@ -180,20 +182,28 @@ export async function syncSearch(id: number, criteria: Criteria) {
       const existing = await getSearch(id);
       const oldUrls = new Set(existing?.listings.map(item => item.url) ?? []);
       const seen = new Set<string>();
-      const listings = items.map(item => normalize(item, criteria)).filter((item): item is Omit<Listing, "id"> => {
+      const listings = items.map(item => normalize(item, criteria, phase)).filter((item): item is Omit<Listing, "id"> => {
         if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria)) return false;
         seen.add(item.url);
         return true;
       });
+      let runBroad = false;
       await setAnalyzing(id);
       try {
-        // The completed state is published only after the AI observations and
-        // listings are committed together; polling never exposes partial results.
-        const candidates = listings.slice(0, RESULT_LIMIT).filter(item =>
+        // Prefer new ads to ones already saved during a refresh or the focused
+        // pass; each pass keeps its own limit and the listing URLs are unique.
+        const selected = [...listings].sort((a, b) => Number(oldUrls.has(a.url)) - Number(oldUrls.has(b.url))).slice(0, RESULT_LIMIT);
+        const candidates = selected.filter(item =>
           !oldUrls.has(item.url) || !existing?.listings.find(previous => previous.url === item.url)?.criterionResults.length)
           .map((item, index) => ({ ...item, id: -(index + 1) }));
-        const enriched = await analyze(candidates, criteria);
-        await completeSearch(id, listings.slice(0, RESULT_LIMIT).map(item => {
+        const enriched: Awaited<ReturnType<typeof analyze>> = [];
+        // The LLM receives at most five ads in each bounded request.
+        for (let offset = 0; offset < candidates.length; offset += 15) {
+          const groups = [0, 5, 10].map(start => candidates.slice(offset + start, offset + start + 5)).filter(group => group.length);
+          const analyses = await Promise.all(groups.map(group => analyze(group, criteria)));
+          enriched.push(...analyses.flat());
+        }
+        const saved = selected.map(item => {
           const enrichedItem = candidates.find(candidate => candidate.url === item.url);
           const observations = enriched.find(result => result.id === enrichedItem?.id);
           const previous = existing?.listings.find(result => result.url === item.url);
@@ -203,7 +213,7 @@ export async function syncSearch(id: number, criteria: Criteria) {
           const features = [...(previous?.features ?? []), ...additions.filter(feature =>
             !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
           return {
-          title: item.title, url: item.url, description: item.description,
+          batch: item.batch, title: item.title, url: item.url, description: item.description,
           price: observations?.price ?? item.price, area: observations?.area ?? item.area,
           rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
           image: item.image, images: item.images, score: observations?.score ?? item.score,
@@ -211,13 +221,22 @@ export async function syncSearch(id: number, criteria: Criteria) {
           features,
           criterionResults,
         }; }).filter(item => !item.criterionResults.some(check =>
-          ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")));
+          ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description"));
+        // Count only homes that survived all checks, including description-based
+        // contradictions. A large raw dataset is not 40 usable matches.
+        runBroad = phase === "focused" && shouldRunBroad(saved.length, Boolean(focusedSearchTerm(criteria)));
+        await completeSearch(id, saved, phase, runBroad, RESULT_LIMIT);
+        if (runBroad) {
+          // The same startup lock handles a competing client poll. If the
+          // server restarts now, the pending broad phase resumes from SQLite.
+          await continueSearch();
+        }
       } catch (error) {
-        await setFailure(id, error instanceof Error ? error.message : "L'analyse des annonces a échoué.", Boolean(row.analyzed));
+        await setFailure(id, error instanceof Error ? error.message : "L'analyse des annonces a échoué.", Boolean(row.analyzed) || runBroad || phase === "broad");
         throw error;
       }
     } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
-      await setFailure(id, text(run.statusMessage) || `Exécution Apify : ${status}`, Boolean(row.analyzed));
+      await setFailure(id, text(run.statusMessage) || `Exécution Apify : ${status}`, Boolean(row.analyzed) || phase === "broad");
     }
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");

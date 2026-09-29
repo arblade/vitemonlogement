@@ -2,7 +2,7 @@ import { createClient } from "@libsql/client/web";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { isHousingListingUrl } from "./housing-search";
+import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 
 export type Criterion = {
   id: string;
@@ -43,6 +43,7 @@ export type Feature = {
 
 export type Listing = {
   id: number;
+  batch: SearchBatch;
   title: string;
   url: string;
   description: string;
@@ -65,6 +66,10 @@ type SearchRow = {
   criteria: string;
   status: "running" | "completed" | "failed";
   stage: "interpreting" | "searching" | "analyzing" | "ready" | "failed";
+  phase: SearchBatch;
+  focused_request: string | null;
+  broad_request: string | null;
+  focused_matches: number | null;
   run_id: string | null;
   error: string | null;
   analyzed: number;
@@ -125,6 +130,10 @@ const ready = (async () => {
     criteria TEXT NOT NULL,
     status TEXT NOT NULL,
     stage TEXT NOT NULL DEFAULT 'interpreting',
+    phase TEXT NOT NULL DEFAULT 'focused',
+    focused_request TEXT,
+    broad_request TEXT,
+    focused_matches INTEGER,
     run_id TEXT,
     error TEXT,
     analyzed INTEGER NOT NULL DEFAULT 0,
@@ -133,6 +142,7 @@ const ready = (async () => {
   await query(`CREATE TABLE IF NOT EXISTS housing_listings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     search_id INTEGER NOT NULL REFERENCES housing_searches(id),
+    batch TEXT NOT NULL DEFAULT 'focused',
     title TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL,
     price REAL, area REAL, rooms INTEGER, location TEXT, image TEXT,
     score INTEGER NOT NULL, features TEXT NOT NULL,
@@ -146,12 +156,25 @@ const ready = (async () => {
   if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "stage")) {
     await query("ALTER TABLE housing_searches ADD COLUMN stage TEXT NOT NULL DEFAULT 'ready'");
   }
+  if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "phase")) {
+    await query("ALTER TABLE housing_searches ADD COLUMN phase TEXT NOT NULL DEFAULT 'focused'");
+  }
+  if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "focused_request")) {
+    await query("ALTER TABLE housing_searches ADD COLUMN focused_request TEXT");
+  }
+  if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "broad_request")) {
+    await query("ALTER TABLE housing_searches ADD COLUMN broad_request TEXT");
+  }
+  if (!columns.rows.some(row => (row as unknown as { name?: unknown }).name === "focused_matches")) {
+    await query("ALTER TABLE housing_searches ADD COLUMN focused_matches INTEGER");
+  }
   const listingColumns = await query("PRAGMA table_info(housing_listings)");
   const names = new Set(listingColumns.rows.map(row => String((row as unknown as { name: unknown }).name)));
   if (!names.has("images")) await query("ALTER TABLE housing_listings ADD COLUMN images TEXT NOT NULL DEFAULT '[]'");
   if (!names.has("ai_summary")) await query("ALTER TABLE housing_listings ADD COLUMN ai_summary TEXT");
   if (!names.has("summary_evidence")) await query("ALTER TABLE housing_listings ADD COLUMN summary_evidence TEXT NOT NULL DEFAULT '[]'");
   if (!names.has("criterion_results")) await query("ALTER TABLE housing_listings ADD COLUMN criterion_results TEXT NOT NULL DEFAULT '[]'");
+  if (!names.has("batch")) await query("ALTER TABLE housing_listings ADD COLUMN batch TEXT NOT NULL DEFAULT 'focused'");
 })();
 
 async function execute(sql: string, args: (string | number | null)[] = []) {
@@ -169,8 +192,10 @@ export async function setCriteria(id: number, criteria: Criteria) {
   await execute("UPDATE housing_searches SET criteria = ?, stage = 'searching' WHERE id = ?", [JSON.stringify(criteria), id]);
 }
 
-export async function setRun(id: number, runId: string) {
-  await execute("UPDATE housing_searches SET run_id = ?, stage = 'searching' WHERE id = ?", [runId, id]);
+export async function setRun(id: number, runId: string, request: ActorRequest) {
+  const column = request.batch === "focused" ? "focused_request" : "broad_request";
+  await execute(`UPDATE housing_searches SET run_id = ?, ${column} = ?, stage = 'searching' WHERE id = ?`,
+    [runId, JSON.stringify(request), id]);
 }
 
 export async function setAnalyzing(id: number) {
@@ -184,7 +209,8 @@ export async function setFailure(id: number, message: string, refresh = false) {
 
 export async function beginRefresh(id: number) {
   const result = await execute(`UPDATE housing_searches
-    SET status = 'running', stage = 'searching', run_id = NULL, error = NULL
+    SET status = 'running', stage = 'searching', phase = 'focused', run_id = NULL,
+      focused_request = NULL, broad_request = NULL, focused_matches = NULL, error = NULL
     WHERE id = ? AND status = 'completed'`, [id]);
   return result.rowsAffected === 1;
 }
@@ -196,12 +222,18 @@ export async function getSearchRow(id: number) {
 
 async function summary(row: SearchRow) {
   const result = await execute("SELECT url FROM housing_listings WHERE search_id = ?", [row.id]);
+  const searchRequests = [row.focused_request, row.broad_request]
+    .filter((value): value is string => Boolean(value))
+    .map(value => JSON.parse(value) as ActorRequest);
   return {
     id: Number(row.id),
     prompt: row.prompt,
     criteria: JSON.parse(row.criteria) as Criteria,
     status: row.status,
     stage: row.stage,
+    phase: row.phase,
+    searchRequests,
+    focusedMatches: row.focused_matches,
     count: (result.rows as unknown as { url: string }[]).filter(listing => isHousingListingUrl(listing.url)).length,
     createdAt: row.created_at,
     analyzed: Boolean(row.analyzed),
@@ -217,9 +249,9 @@ export async function listSearches() {
 export async function getSearch(id: number) {
   const row = await getSearchRow(id);
   if (!row) return null;
-  const result = await execute(`SELECT id, title, url, description, price, area, rooms, location, image, score, features
+  const result = await execute(`SELECT id, batch, title, url, description, price, area, rooms, location, image, score, features
     , images, ai_summary, summary_evidence, criterion_results
-    FROM housing_listings WHERE search_id = ? ORDER BY score DESC, id ASC`, [id]);
+    FROM housing_listings WHERE search_id = ? ORDER BY CASE batch WHEN 'focused' THEN 0 ELSE 1 END, score DESC, id ASC`, [id]);
   const listings = (result.rows as unknown as ListingRow[])
     .filter(listing => isHousingListingUrl(listing.url))
     .map(({ ai_summary, summary_evidence, criterion_results, ...listing }) => ({
@@ -233,25 +265,28 @@ export async function getSearch(id: number) {
   return { ...await summary(row), listings };
 }
 
-export async function completeSearch(id: number, listings: Omit<Listing, "id">[]) {
+export async function completeSearch(id: number, listings: Omit<Listing, "id">[], batchName: SearchBatch, continueBroad = false, maxResults = 5) {
   await ready;
-  const statements: Statement[] = listings.slice(0, 5).map(item => ({
+  const statements: Statement[] = listings.slice(0, maxResults).map(item => ({
     sql: `INSERT INTO housing_listings
-      (search_id, title, url, description, price, area, rooms, location, image, score, features, images, ai_summary, summary_evidence, criterion_results)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (search_id, batch, title, url, description, price, area, rooms, location, image, score, features, images, ai_summary, summary_evidence, criterion_results)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(search_id, url) DO UPDATE SET
+       batch = CASE WHEN excluded.batch = 'focused' THEN 'focused' ELSE housing_listings.batch END,
       image = COALESCE(housing_listings.image, excluded.image),
       features = excluded.features,
       images = CASE WHEN housing_listings.images = '[]' THEN excluded.images ELSE housing_listings.images END,
       ai_summary = COALESCE(housing_listings.ai_summary, excluded.ai_summary),
       summary_evidence = CASE WHEN housing_listings.summary_evidence = '[]' THEN excluded.summary_evidence ELSE housing_listings.summary_evidence END,
       criterion_results = excluded.criterion_results`,
-    args: [id, item.title, item.url, item.description, item.price, item.area, item.rooms,
+    args: [id, batchName, item.title, item.url, item.description, item.price, item.area, item.rooms,
       item.location, item.image, item.score, JSON.stringify(item.features), JSON.stringify(item.images),
       item.aiSummary, JSON.stringify(item.summaryEvidence), JSON.stringify(item.criterionResults)],
   }));
-  statements.push({ sql: "UPDATE housing_searches SET status = 'completed', stage = 'ready', run_id = NULL, analyzed = 1, error = NULL WHERE id = ?",
-    args: [id] });
+  statements.push({ sql: `UPDATE housing_searches SET status = ?, stage = ?, phase = ?, run_id = NULL,
+      focused_matches = COALESCE(?, focused_matches), analyzed = 1, error = NULL WHERE id = ?`,
+    args: [continueBroad ? "running" : "completed", continueBroad ? "searching" : "ready",
+      continueBroad ? "broad" : batchName, batchName === "focused" ? listings.length : null, id] });
   await batch(statements);
 }
 

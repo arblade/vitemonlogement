@@ -93,12 +93,38 @@ export const HousingSearchSummaryStage = {
   failed: 'failed',
 } as const;
 
+export type HousingSearchSummaryPhase = typeof HousingSearchSummaryPhase[keyof typeof HousingSearchSummaryPhase];
+
+
+export const HousingSearchSummaryPhase = {
+  focused: 'focused',
+  broad: 'broad',
+} as const;
+
+export type HousingSearchRequestBatch = typeof HousingSearchRequestBatch[keyof typeof HousingSearchRequestBatch];
+
+
+export const HousingSearchRequestBatch = {
+  focused: 'focused',
+  broad: 'broad',
+} as const;
+
+export interface HousingSearchRequest {
+  batch: HousingSearchRequestBatch;
+  path: string;
+  input: string;
+}
+
 export interface HousingSearchSummary {
   id: number;
   prompt: string;
   criteria: HousingCriteria;
   status: HousingSearchSummaryStatus;
   stage?: HousingSearchSummaryStage;
+  phase?: HousingSearchSummaryPhase;
+  searchRequests?: HousingSearchRequest[];
+  /** @nullable */
+  focusedMatches?: number | null;
   count: number;
   createdAt: string;
   analyzed: boolean;
@@ -148,8 +174,17 @@ export interface HousingCriterionResult {
   evidence: string;
 }
 
+export type HousingListingBatch = typeof HousingListingBatch[keyof typeof HousingListingBatch];
+
+
+export const HousingListingBatch = {
+  focused: 'focused',
+  broad: 'broad',
+} as const;
+
 export interface HousingListing {
   id: number;
+  batch: HousingListingBatch;
   title: string;
   url: string;
   description: string;
