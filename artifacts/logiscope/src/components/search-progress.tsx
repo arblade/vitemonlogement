@@ -23,12 +23,12 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
         ? 'Nous parcourons les annonces qui pourraient vous convenir.'
         : 'Nous repérons vos critères dans votre description.';
 
-  return <section className="rounded-2xl border border-[#d7dcbc] bg-[#e9edcf] px-5 py-6 md:px-8 md:py-7" aria-label="Recherche en cours" aria-live="polite">
-    <div className="flex items-center gap-2 font-data text-[10px] uppercase tracking-[.14em] text-[#66704d]">
+  return <section className="rounded-2xl border border-[#d7dcbc] bg-lime-wash px-5 py-6 md:px-8 md:py-7" aria-label="Recherche en cours" aria-live="polite">
+    <div className="flex items-center gap-2 font-data text-xs uppercase tracking-[.14em] text-[#66704d]">
       <span className="pulse-dot size-2 rounded-full bg-[#77874c]" aria-hidden="true" />
       Recherche en cours
     </div>
-    <h3 data-testid="text-current-activity" className="mt-3 max-w-xl text-lg font-semibold leading-snug tracking-tight text-[#292635]">{activity}</h3>
+    <h3 data-testid="text-current-activity" className="mt-3 max-w-xl text-lg font-semibold leading-snug tracking-tight text-ink">{activity}</h3>
     <p className="mt-1 text-xs leading-relaxed text-[#626b51]">{phase === 'broad' ? 'Les premières annonces sont disponibles plus bas.' : 'Les résultats apparaîtront sur cette page dès qu’ils seront prêts.'}</p>
 
     <div
@@ -47,7 +47,7 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
       {steps.slice(0, activeIndex + 1).map((step, index) => {
         const complete = phase === 'broad' || index < activeIndex;
         return <li key={step.key} data-testid={`stage-${step.key}`} aria-current={!complete ? 'step' : undefined} className="flex items-center gap-2.5 text-sm text-[#3c4233]">
-          <span className={`grid size-5 shrink-0 place-items-center rounded-full ${complete ? 'bg-[#77874c] text-[#f5f3eb]' : 'border-2 border-[#77874c]'}`} aria-hidden="true">
+          <span className={`grid size-5 shrink-0 place-items-center rounded-full ${complete ? 'bg-[#77874c] text-paper' : 'border-2 border-[#77874c]'}`} aria-hidden="true">
             {complete && <Check size={12} strokeWidth={2.5} />}
           </span>
           <span className={complete ? 'text-[#68705a]' : 'font-semibold'}>{step.label}</span>

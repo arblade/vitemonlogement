@@ -48,16 +48,16 @@ export function ListingGallery({ listing, large = false }: { listing: HousingLis
       <span className="max-w-[230px] text-sm font-semibold">{broken ? 'Cette photo n’a pas pu être chargée.' : 'Aucune photo fournie pour cette annonce.'}</span>
       {broken && <span className="text-xs">Vous pouvez consulter les autres photos ou l’annonce d’origine.</span>}
     </div>}
-    {images.length > 0 && <span className="absolute left-4 top-4 rounded-full bg-[#fbfaf5]/95 px-3 py-1.5 font-data text-[10px] uppercase tracking-[.08em] text-[#343341]">
+    {images.length > 0 && <span className="absolute left-4 top-4 rounded-full bg-cream/95 px-3 py-1.5 font-data text-xs uppercase tracking-[.08em] text-[#343341]">
       Photo {visibleIndex + 1} / {images.length}
     </span>}
     {images.length > 1 && <>
       <div className="absolute inset-x-3 top-1/2 flex -translate-y-1/2 justify-between">
-        <button type="button" data-testid={`${large ? 'detail' : 'card'}-photo-prev-${listing.id}`} aria-label="Photo précédente" onClick={() => move(-1)} className="grid size-10 place-items-center rounded-full bg-[#fbfaf5]/95 text-[#292635] shadow-sm transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#292635]"><ArrowLeft size={18}/></button>
-        <button type="button" data-testid={`${large ? 'detail' : 'card'}-photo-next-${listing.id}`} aria-label="Photo suivante" onClick={() => move(1)} className="grid size-10 place-items-center rounded-full bg-[#fbfaf5]/95 text-[#292635] shadow-sm transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#292635]"><ArrowRight size={18}/></button>
+        <button type="button" data-testid={`${large ? 'detail' : 'card'}-photo-prev-${listing.id}`} aria-label="Photo précédente" onClick={() => move(-1)} className="grid size-10 place-items-center rounded-full bg-cream/95 text-ink shadow-sm transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"><ArrowLeft size={18}/></button>
+        <button type="button" data-testid={`${large ? 'detail' : 'card'}-photo-next-${listing.id}`} aria-label="Photo suivante" onClick={() => move(1)} className="grid size-10 place-items-center rounded-full bg-cream/95 text-ink shadow-sm transition-transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"><ArrowRight size={18}/></button>
       </div>
       <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5" aria-label="Choisir une photo">
-        {images.map((url, index) => <button key={`${url}-${index}`} type="button" data-testid={`${large ? 'detail' : 'card'}-photo-dot-${listing.id}-${index}`} aria-label={`Afficher la photo ${index + 1}`} aria-current={index === visibleIndex ? 'true' : undefined} onClick={() => setActive(index)} className={`size-2.5 rounded-full border border-[#fbfaf5] transition-transform hover:scale-125 ${index === visibleIndex ? 'bg-[#fbfaf5]' : 'bg-[#292635]/50'}`}/>)}
+        {images.map((url, index) => <button key={`${url}-${index}`} type="button" data-testid={`${large ? 'detail' : 'card'}-photo-dot-${listing.id}-${index}`} aria-label={`Afficher la photo ${index + 1}`} aria-current={index === visibleIndex ? 'true' : undefined} onClick={() => setActive(index)} className={`size-2.5 rounded-full border border-cream transition-transform hover:scale-125 ${index === visibleIndex ? 'bg-cream' : 'bg-ink/50'}`}/>)}
       </div>
     </>}
   </div>;

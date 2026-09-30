@@ -1,6 +1,15 @@
 # Refonte UX / design et saisie en deux temps
 
-**Statut :** audit et plan d'action terminés, rien de codé. Doc complet : « Vite mon logement — Audit UX et plan de refonte ».
+**Statut :** audit terminé ; phase 1 (quick wins front) implémentée le 30/09/2026 sur `develop` ; phases 2 à 4 non codées.
+
+## Phase 1 réalisée
+- Annonces consultées : elles ne sont plus repoussées en bas avant le tri, elles restent grisées à leur place.
+- Bloc technique « Requêtes envoyées à Leboncoin » (JSON Apify) masqué, visible avec `?debug=1`.
+- Bloc promotionnel « Le tri est fait » supprimé ; bandeau de la page résultats et titres réduits ; « Affiner votre recherche » compacté.
+- Vocabulaire : « Refresh » → « Chercher d'autres annonces », « J'aime / annonces aimées » → « Favoris ».
+- Style : une seule police (DM Sans ; Instrument Serif et Space Mono retirées), aucun texte sous 12 px (52 occurrences de 8 à 11 px), 14 couleurs principales passées en jetons de thème (`ink`, `lime`, `line`, `sage`…). Il reste environ 190 occurrences de couleurs en dur moins fréquentes.
+- Non fait de cette phase : accueil orienté bénéfice et bloc avant/après (phase 2), groupes « Correspond / Pistes proches » (phase 2).
+ Doc complet : « Vite mon logement — Audit UX et plan de refonte ».
 **Source :** conversation « Design et UX de l'app » (30/09/2026)
 
 ## Demande
