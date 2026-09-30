@@ -1,5 +1,9 @@
 import type { HousingCriterion, HousingCriterionResult, HousingFeature, HousingListing } from '@workspace/api-client-react';
+import { DoorOpen, Euro, MapPin, Ruler, type LucideIcon } from 'lucide-react';
 import { formatPrice } from '@/components/site-shell';
+
+/** Icône (trait fin) de chaque repère essentiel, partagée par la carte et la fiche détaillée. */
+export const generalIcons: Record<string, LucideIcon> = { Prix: Euro, Surface: Ruler, Pièces: DoorOpen, Localisation: MapPin };
 
 const normalize = (text: string) => text.toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 

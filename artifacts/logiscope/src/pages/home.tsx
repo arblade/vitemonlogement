@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useLocation, Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateHousingSearch, useListHousingSearches, getListHousingSearchesQueryKey, getGetHousingSearchQueryKey } from '@workspace/api-client-react';
-import { ArrowRight, ArrowUp, Check, ChevronRight, Search, X } from 'lucide-react';
+import { ArrowRight, ArrowUp, Building2, Cat, Check, ChevronRight, House, PenLine, ScanSearch, Search, TreeDeciduous, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,14 +11,14 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { ErrorNotice, formatDate } from '@/components/site-shell';
 
 const suggestions = [
-  { emoji: '🐱', text: 'Un studio à Lille, 650 € maximum, chat accepté' },
-  { emoji: '🛗', text: 'Un T2 à Lyon, 1 200 € maximum, avec ascenseur' },
-  { emoji: '🌳', text: 'Une maison à Nantes, 3 chambres, avec jardin' },
+  { icon: Cat, text: 'Un studio à Lille, 650 € maximum, chat accepté' },
+  { icon: Building2, text: 'Un T2 à Lyon, 1 200 € maximum, avec ascenseur' },
+  { icon: TreeDeciduous, text: 'Une maison à Nantes, 3 chambres, avec jardin' },
 ];
 const steps = [
-  { emoji: '✍️', title: 'Vous décrivez', text: 'Ville, budget, et tout ce qui compte pour vous, avec vos propres mots.' },
-  { emoji: '🔎', title: 'On cherche et on vérifie', text: 'Nous parcourons les annonces et contrôlons chacun de vos critères.' },
-  { emoji: '🏡', title: 'Vous choisissez', text: 'Vous voyez ce qui est confirmé, ce qui reste à vérifier, et vous comparez.' },
+  { icon: PenLine, title: 'Vous décrivez', text: 'Ville, budget, et tout ce qui compte pour vous, avec vos propres mots.' },
+  { icon: ScanSearch, title: 'On cherche et on vérifie', text: 'Nous parcourons les annonces et contrôlons chacun de vos critères.' },
+  { icon: House, title: 'Vous choisissez', text: 'Vous voyez ce qui est confirmé, ce qui reste à vérifier, et vous comparez.' },
 ];
 type PromptForm = { prompt: string };
 const apiMessage = (error: unknown, fallback: string) => {
@@ -68,14 +68,14 @@ export default function Home() {
       </Form>
       {localError && <div role="alert" className="mt-5 text-left"><ErrorNotice message={localError}/></div>}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-        {suggestions.map(({ emoji, text: suggestion }, index) => <button key={suggestion} type="button" data-testid={`button-suggestion-${index}`} onClick={() => { promptForm.setValue('prompt', suggestion, { shouldValidate: true }); promptForm.setFocus('prompt'); }} className="rounded-full border border-line bg-paper px-4 py-2.5 text-sm text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime"><span aria-hidden="true" className="mr-2">{emoji}</span>{suggestion}</button>)}
+        {suggestions.map(({ icon: Icon, text: suggestion }, index) => <button key={suggestion} type="button" data-testid={`button-suggestion-${index}`} onClick={() => { promptForm.setValue('prompt', suggestion, { shouldValidate: true }); promptForm.setFocus('prompt'); }} className="inline-flex items-center rounded-full border border-line bg-paper px-4 py-2.5 text-sm text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime"><Icon size={16} aria-hidden="true" className="mr-2 shrink-0 text-brand"/>{suggestion}</button>)}
       </div>
     </section>
 
     <section aria-label="Comment ça marche" className="mx-auto max-w-5xl px-5 pb-14">
       <div className="grid gap-4 md:grid-cols-3">
-        {steps.map((step, index) => <div key={step.title} className="rounded-3xl bg-sage p-6">
-          <div className="mb-3 flex items-center gap-3"><span aria-hidden="true" className="grid size-11 place-items-center rounded-2xl bg-paper text-xl shadow-sm">{step.emoji}</span><span className="text-xs font-semibold text-brand-deep">Étape {index + 1}</span></div>
+        {steps.map(({ icon: Icon, ...step }, index) => <div key={step.title} className="rounded-3xl bg-sage p-6">
+          <div className="mb-3 flex items-center gap-3"><span aria-hidden="true" className="grid size-11 place-items-center rounded-2xl bg-brand-wash text-brand"><Icon size={22} strokeWidth={1.75}/></span><span className="text-xs font-semibold text-brand-deep">Étape {index + 1}</span></div>
           <h2 className="text-lg font-semibold">{step.title}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-stone">{step.text}</p>
         </div>)}

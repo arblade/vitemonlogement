@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorNotice, Eyebrow, formatDate, formatPrice } from '@/components/site-shell';
 import { ListingGallery } from '@/components/listing-gallery';
 import { ListingDetail } from '@/components/listing-detail';
-import { listingFacts } from '@/components/listing-facts';
+import { generalIcons, listingFacts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
@@ -71,7 +71,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
            </div>
         </div>
          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-soft bg-line-soft sm:grid-cols-4" aria-label="Repères essentiels">
-           {generals.map(({ label, value }) => <div key={label} data-testid={`card-general-${listing.id}-${label}`} className="min-w-0 bg-[#f7f7f7] px-3 py-3"><span className="block font-data text-xs uppercase tracking-[.06em] text-stone">{label}</span><strong className={`mt-1 block break-words font-semibold ${label === 'Prix' ? 'text-[16px] tracking-[-.03em]' : 'text-[12px]'}`}>{value}</strong></div>)}
+           {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`card-general-${listing.id}-${label}`} className="min-w-0 bg-[#f7f7f7] px-3 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.06em] text-stone">{Icon && <Icon size={13} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className={`mt-1 block break-words font-semibold ${label === 'Prix' ? 'text-[16px] tracking-[-.03em]' : 'text-[12px]'}`}>{value}</strong></div>; })}
          </div>
          {criteria.length > 0 && <div className="mt-5" data-testid={`card-criteria-${listing.id}`}>
            <div className="mb-2 font-data text-xs uppercase tracking-[.1em] text-moss">Vos critères · {criteria.length}</div>

@@ -2,7 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { HousingCriterion, HousingListing } from '@workspace/api-client-react';
 import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles, X } from 'lucide-react';
 import { ListingGallery } from '@/components/listing-gallery';
-import { listingFacts } from '@/components/listing-facts';
+import { generalIcons, listingFacts } from '@/components/listing-facts';
 
 function sourceName(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -53,7 +53,7 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
             <section aria-labelledby={`generals-${listing.id}`} className="border-b border-line-soft py-7">
               <h2 id={`generals-${listing.id}`} className="mb-4 font-data text-xs uppercase tracking-[.12em] text-moss">01 / Repères essentiels</h2>
               <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-                {generals.map(({ label, value }) => <div key={label} data-testid={`general-${listing.id}-${label}`} className="min-w-0 rounded-xl bg-mist p-4"><span className="block font-data text-xs uppercase tracking-[.08em] text-stone">{label}</span><strong className="mt-2 block break-words text-[16px] font-semibold">{value}</strong></div>)}
+                {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`general-${listing.id}-${label}`} className="min-w-0 rounded-xl bg-mist p-4"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.08em] text-stone">{Icon && <Icon size={14} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className="mt-2 block break-words text-[16px] font-semibold">{value}</strong></div>; })}
               </div>
             </section>
 
