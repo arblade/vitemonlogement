@@ -60,7 +60,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
     <button type="button" data-testid={`button-open-listing-${listing.id}`} onClick={() => { onViewed(); setOpen(true); }} aria-label={`Lire le détail de l’annonce : ${listing.title}`} className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-moss"/>
     <div className="grid md:grid-cols-[260px_1fr] xl:grid-cols-[310px_1fr]">
       <div className="relative z-20 min-h-[230px] p-3 md:min-h-full">
-        <div onClickCapture={onViewed}><ListingGallery key={listing.id} listing={listing}/></div>
+        <ListingGallery key={listing.id} listing={listing}/>
       </div>
       <div className="flex flex-col p-5 md:p-6">
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">

@@ -70,6 +70,21 @@ test("le premier compte a adopté l'ancienne recherche, et ses favoris sont en b
   await page.close();
 });
 
+test("galerie (mobile) : faire défiler les photos ne grise pas l'annonce, même après rechargement", async () => {
+  const page = await mobile.newPage();
+  await page.goto(base + "/searches/1");
+  await page.waitForSelector("[data-testid=card-photo-next-1]");
+  await page.click("[data-testid=card-photo-next-1]");
+  await page.click("[data-testid=card-photo-next-1]");
+  await page.click("[data-testid=card-photo-prev-1]");
+  assert.match(await text(page, "[data-testid=card-gallery-1]"), /photo 2 \/ 3/i);
+  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
+  await page.reload();
+  await page.waitForSelector("[data-testid=card-listing-1]");
+  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
+  await page.close();
+});
+
 test("fiche détaillée (mobile) : ligne « Contacter le vendeur », message replié puis déplié", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");

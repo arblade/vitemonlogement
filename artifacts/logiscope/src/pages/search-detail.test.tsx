@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import SearchDetail from '@/pages/search-detail';
+import { resetListingInteractionsCache } from '@/lib/listing-interactions';
 import { checks, listing, mockFetch, search, type Route as FetchRoute } from '@/test/fixtures';
 
 const api = vi.hoisted(() => ({
@@ -33,6 +34,7 @@ function renderPage(path = '/searches/1') {
 const cardOrder = () => screen.getAllByTestId(/^card-listing-\d+$/).map(card => card.getAttribute('data-testid')!.replace('card-listing-', ''));
 
 beforeEach(() => {
+  resetListingInteractionsCache();
   api.state.data = search(); api.state.isLoading = false; api.state.isError = false;
   api.refresh.mockReset(); api.create.mockReset();
   mockFetch(favoriteRoutes());
@@ -119,6 +121,37 @@ describe('Page résultats : tri et consultation', () => {
     expect(cardOrder()).toEqual(['1', '2', '3']);
     expect(screen.getByText(/2 annonces non consultées/)).toBeInTheDocument();
     expect(screen.getByText(/Celles déjà ouvertes sont grisées/)).toBeInTheDocument();
+  });
+});
+
+describe('Galerie photo d’une carte', () => {
+  const photos = ['https://img.test/a.jpg', 'https://img.test/b.jpg', 'https://img.test/c.jpg'];
+
+  it('faire défiler les photos ne marque pas l’annonce comme consultée (ni grisée)', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { images: photos, image: photos[0] }), listing(2)] });
+    renderPage();
+    const card = screen.getByTestId('card-listing-1');
+    await user.click(screen.getByTestId('card-photo-next-1'));
+    await user.click(screen.getByTestId('card-photo-next-1'));
+    await user.click(screen.getByTestId('card-photo-prev-1'));
+    await user.click(screen.getByTestId('card-photo-dot-1-0'));
+    expect(within(card).getByTestId('card-image-1')).toHaveAttribute('src', photos[0]);
+    expect(card).not.toHaveTextContent('déjà consultée');
+    expect(card.className).not.toMatch(/opacity|grayscale/);
+    expect(screen.getByText(/2 annonces non consultées/)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('logiscope:listing-interactions:v1') ?? '{"viewed":[]}').viewed).toEqual([]);
+  });
+
+  it('les flèches changent bien de photo, et ouvrir le détail reste ce qui marque l’annonce consultée', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { images: photos, image: photos[0] })] });
+    renderPage();
+    await user.click(screen.getByTestId('card-photo-next-1'));
+    expect(screen.getByTestId('card-image-1')).toHaveAttribute('src', photos[1]);
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée'));
   });
 });
 

@@ -15,7 +15,7 @@ const id = await createSearch("Un studio à Lille, 700 € max, chat accepté");
 await setCriteria(id, { location: "Lille", intent: "rent", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }] });
 const listing = (n: number) => ({
   batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: `https://www.leboncoin.fr/ad/locations/${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
-  location: "Lille", image: null, images: [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n, features: [],
+  location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n, features: [],
   criterionResults: [
     { id: "price", label: "Budget ≤ 700 €", status: "confirmed" as const, source: "api" as const, value: "590 €", evidence: "" },
     { id: "wish-1", label: "chat accepté", status: "unknown" as const, source: "unknown" as const, value: "", evidence: "" },
