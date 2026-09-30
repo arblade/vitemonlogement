@@ -85,7 +85,7 @@ export default function Home() {
     <section id="recherches" className="mx-auto max-w-3xl px-5 pb-20 pt-6">
       <div className="mb-3 flex items-center justify-between gap-4">
         <h2 className="text-sm font-semibold text-stone">Recherches récentes</h2>
-        <Link href="/searches" data-testid="link-all-searches" className="inline-flex items-center gap-1.5 text-sm text-stone transition-colors hover:text-ink">Tout voir <ArrowRight size={14} aria-hidden="true"/></Link>
+        <Link href="/searches" data-testid="link-all-searches" className="inline-flex min-h-11 items-center gap-1.5 text-sm text-stone transition-colors hover:text-ink">Tout voir <ArrowRight size={14} aria-hidden="true"/></Link>
       </div>
       {history.isLoading ? <div className="space-y-2">{[0,1,2].map(i=><Skeleton key={i} className="h-16 rounded-2xl bg-sage"/>)}</div> :
         history.isError ? <ErrorNotice message="Impossible de charger vos recherches pour le moment." retry={()=>history.refetch()}/> :

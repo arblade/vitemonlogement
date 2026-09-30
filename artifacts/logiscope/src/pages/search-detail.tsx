@@ -63,9 +63,9 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
         <div onClickCapture={onViewed}><ListingGallery key={listing.id} listing={listing}/></div>
       </div>
       <div className="flex flex-col p-5 md:p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="min-w-0"><div className="mb-2 font-data text-xs uppercase tracking-[.08em] text-[#717171]">{listing.batch === 'broad' ? 'Recherche élargie' : 'Recherche ciblée'} · {String(index+1).padStart(2,'0')}{viewed ? ' · déjà consultée' : ''}</div><h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
-           <div className="relative z-20 flex shrink-0 items-start gap-2">
+           <div className="relative z-20 flex shrink-0 items-center justify-between gap-2 sm:items-start sm:justify-end">
              <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={onFavorite} className={`grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-[#ff385c] bg-lime-wash text-[#c13515]' : 'border-[#dddddd] bg-white text-stone hover:text-[#c13515]'}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'}/></button>
              <div className="rounded-lg bg-lime-wash px-2.5 py-2 text-center"><span className="block font-data text-[16px] font-bold leading-none">{Math.round(listing.score)}<span className="text-xs">/100</span></span><span className="mt-1 block text-xs uppercase tracking-[.05em]">pertinence</span></div>
            </div>
@@ -154,7 +154,7 @@ export default function SearchDetail() {
   return <main className="min-h-[75dvh]">
     <section className="border-b border-line-soft">
       <div className="mx-auto max-w-[1440px] px-5 pb-8 pt-6 md:px-10 md:pb-10 md:pt-8 lg:px-16">
-         <Link href="/searches" data-testid="link-back-home" className="inline-flex items-center gap-2 text-sm text-stone transition-colors hover:text-ink"><ArrowLeft size={15}/> Toutes mes recherches</Link>
+         <Link href="/searches" data-testid="link-back-home" className="inline-flex min-h-11 items-center gap-2 text-sm text-stone transition-colors hover:text-ink"><ArrowLeft size={15}/> Toutes mes recherches</Link>
         {search.isLoading ? <div className="mt-12 space-y-4"><Skeleton className="h-12 w-2/3 bg-sage"/><Skeleton className="h-5 w-1/3 bg-sage"/></div> : data ? <>
            <div className="mt-6 flex flex-wrap items-center gap-2 text-sm font-medium text-moss"><span>Location</span><span aria-hidden="true">·</span><span className="text-stone">Recherche n° {data.id}</span></div>
           <div className="mt-5 flex flex-col justify-between gap-7 lg:flex-row lg:items-end"><div><h1 data-testid="text-search-location" className="text-[clamp(2rem,4.2vw,3.4rem)] font-semibold leading-[1.05] tracking-[-.03em]">{data.criteria.location || 'Votre recherche'}</h1><p data-testid="text-search-prompt" className="mt-3 max-w-[700px] text-base leading-relaxed text-stone">“{data.prompt}”</p></div>
@@ -190,8 +190,8 @@ export default function SearchDetail() {
              <aside className="h-fit rounded-2xl border border-line bg-cream p-6 lg:sticky lg:top-6"><span className="font-data text-xs uppercase tracking-[.13em] text-[#717171]">Votre demande</span><h3 className="mt-4 text-[28px] leading-tight">Ce que nous avons cherché pour vous.</h3><div className="mt-6 space-y-3 border-t border-line-soft pt-5 text-xs">{[
                 ['Projet','Location'],['Lieu',data.criteria.location],['Budget min.',data.criteria.minPrice!=null?formatPrice(data.criteria.minPrice):'Non précisé'],['Budget max.',data.criteria.maxPrice!=null?formatPrice(data.criteria.maxPrice):'Non précisé'],['Surface min.',data.criteria.minArea!=null?`${data.criteria.minArea} m²`:'Non précisée'],['Surface max.',data.criteria.maxArea!=null?`${data.criteria.maxArea} m²`:'Non précisé'],['Pièces min.',data.criteria.minRooms!=null?String(data.criteria.minRooms):'Non précisées'],['Rayon',data.criteria.radius?`${data.criteria.radius} km`:'Non précisé'],['Mots-clés',data.criteria.keywords||'Aucun']
              ].map(([label,value])=><div key={label} className="flex justify-between gap-4"><span className="text-[#717171]">{label}</span><strong className="max-w-[155px] text-right font-semibold">{value}</strong></div>)}</div>{!!data.criteria.wishes?.length && <div className="mt-5 border-t border-line-soft pt-5"><span className="text-xs text-[#717171]">Souhaits</span><p className="mt-2 text-xs font-semibold">{data.criteria.wishes.join(' · ')}</p></div>}
-             <div className="mt-6 border-t border-line-soft pt-5">
-               <h4 className="text-[13px] font-semibold">Comment les critères sont vérifiés</h4>
+             <details className="group/how mt-6 border-t border-line-soft pt-5">
+               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[13px] font-semibold">Comment les critères sont vérifiés <span aria-hidden="true" className="text-stone transition-transform group-open/how:rotate-180">⌄</span></summary>
                <p className="mt-2 text-xs leading-relaxed text-stone">Cette classification indique où chercher une réponse, pas si une annonce répond au critère.</p>
                {data.criteria.checks?.length ? <div className="mt-5 space-y-5">{checkGroups.map(group => {
                  const items = data.criteria.checks?.filter(check => check.availability === group.availability) || [];
@@ -200,7 +200,7 @@ export default function SearchDetail() {
                    {items.length ? <ul className="mt-2 space-y-1.5 pl-3">{items.map(check => <li data-testid={`criterion-classification-${check.id}`} key={check.id} className="border-l-2 border-[#ffe3e8] py-1 pl-3 text-xs font-medium leading-snug">{check.label}</li>)}</ul> : <p className="mt-2 pl-3 text-xs text-[#717171]">Aucun critère dans cette catégorie.</p>}
                  </section>;
                })}</div> : <p className="mt-4 text-xs leading-relaxed text-stone">Aucun critère individuel n’a été identifié dans cette demande.</p>}
-             </div>
+             </details>
              <div className="mt-6 rounded-lg bg-sage p-4 text-xs leading-relaxed text-[#484848]"><Info size={15} className="mb-2"/> Un score de pertinence aide à parcourir les annonces. Une information non précisée n’est pas un critère non satisfait. Vérifiez les détails directement sur la source avant toute décision.</div></aside>
           </div>}
         </>}
