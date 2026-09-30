@@ -6,12 +6,18 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingPlaceKind } from './housingPlaceKind';
+import type { HousingPlaceMode } from './housingPlaceMode';
 
 export interface HousingPlace {
   id: string;
   label: string;
   kind: HousingPlaceKind;
   address: string;
+  /**
+     * Travel mode stated explicitly by the user (wins over the automatic choice)
+     * @nullable
+     */
+  mode?: HousingPlaceMode;
   /** @nullable */
   lat?: number | null;
   /** @nullable */

@@ -8,7 +8,7 @@
 import type { TravelMode } from './travelMode';
 
 /**
- * Mode chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
+ * Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
  */
 export interface ListingRoute {
   placeId: string;

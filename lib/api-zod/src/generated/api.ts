@@ -52,6 +52,7 @@ export const InterpretHousingRequestResponse = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -89,6 +90,7 @@ export const ListHousingSearchesResponseItem = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -150,6 +152,7 @@ export const CreateHousingSearchResponse = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -240,6 +243,7 @@ export const GetHousingSearchResponse = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -333,6 +337,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -426,6 +431,7 @@ export const RefreshHousingSearchResponse = zod.object({
   "label": zod.string(),
   "kind": zod.enum(['work', 'school', 'other']),
   "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
   "resolved": zod.string().nullish()
@@ -497,7 +503,7 @@ export const GetListingRoutesResponse = zod.object({
   "durationSeconds": zod.number().int(),
   "distanceMeters": zod.number().int(),
   "path": zod.array(zod.array(zod.number()))
-}).describe('Mode chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)'))
+}).describe('Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)'))
 })
 
 

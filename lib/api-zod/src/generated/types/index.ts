@@ -21,6 +21,7 @@ export * from './housingListingBatch';
 export * from './housingListingGeoPrecision';
 export * from './housingPlace';
 export * from './housingPlaceKind';
+export * from './housingPlaceMode';
 export * from './housingPrompt';
 export * from './housingSearchDetail';
 export * from './housingSearchInput';

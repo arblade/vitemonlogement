@@ -125,7 +125,7 @@ test("lieu de vie : extrait de la demande, géocodé une fois et enregistré ave
   const id = await createSearch("Un studio à Lille, je travaille au 1 place de la Gare, j'y vais à vélo");
   assert.equal((await runToCompletion(id)).status, "completed");
   const search = await getSearch(id);
-  assert.deepEqual(search?.criteria.places, [{ id: "place-1", label: "Travail", kind: "work", address: "1 place de la Gare",
+  assert.deepEqual(search?.criteria.places, [{ id: "place-1", label: "Travail", kind: "work", address: "1 place de la Gare", mode: "bike",
     lat: 50.6372, lng: 3.0706, resolved: "1 Place de la Gare 59000 Lille" }]);
   assert.equal(counts.geocode - before, 1);
   const exact = search?.listings.find(item => item.url.endsWith("/1"));

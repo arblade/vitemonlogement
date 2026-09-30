@@ -18,14 +18,22 @@ let google: Server;
 let base = "";
 let googleCalls = 0;
 let googleStatus = 200;
+let googleModes: string[] = [];
+let noRouteFor = new Set<string>();
 
 before(async () => {
   await useMemoryDatabase();
   google = createServer((req, res) => {
-    googleCalls++;
-    res.statusCode = googleStatus;
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ routes: [{ duration: "1534s", distanceMeters: 5210, polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" } }] }));
+    let body = "";
+    req.on("data", chunk => (body += chunk));
+    req.on("end", () => {
+      googleCalls++;
+      const mode = JSON.parse(body).travelMode as string;
+      googleModes.push(mode);
+      res.statusCode = googleStatus;
+      res.setHeader("content-type", "application/json");
+      res.end(JSON.stringify(noRouteFor.has(mode) ? {} : { routes: [{ duration: "1534s", distanceMeters: 5210, polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" } }] }));
+    });
   });
   await new Promise<void>(resolve => google.listen(0, "127.0.0.1", resolve));
   process.env.GOOGLE_ROUTES_BASE_URL = `http://127.0.0.1:${(google.address() as AddressInfo).port}`;
@@ -34,7 +42,7 @@ before(async () => {
   base = `http://127.0.0.1:${(app.address() as AddressInfo).port}/api`;
 });
 after(async () => { app.close(); google.close(); await closeDatabase(); });
-beforeEach(() => { process.env.GOOGLE_MAPS_API_KEY = "cle-de-test"; googleCalls = 0; googleStatus = 200; });
+beforeEach(() => { process.env.GOOGLE_MAPS_API_KEY = "cle-de-test"; googleCalls = 0; googleStatus = 200; googleModes = []; noRouteFor = new Set(); });
 
 test("listingPosition : garde les coordonnées Le Bon Coin et leur précision", () => {
   assert.deepEqual(listingPosition({ location: { city: "Rennes", lat: 48.11, lng: -1.68, type: "streetNumber" } }), { lat: 48.11, lng: -1.68, geoPrecision: "streetNumber" });
@@ -63,7 +71,7 @@ test("isPrecise : seules l'adresse exacte et la rue vont sur la carte", () => {
   assert.equal(isPrecise(at("street", null)), false);
 });
 
-test("parsePlaces : lieux de vie bornés (3 max), type validé, libellé par défaut ; un moyen de transport proposé par le LLM est ignoré", () => {
+test("parsePlaces : lieux de vie bornés (3 max), type validé, libellé par défaut ; moyen de transport gardé seulement s'il est valide", () => {
   const places = parsePlaces([
     { label: "Travail", kind: "work", address: " 20 place des Lices ", mode: "bike" },
     { kind: "school", address: "Université Rennes 2", mode: "fusée" },
@@ -71,10 +79,10 @@ test("parsePlaces : lieux de vie bornés (3 max), type validé, libellé par dé
     { label: "x", kind: "martien", address: "12 rue X" },
     { label: "y", kind: "other", address: "14 rue Y" },
   ]);
-  assert.deepEqual(places.map(place => [place.id, place.label, place.kind, place.address, "mode" in place]), [
-    ["place-1", "Travail", "work", "20 place des Lices", false],
-    ["place-2", "École", "school", "Université Rennes 2", false],
-    ["place-3", "x", "other", "12 rue X", false],
+  assert.deepEqual(places.map(place => [place.id, place.label, place.kind, place.address, place.mode]), [
+    ["place-1", "Travail", "work", "20 place des Lices", "bike"],
+    ["place-2", "École", "school", "Université Rennes 2", null],
+    ["place-3", "x", "other", "12 rue X", null],
   ]);
   assert.deepEqual(parsePlaces(undefined), []);
   assert.deepEqual(parsePlaces("Rennes"), []);
@@ -150,4 +158,19 @@ test("GET …/routes : recherche d'un autre compte ou annonce inconnue → 404 ;
   const failed = await fetch(`${base}/housing/searches/${mine.id}/listings/${mine.precise.id}/routes`, { headers: { cookie: mine.cookie } });
   assert.equal(failed.status, 200);
   assert.deepEqual(await failed.json(), { routes: [] });
+});
+
+test("GET …/routes : un moyen de transport dit par l'utilisateur l'emporte sur le choix automatique", async () => {
+  const { id, cookie, precise } = await searchFor("carte-8@test.fr", [{ ...workPlace, lat: 48.12, mode: "drive" }]);
+  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string }[] };
+  assert.equal(body.routes[0].mode, "drive");
+  assert.deepEqual(googleModes, ["DRIVE"], "ni marche ni vélo demandés");
+});
+
+test("GET …/routes : mode dit par l'utilisateur mais sans itinéraire (pas de transports) → l'app choisit", async () => {
+  noRouteFor = new Set(["TRANSIT"]);
+  const { id, cookie, precise } = await searchFor("carte-9@test.fr", [{ ...workPlace, lat: 48.13, mode: "transit" }]);
+  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string }[] };
+  assert.equal(body.routes[0].mode, "bike", "à 2,2 km : marche non demandée, vélo 25 min retenu");
+  assert.deepEqual(googleModes, ["TRANSIT", "BICYCLE"]);
 });

@@ -187,6 +187,10 @@ components:
         label: { type: string }
         kind: { type: string, enum: [work, school, other] }
         address: { type: string }
+        mode:
+          description: Travel mode stated explicitly by the user (wins over the automatic choice)
+          type: ["string", "null"]
+          enum: [transit, drive, bike, walk, null]
         lat: { type: ["number", "null"] }
         lng: { type: ["number", "null"] }
         resolved: { type: ["string", "null"] }
@@ -202,7 +206,7 @@ components:
           items:
             $ref: "#/components/schemas/ListingRoute"
     ListingRoute:
-      description: Mode chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
+      description: Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
       type: object
       required: [placeId, mode, durationSeconds, distanceMeters, path]
       properties:

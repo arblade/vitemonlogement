@@ -26,6 +26,8 @@ export type Place = {
   label: string;
   kind: "work" | "school" | "other";
   address: string;
+  /** Moyen de transport dit explicitement par l'utilisateur ; absent → l'app choisit (lib/travel.ts, commute). */
+  mode?: TravelMode | null;
   lat?: number | null;
   lng?: number | null;
   /** Adresse telle que retrouvée par le géocodeur (affichée à l'utilisateur). */
