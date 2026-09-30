@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { Criteria, Listing, Feature, Criterion, CriterionResult } from "./store";
 import { checksFor, classifyWish, matchesValue } from "./criteria";
+import { canonicalLocation } from "../../lib/places";
 import { criterionKey, dbAnalysisCache, descriptionHash, urlKey, type AnalysisCache, type CachedAnalysis, type GeneralExtraction, type Verdict } from "../../lib/analysis-cache";
 
 function client() {
@@ -37,7 +38,7 @@ export async function interpret(prompt: string): Promise<Criteria> {
   const preferences = declared.length ? declared : oldWishes.map(label => ({ label }));
   const wishes = preferences.map(value => String(value.label).trim().slice(0, 100));
   const criteria: Criteria = {
-    location: typeof result.location === "string" ? result.location.slice(0, 100) : "",
+    location: typeof result.location === "string" ? canonicalLocation(result.location.slice(0, 100)) : "",
     intent: "rent",
     minPrice: numeric(result.minPrice),
     maxPrice: numeric(result.maxPrice),

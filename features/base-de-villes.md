@@ -1,6 +1,19 @@
 # Base de villes pré-intégrée
 
-**Statut :** évaluation terminée, rien de codé.
+**Statut :** partie serveur implémentée (30/09/2026) ; autocomplétion front en attente de la saisie en deux temps.
+
+## Implémenté
+- `artifacts/api-server/src/data/communes.json` : 34 969 communes (code INSEE, nom, codes postaux, département, population, centre), 2 Mo, régénérable avec `pnpm --filter @workspace/api-server run data:communes`.
+- `src/lib/places.ts` : `suggestPlaces` (recherche floue en mémoire, insensible aux accents, à la casse et à « st »), `resolvePlace` (rattachement exact, département ou code postal pour les homonymes), `canonicalLocation`.
+- `GET /api/places/suggest?q=&limit=` (session requise, sans quota coûteux).
+- `interpret()` remplace la ville du LLM par le nom officiel quand elle est reconnue sans ambiguïté ; les cas ambigus, « Paris 12e » ou « Paris 12e, Vincennes » restent inchangés.
+- Écart avec la fiche : un fichier embarqué dans le build plutôt qu'une table `communes` (pas de migration, même comportement sur Postgres et PGlite).
+
+## Reste à faire
+- Champ d'autocomplétion dans le formulaire : le front n'a qu'un texte libre, cela vient avec l'écran « Vérifier » de la [refonte UX](refonte-ux-et-saisie-en-deux-temps.md).
+- Repose de la question quand la ville est ambiguë (`resolvePlace` renvoie déjà les candidats).
+- Remplacer le test « la ville contient la chaîne » (`criteria.ts`) par un test sur les coordonnées.
+
 **Source :** conversation « Feature géographique pour logement » (30/09/2026)
 
 ## Demande
