@@ -48,6 +48,9 @@ function current() {
   return snapshot;
 }
 
+/** Oublie le cache mémoire du localStorage (utilisé par les tests, qui réécrivent le stockage entre deux cas). */
+export function resetListingInteractionsCache() { snapshot = undefined; }
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   const onStorage = (event: StorageEvent) => {

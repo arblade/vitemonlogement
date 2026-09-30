@@ -20,7 +20,7 @@ test("prod : OpenAI interprète une demande en critères structurés", async () 
   assert.match(criteria.location, /lille/i);
   assert.equal(criteria.intent, "rent");
   assert.equal(criteria.maxPrice, 700);
-  assert.ok(criteria.wishes.some(wish => /balcon/i.test(wish)), `souhait « balcon » attendu, reçu : ${criteria.wishes.join(", ")}`);
+  assert.ok((criteria.wishes ?? []).some(wish => /balcon/i.test(wish)), `souhait « balcon » attendu, reçu : ${(criteria.wishes ?? []).join(", ")}`);
 });
 
 test("prod : recherche complète Apify + analyse OpenAI, de bout en bout", { timeout: 240_000 }, async () => {
