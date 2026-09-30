@@ -3,10 +3,9 @@ import type { Criteria, Listing, Feature, Criterion, CriterionResult } from "./s
 import { checksFor, classifyWish, matchesValue } from "./criteria";
 
 function client() {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-  if (!apiKey || !baseURL) throw new Error("L'intégration OpenAI n'est pas configurée.");
-  return new OpenAI({ apiKey, baseURL });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY n'est pas configurée.");
+  return new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL || undefined });
 }
 
 async function jsonResponse(system: string, user: string): Promise<unknown> {

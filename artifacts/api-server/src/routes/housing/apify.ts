@@ -1,4 +1,3 @@
-import { ReplitConnectors } from "@replit/connectors-sdk";
 import { completeSearch, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type Listing } from "./store";
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
@@ -7,11 +6,15 @@ import { actorRequest, focusedSearchTerm, isHousingListingUrl, shouldRunBroad, t
 
 const RESULT_LIMIT = process.env.NODE_ENV === "production" ? 100 : 5;
 const CANDIDATE_LIMIT = process.env.NODE_ENV === "production" ? 100 : 10;
-const connectors = new ReplitConnectors();
 const polling = new Set<number>();
 
 async function apify(path: string, init?: { method: string; headers: Record<string, string>; body: string }) {
-  const response = await connectors.proxy("apify", path, init);
+  const token = process.env.APIFY_TOKEN;
+  if (!token) throw new Error("APIFY_TOKEN n'est pas configuré.");
+  const response = await fetch(`https://api.apify.com${path}`, {
+    ...init,
+    headers: { ...init?.headers, Authorization: `Bearer ${token}` },
+  });
   if (!response.ok) {
     const body = await response.text();
     throw new Error(`Apify (${response.status}) : ${body.slice(0, 250)}`);

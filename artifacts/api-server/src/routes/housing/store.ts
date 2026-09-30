@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client/web";
+import pg from "pg";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
@@ -81,36 +81,54 @@ type ListingRow = Omit<Listing, "features" | "images" | "summaryEvidence" | "aiS
 type Args = (string | number | null)[];
 type Statement = { sql: string; args: Args };
 
-const remoteUrl = process.env.TURSO_DATABASE_URL;
-const remoteToken = process.env.TURSO_AUTH_TOKEN;
-const useRemote = process.env.NODE_ENV === "production" || process.env.LOGISCOPE_USE_TURSO === "1";
-if (process.env.NODE_ENV === "production" && (!remoteUrl || !remoteToken)) {
-  throw new Error("La production nécessite TURSO_DATABASE_URL et TURSO_AUTH_TOKEN : un fichier SQLite local n'est pas persistant sur le déploiement.");
+// SQLite en développement, Postgres en production (ou avec LOGISCOPE_USE_POSTGRES=1).
+const databaseUrl = process.env.DATABASE_URL;
+const usePg = process.env.NODE_ENV === "production" || process.env.LOGISCOPE_USE_POSTGRES === "1";
+if (usePg && !databaseUrl) {
+  throw new Error("Postgres est utilisé mais DATABASE_URL n'est pas définie (en production, elle est obligatoire).");
 }
-if (useRemote && Boolean(remoteUrl) !== Boolean(remoteToken)) {
-  throw new Error("TURSO_DATABASE_URL et TURSO_AUTH_TOKEN doivent être configurés ensemble.");
-}
-if (useRemote && remoteUrl && !/^libsql:\/\/[a-z0-9.-]+\.turso\.io\/?$/i.test(remoteUrl)) {
-  throw new Error("TURSO_DATABASE_URL doit être une URL valide de base Turso au format libsql://...turso.io.");
-}
+const pool = usePg
+  ? new pg.Pool({
+      connectionString: databaseUrl,
+      // L'URL externe de Render exige TLS ; l'URL interne n'en a pas besoin.
+      ssl: /\.render\.com/.test(databaseUrl!) ? { rejectUnauthorized: false } : undefined,
+    })
+  : null;
 const filename = process.env.LOGISCOPE_SQLITE_PATH || path.resolve(process.cwd(), ".data/logiscope.sqlite");
-if (!useRemote) mkdirSync(path.dirname(filename), { recursive: true });
-const remote = useRemote && remoteUrl ? createClient({ url: remoteUrl, authToken: remoteToken }) : null;
-const local = remote ? null : new DatabaseSync(filename);
+if (!pool) mkdirSync(path.dirname(filename), { recursive: true });
+const local = pool ? null : new DatabaseSync(filename);
+
+function toPg(sql: string) {
+  let n = 0;
+  return sql.replace(/\?/g, () => `$${++n}`);
+}
 
 async function query(sql: string, args: Args = []) {
-  if (remote) return remote.execute({ sql, args });
+  if (pool) {
+    const result = await pool.query(toPg(sql), args);
+    return { rows: result.rows as unknown[], rowsAffected: result.rowCount ?? 0, lastInsertRowid: null as number | bigint | null };
+  }
   const statement = local!.prepare(sql);
   if (/^\s*(SELECT|PRAGMA)/i.test(sql)) {
-    return { rows: statement.all(...args), rowsAffected: 0, lastInsertRowid: null };
+    return { rows: statement.all(...args) as unknown[], rowsAffected: 0, lastInsertRowid: null as number | bigint | null };
   }
   const result = statement.run(...args);
-  return { rows: [], rowsAffected: result.changes, lastInsertRowid: result.lastInsertRowid };
+  return { rows: [] as unknown[], rowsAffected: Number(result.changes), lastInsertRowid: result.lastInsertRowid as number | bigint | null };
 }
 
 async function batch(statements: Statement[]) {
-  if (remote) {
-    await remote.batch(statements, "write");
+  if (pool) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const item of statements) await client.query(toPg(item.sql), item.args);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
     return;
   }
   local!.exec("BEGIN");
@@ -124,6 +142,36 @@ async function batch(statements: Statement[]) {
 }
 
 const ready = (async () => {
+  if (pool) {
+    await query(`CREATE TABLE IF NOT EXISTS housing_searches (
+      id SERIAL PRIMARY KEY,
+      prompt TEXT NOT NULL,
+      criteria TEXT NOT NULL,
+      status TEXT NOT NULL,
+      stage TEXT NOT NULL DEFAULT 'interpreting',
+      phase TEXT NOT NULL DEFAULT 'focused',
+      focused_request TEXT,
+      broad_request TEXT,
+      focused_matches INTEGER,
+      run_id TEXT,
+      error TEXT,
+      analyzed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+    )`);
+    await query(`CREATE TABLE IF NOT EXISTS housing_listings (
+      id SERIAL PRIMARY KEY,
+      search_id INTEGER NOT NULL REFERENCES housing_searches(id),
+      batch TEXT NOT NULL DEFAULT 'focused',
+      title TEXT NOT NULL, url TEXT NOT NULL, description TEXT NOT NULL,
+      price DOUBLE PRECISION, area DOUBLE PRECISION, rooms INTEGER, location TEXT, image TEXT,
+      score INTEGER NOT NULL, features TEXT NOT NULL,
+      images TEXT NOT NULL DEFAULT '[]', ai_summary TEXT,
+      summary_evidence TEXT NOT NULL DEFAULT '[]',
+      criterion_results TEXT NOT NULL DEFAULT '[]',
+      UNIQUE(search_id, url)
+    )`);
+    return;
+  }
   await query(`CREATE TABLE IF NOT EXISTS housing_searches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     prompt TEXT NOT NULL,
@@ -184,8 +232,8 @@ async function execute(sql: string, args: (string | number | null)[] = []) {
 
 export async function createSearch(prompt: string) {
   const placeholder: Criteria = { location: "", intent: "rent", keywords: "", radius: 5, wishes: [] };
-  const result = await execute("INSERT INTO housing_searches (prompt, criteria, status, stage) VALUES (?, ?, 'running', 'interpreting')", [prompt, JSON.stringify(placeholder)]);
-  return Number(result.lastInsertRowid);
+  const result = await execute(`INSERT INTO housing_searches (prompt, criteria, status, stage) VALUES (?, ?, 'running', 'interpreting')${pool ? " RETURNING id" : ""}`, [prompt, JSON.stringify(placeholder)]);
+  return pool ? Number((result.rows[0] as { id: number }).id) : Number(result.lastInsertRowid);
 }
 
 export async function setCriteria(id: number, criteria: Criteria) {
@@ -279,7 +327,7 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
       ai_summary = COALESCE(housing_listings.ai_summary, excluded.ai_summary),
       summary_evidence = CASE WHEN housing_listings.summary_evidence = '[]' THEN excluded.summary_evidence ELSE housing_listings.summary_evidence END,
       criterion_results = excluded.criterion_results`,
-    args: [id, batchName, item.title, item.url, item.description, item.price, item.area, item.rooms,
+    args: [id, batchName, item.title, item.url, item.description, item.price, item.area, item.rooms == null ? null : Math.round(item.rooms),
       item.location, item.image, item.score, JSON.stringify(item.features), JSON.stringify(item.images),
       item.aiSummary, JSON.stringify(item.summaryEvidence), JSON.stringify(item.criterionResults)],
   }));
@@ -295,7 +343,7 @@ export async function saveAnalysis(id: number, enriched: { id: number; features:
   const statements: Statement[] = enriched.map(item => ({
     sql: "UPDATE housing_listings SET features = ?, ai_summary = ?, summary_evidence = ?, criterion_results = ?, score = ?, price = COALESCE(price, ?), area = COALESCE(area, ?), rooms = COALESCE(rooms, ?), location = COALESCE(location, ?) WHERE id = ? AND search_id = ?",
     args: [JSON.stringify(item.features), item.aiSummary, JSON.stringify(item.summaryEvidence), JSON.stringify(item.criterionResults), item.score,
-      item.price, item.area, item.rooms, item.location, item.id, id],
+      item.price, item.area, item.rooms == null ? null : Math.round(item.rooms), item.location, item.id, id],
   }));
   statements.push({ sql: "UPDATE housing_searches SET analyzed = 1 WHERE id = ?", args: [id] });
   await batch(statements);

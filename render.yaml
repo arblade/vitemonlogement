@@ -1,0 +1,21 @@
+# Blueprint Render : un seul service web sert l'API (/api) et le front compilé.
+# La base Postgres existe déjà : collez son « Internal Database URL » dans DATABASE_URL.
+services:
+  - type: web
+    name: vitemonlogement
+    runtime: node
+    plan: free # passer à « starter » pour éviter la mise en veille (les recherches Apify tournent en arrière-plan)
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/logiscope run build && pnpm --filter @workspace/api-server run build
+    startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 22.22.2
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: APIFY_TOKEN
+        sync: false
