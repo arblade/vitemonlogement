@@ -49,8 +49,8 @@ test("geocode : score trop faible, réponse vide ou erreur réseau → null, jam
 
 test("locatePlaces : chaque lieu reçoit ses coordonnées et l'adresse retrouvée ; un lieu introuvable reste sans coordonnées", async () => {
   const places: Place[] = [
-    { id: "place-1", label: "Travail", kind: "work", address: "20 place des Lices", mode: "transit" },
-    { id: "place-2", label: "École", kind: "school", address: "introuvable", mode: "walk" },
+    { id: "place-1", label: "Travail", kind: "work", address: "20 place des Lices" },
+    { id: "place-2", label: "École", kind: "school", address: "introuvable" },
   ];
   const fetcher = (async (input: string | URL) => {
     const q = new URL(String(input)).searchParams.get("q") ?? "";

@@ -63,7 +63,7 @@ test("isPrecise : seules l'adresse exacte et la rue vont sur la carte", () => {
   assert.equal(isPrecise(at("street", null)), false);
 });
 
-test("parsePlaces : lieux de vie bornés (3 max), types et modes validés, libellé par défaut", () => {
+test("parsePlaces : lieux de vie bornés (3 max), type validé, libellé par défaut ; un moyen de transport proposé par le LLM est ignoré", () => {
   const places = parsePlaces([
     { label: "Travail", kind: "work", address: " 20 place des Lices ", mode: "bike" },
     { kind: "school", address: "Université Rennes 2", mode: "fusée" },
@@ -71,10 +71,10 @@ test("parsePlaces : lieux de vie bornés (3 max), types et modes validés, libel
     { label: "x", kind: "martien", address: "12 rue X" },
     { label: "y", kind: "other", address: "14 rue Y" },
   ]);
-  assert.deepEqual(places.map(place => [place.id, place.label, place.kind, place.address, place.mode]), [
-    ["place-1", "Travail", "work", "20 place des Lices", "bike"],
-    ["place-2", "École", "school", "Université Rennes 2", "transit"],
-    ["place-3", "x", "other", "12 rue X", "transit"],
+  assert.deepEqual(places.map(place => [place.id, place.label, place.kind, place.address, "mode" in place]), [
+    ["place-1", "Travail", "work", "20 place des Lices", false],
+    ["place-2", "École", "school", "Université Rennes 2", false],
+    ["place-3", "x", "other", "12 rue X", false],
   ]);
   assert.deepEqual(parsePlaces(undefined), []);
   assert.deepEqual(parsePlaces("Rennes"), []);
@@ -85,7 +85,7 @@ const ad = (n: number, position: Partial<Listing> = {}): Omit<Listing, "id"> => 
   location: "Rennes", image: null, images: [], aiSummary: null, summaryEvidence: [], score: 70, features: [], criterionResults: [],
   lat: null, lng: null, geoPrecision: null, ...position,
 });
-const workPlace = { id: "place-1", label: "Travail", kind: "work" as const, address: "20 place des Lices", mode: "transit" as const, lat: 48.1135, lng: -1.6828, resolved: "20 Place des Lices 35000 Rennes" };
+const workPlace = { id: "place-1", label: "Travail", kind: "work" as const, address: "20 place des Lices", lat: 48.1135, lng: -1.6828, resolved: "20 Place des Lices 35000 Rennes" };
 
 async function searchFor(email: string, places: Place[] = [workPlace]) {
   const user = await createUser(email, "motdepasse-long");
@@ -110,14 +110,16 @@ test("la position et les lieux de vie sont enregistrés en base et relus avec la
   assert.equal((await getSearch(id))?.listings.find(item => item.id === precise.id)?.geoPrecision, "streetNumber");
 });
 
-test("GET …/routes : trajet réel annonce → travail, puis resservi depuis la base", async () => {
+test("GET …/routes : l'app choisit le trajet (à pied 25 min → vélo), puis le ressert depuis la base", async () => {
   const { id, cookie, precise } = await searchFor("carte-2@test.fr");
   const url = `${base}/housing/searches/${id}/listings/${precise.id}/routes`;
   const response = await fetch(url, { headers: { cookie } });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { routes: [{ placeId: "place-1", mode: "transit", durationSeconds: 1534, distanceMeters: 5210, path: [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]] }] });
+  assert.deepEqual(await response.json(), { routes: [{ placeId: "place-1", mode: "bike", durationSeconds: 1534, distanceMeters: 5210, path: [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]] }] });
   await fetch(url, { headers: { cookie } });
-  assert.equal(googleCalls, 1, "le 2e affichage ne recoûte rien");
+  assert.equal(googleCalls, 2, "marche (trop longue) puis vélo");
+  await fetch(url, { headers: { cookie } });
+  assert.equal(googleCalls, 2, "le 2e affichage ne recoûte rien");
 });
 
 test("GET …/routes : annonce approximative ou lieu non géocodé → aucun trajet, aucun appel", async () => {

@@ -26,7 +26,6 @@ export type Place = {
   label: string;
   kind: "work" | "school" | "other";
   address: string;
-  mode: TravelMode;
   lat?: number | null;
   lng?: number | null;
   /** Adresse telle que retrouvée par le géocodeur (affichée à l'utilisateur). */

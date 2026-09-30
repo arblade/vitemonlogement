@@ -16,6 +16,6 @@ Résumés des études de features menées le 30/09/2026. Un fichier par feature.
 La carte est sur `develop` ; le reste est aussi sur `main`.
 
 ## Tests (à lancer à chaque fois : voir `CLAUDE.md`)
-- `pnpm test` : serveur (`node:test`, 85 + 4 `todo` connus) et front (Vitest, 101).
+- `pnpm test` : serveur (`node:test`, 92 + 4 `todo` connus) et front (Vitest, 102).
 - `pnpm test:e2e` : scénario navigateur mobile puis desktop (12).
 - `pnpm test:prod` : vrais Apify/OpenAI, sur demande explicite seulement (non validé : crédit OpenAI épuisé lors du dernier essai).

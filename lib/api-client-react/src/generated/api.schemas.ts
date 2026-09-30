@@ -51,22 +51,11 @@ export const HousingPlaceKind = {
   other: 'other',
 } as const;
 
-export type TravelMode = typeof TravelMode[keyof typeof TravelMode];
-
-
-export const TravelMode = {
-  transit: 'transit',
-  drive: 'drive',
-  bike: 'bike',
-  walk: 'walk',
-} as const;
-
 export interface HousingPlace {
   id: string;
   label: string;
   kind: HousingPlaceKind;
   address: string;
-  mode: TravelMode;
   /** @nullable */
   lat?: number | null;
   /** @nullable */
@@ -99,6 +88,19 @@ export interface HousingCriteria {
   places?: HousingPlace[];
 }
 
+export type TravelMode = typeof TravelMode[keyof typeof TravelMode];
+
+
+export const TravelMode = {
+  transit: 'transit',
+  drive: 'drive',
+  bike: 'bike',
+  walk: 'walk',
+} as const;
+
+/**
+ * Mode chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
+ */
 export interface ListingRoute {
   placeId: string;
   mode: TravelMode;

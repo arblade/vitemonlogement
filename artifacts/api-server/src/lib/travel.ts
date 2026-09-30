@@ -84,6 +84,42 @@ async function callGoogle(mode: TravelMode, from: Point, to: Point, fetcher: typ
   };
 }
 
+/** Distance à vol d'oiseau en mètres (haversine). */
+export function crowDistance(a: Point, b: Point) {
+  const rad = (value: number) => value * Math.PI / 180;
+  const h = Math.sin(rad(b.lat - a.lat) / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
+}
+
+/** Seuils du choix automatique du moyen de transport. */
+export const COMMUTE = {
+  walkMaxSeconds: 20 * 60,
+  bikeMaxSeconds: 40 * 60,
+  // Au-delà, marcher 20 min (≈ 1,7 km) ou pédaler 40 min (≈ 12 km) est impossible : on ne paie pas l'appel.
+  walkMaxCrowMeters: 2_000,
+  bikeMaxCrowMeters: 12_000,
+} as const;
+
+/**
+ * L'app choisit le trajet, pas l'utilisateur : à pied si ≤ 20 min, sinon vélo si ≤ 40 min, sinon transports en commun
+ * s'il en existe, sinon voiture. Chaque mode est calculé seulement si le précédent ne convient pas (et mis en cache).
+ */
+export async function commute(from: Point, to: Point, fetcher: typeof fetch = fetch): Promise<(TravelRoute & { mode: TravelMode }) | null> {
+  const crow = crowDistance(from, to);
+  if (crow <= COMMUTE.walkMaxCrowMeters) {
+    const walk = await travelRoute("walk", from, to, fetcher);
+    if (walk && walk.durationSeconds <= COMMUTE.walkMaxSeconds) return { mode: "walk", ...walk };
+  }
+  if (crow <= COMMUTE.bikeMaxCrowMeters) {
+    const bike = await travelRoute("bike", from, to, fetcher);
+    if (bike && bike.durationSeconds <= COMMUTE.bikeMaxSeconds) return { mode: "bike", ...bike };
+  }
+  const transit = await travelRoute("transit", from, to, fetcher);
+  if (transit) return { mode: "transit", ...transit };
+  const drive = await travelRoute("drive", from, to, fetcher);
+  return drive ? { mode: "drive", ...drive } : null;
+}
+
 /**
  * Trajet from → to, depuis le cache en base si possible. Chaque vrai appel Google est décompté d'un plafond
  * quotidien global (GOOGLE_ROUTES_PER_DAY, 150 par défaut) : au-delà, RoutingQuotaError.

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo } from 'react';
-import { Briefcase, GraduationCap, MapPin, Navigation } from 'lucide-react';
+import { Bike, Briefcase, Car, Footprints, GraduationCap, MapPin, Navigation, TrainFront } from 'lucide-react';
 import { getGetListingRoutesQueryKey, useGetListingRoutes, type HousingListing, type HousingPlace, type ListingRoute } from '@workspace/api-client-react';
 import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, MODE_LABEL } from '@/lib/geo';
 
@@ -7,6 +7,7 @@ import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlace
 const ListingMapCanvas = lazy(() => import('@/components/listing-map-canvas'));
 
 const NO_ROUTES: ListingRoute[] = [];
+const MODE_ICON = { walk: Footprints, bike: Bike, transit: TrainFront, drive: Car } as const;
 const PlaceIcon = ({ kind }: { kind: HousingPlace['kind'] }) => {
   const Icon = kind === 'work' ? Briefcase : kind === 'school' ? GraduationCap : MapPin;
   return <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#ffe3e8] text-brand"><Icon size={16} aria-hidden="true"/></span>;
@@ -61,7 +62,7 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
             <p className="truncate text-xs text-stone">{hasPoint ? place.resolved || place.address : `${place.address} · adresse introuvable`}</p>
           </div>
           <div className="shrink-0 text-right text-xs" data-testid={`map-travel-${place.id}`}>
-            {route ? <><strong className="block text-[15px] text-ink">{formatDuration(route.durationSeconds)}</strong><span className="text-stone">{MODE_LABEL[route.mode]} · {formatDistance(route.distanceMeters)}</span></>
+            {route ? <><strong className="flex items-center justify-end gap-1.5 text-[15px] text-ink">{(() => { const Icon = MODE_ICON[route.mode]; return <Icon size={15} className="text-brand" aria-hidden="true"/>; })()}{formatDuration(route.durationSeconds)}</strong><span className="text-stone">{MODE_LABEL[route.mode]} · {formatDistance(route.distanceMeters)}</span></>
               : hasPoint && wantRoutes && routesQuery.isLoading ? <span className="inline-flex items-center gap-1 text-stone"><Navigation size={12} className="animate-pulse" aria-hidden="true"/>Calcul du trajet…</span>
               : hasPoint && area.precise ? <span className="text-stone">{formatDistance(crowDistance(home, { lat: place.lat!, lng: place.lng! }))}<span className="block">à vol d’oiseau</span></span>
               : null}

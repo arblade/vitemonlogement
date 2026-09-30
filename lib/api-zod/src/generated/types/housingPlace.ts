@@ -6,14 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingPlaceKind } from './housingPlaceKind';
-import type { TravelMode } from './travelMode';
 
 export interface HousingPlace {
   id: string;
   label: string;
   kind: HousingPlaceKind;
   address: string;
-  mode: TravelMode;
   /** @nullable */
   lat?: number | null;
   /** @nullable */

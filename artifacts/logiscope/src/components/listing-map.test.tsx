@@ -14,8 +14,8 @@ vi.mock('@/components/listing-map-canvas', () => ({
 
 const home = { lat: 50.6408, lng: 3.0611 };
 const precise = (overrides: Partial<HousingListing> = {}) => listing(1, { price: 650, ...home, geoPrecision: 'streetNumber', ...overrides });
-const work: HousingPlace = { id: 'place-1', label: 'Travail', kind: 'work', address: 'gare Lille Flandres', mode: 'bike', lat: 50.6366, lng: 3.0706, resolved: 'Gare Lille Flandres, Lille' };
-const lost: HousingPlace = { id: 'place-2', label: 'École', kind: 'school', address: '12 rue Inconnue', mode: 'walk', lat: null, lng: null, resolved: null };
+const work: HousingPlace = { id: 'place-1', label: 'Travail', kind: 'work', address: 'gare Lille Flandres', lat: 50.6366, lng: 3.0706, resolved: 'Gare Lille Flandres, Lille' };
+const lost: HousingPlace = { id: 'place-2', label: 'École', kind: 'school', address: '12 rue Inconnue', lat: null, lng: null, resolved: null };
 const route: ListingRoute = { placeId: 'place-1', mode: 'bike', durationSeconds: 1080, distanceMeters: 1400, path: [[50.64, 3.06], [50.63, 3.07]] };
 
 function renderMap(props: Partial<Parameters<typeof ListingMap>[0]> = {}) {
@@ -111,6 +111,17 @@ describe('Encart « Où se trouve le logement »', () => {
     expect(screen.getByTestId('canvas')).toHaveAttribute('data-routes', 'place-1');
     expect(screen.getByTestId('map-place-place-1')).toHaveTextContent('Gare Lille Flandres, Lille');
     expect(calls.filter(call => call.url.includes('/routes'))).toHaveLength(1);
+  });
+
+  it('affiche le moyen de transport choisi par l’app (à pied, vélo, transports, voiture), sans aucun sélecteur', async () => {
+    for (const [mode, label] of [['walk', 'à pied'], ['bike', 'à vélo'], ['transit', 'en transports'], ['drive', 'en voiture']] as const) {
+      mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: [{ ...route, mode }] } }) }]);
+      const { unmount } = renderMap({ routingAvailable: true });
+      await waitFor(() => expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent(`18 min${label} · 1,4 km`));
+      expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+      expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('avec clé mais échec du calcul : pas de message d’erreur, repli sur le vol d’oiseau', async () => {

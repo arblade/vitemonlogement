@@ -10,7 +10,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { interpret, analyze } from "./ai";
 import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, isPrecise, listSearches, saveAnalysis } from "./store";
-import { RoutingQuotaError, routingAvailable, travelRoute } from "../../lib/travel";
+import { commute, RoutingQuotaError, routingAvailable } from "../../lib/travel";
 import { logger } from "../../lib/logger";
 import { costlyRateLimit } from "../../lib/quota";
 import { claimSearch, releaseSearch } from "../../lib/queue";
@@ -106,8 +106,8 @@ router.get("/housing/searches/:id/listings/:listingId/routes", async (req, res):
   const routes = [];
   for (const place of places) {
     try {
-      const route = await travelRoute(place.mode, { lat: listing.lat, lng: listing.lng }, { lat: place.lat!, lng: place.lng! });
-      if (route) routes.push({ placeId: place.id, mode: place.mode, ...route });
+      const route = await commute({ lat: listing.lat, lng: listing.lng }, { lat: place.lat!, lng: place.lng! });
+      if (route) routes.push({ placeId: place.id, ...route });
     } catch (error) {
       if (error instanceof RoutingQuotaError) {
         if (!routes.length) { res.status(429).json({ error: "Trop de calculs de trajet aujourd’hui. Réessayez demain." }); return; }

@@ -25,9 +25,8 @@ async function jsonResponse(system: string, user: string): Promise<unknown> {
 }
 
 const PLACE_KINDS = ["work", "school", "other"] as const;
-const TRAVEL_MODES = ["transit", "drive", "bike", "walk"] as const;
 
-/** Lieux de vie proposés par le LLM : au plus 3, adresse obligatoire, types et modes bornés. */
+/** Lieux de vie proposés par le LLM : au plus 3, adresse obligatoire, type borné. Le moyen de transport n'est pas extrait : l'app le choisit (lib/travel.ts, commute). */
 export function parsePlaces(raw: unknown): Place[] {
   if (!Array.isArray(raw)) return [];
   return raw.map(value => value && typeof value === "object" ? value as Record<string, unknown> : {})
@@ -35,16 +34,15 @@ export function parsePlaces(raw: unknown): Place[] {
     .slice(0, 3)
     .map((value, index) => {
       const kind = (PLACE_KINDS as readonly unknown[]).includes(value.kind) ? value.kind as Place["kind"] : "other";
-      const mode = (TRAVEL_MODES as readonly unknown[]).includes(value.mode) ? value.mode as Place["mode"] : "transit";
       const fallback = kind === "work" ? "Travail" : kind === "school" ? "École" : "Lieu";
       const label = typeof value.label === "string" && value.label.trim() ? value.label.trim().slice(0, 40) : fallback;
-      return { id: `place-${index + 1}`, label, kind, address: String(value.address).trim().slice(0, 200), mode, lat: null, lng: null, resolved: null };
+      return { id: `place-${index + 1}`, label, kind, address: String(value.address).trim().slice(0, 200), lat: null, lng: null, resolved: null };
     });
 }
 
 export async function interpret(prompt: string): Promise<Criteria> {
   const result = await jsonResponse(
-    `Interprète une demande de location de logement en France, jamais un achat. Réponds UNIQUEMENT en JSON avec location (ville ou département, vide si inconnue), intent ("rent" uniquement), minPrice/maxPrice (bornes du loyer mensuel € ou null), minArea/maxArea (bornes surface m² ou null), minRooms (ou null), radius (5 par défaut), keywords (mots clés immobiliers simples) uncertainChecks:[{"label":"souhait exact de l'utilisateur","availability":"hybrid ou description","apiField":"parking, furnished, elevator ou null"}] et places:[{"label":"nom court en français, ex. Travail, École, Université, Crèche","kind":"work, school ou other","address":"adresse ou nom du lieu tel que cité, sans rien inventer","mode":"transit, drive, bike ou walk selon le moyen de transport mentionné pour s'y rendre, transit par défaut"}]. places ne contient que les lieux de la vie de la personne (travail, école, université, crèche, famille…) désignés par une adresse ou un nom d'établissement précis ; jamais une simple ville, un quartier ou une zone ; tableau vide sinon. Classe les critères : ville, prix, surface, pièces sont vérifiables dans les champs structurés API quand présents. Parking (nb_parkings), meublé (furnished) et ascenseur (elevator) existent parfois dans l'API, parfois seulement dans la description : hybrid. Les autres souhaits (calme, proximité, balcon, etc.) exigent la lecture du titre/texte : description. Ne présente jamais une donnée absente de l'API comme négative : elle devra être vérifiée par la suite. Liste chaque préférence non structurée exprimée par l'utilisateur sans en inventer. Ne devine aucune borne absente.`,
+    `Interprète une demande de location de logement en France, jamais un achat. Réponds UNIQUEMENT en JSON avec location (ville ou département, vide si inconnue), intent ("rent" uniquement), minPrice/maxPrice (bornes du loyer mensuel € ou null), minArea/maxArea (bornes surface m² ou null), minRooms (ou null), radius (5 par défaut), keywords (mots clés immobiliers simples) uncertainChecks:[{"label":"souhait exact de l'utilisateur","availability":"hybrid ou description","apiField":"parking, furnished, elevator ou null"}] et places:[{"label":"nom court en français, ex. Travail, École, Université, Crèche","kind":"work, school ou other","address":"adresse ou nom du lieu tel que cité, sans rien inventer"}]. places ne contient que les lieux de la vie de la personne (travail, école, université, crèche, famille…) désignés par une adresse ou un nom d'établissement précis ; jamais une simple ville, un quartier ou une zone ; tableau vide sinon. Classe les critères : ville, prix, surface, pièces sont vérifiables dans les champs structurés API quand présents. Parking (nb_parkings), meublé (furnished) et ascenseur (elevator) existent parfois dans l'API, parfois seulement dans la description : hybrid. Les autres souhaits (calme, proximité, balcon, etc.) exigent la lecture du titre/texte : description. Ne présente jamais une donnée absente de l'API comme négative : elle devra être vérifiée par la suite. Liste chaque préférence non structurée exprimée par l'utilisateur sans en inventer. Ne devine aucune borne absente.`,
     prompt,
   ) as Record<string, unknown>;
   const numeric = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : null;
