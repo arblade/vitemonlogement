@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HousingListing } from '@workspace/api-client-react';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import SearchDetail from '@/pages/search-detail';
@@ -202,6 +203,41 @@ describe('Ouverture de la carte au clic', () => {
     link.addEventListener('click', event => event.preventDefault());
     await user.click(link);
     expect(dialog()).not.toBeInTheDocument();
+  });
+});
+
+describe('Vocabulaire : aucun terme technique à l’écran', () => {
+  const rich = () => listing(1, {
+    criterionResults: [
+      { id: 'price', label: 'Budget ≤ 700 €', status: 'confirmed', source: 'api', value: '600 €', evidence: 'Indiqué dans l’annonce : « price ».' },
+      { id: 'wish-1', label: 'chat accepté', status: 'confirmed', source: 'description', value: 'Chats acceptés', evidence: 'Les chats sont acceptés' },
+      { id: 'wish-2', label: 'balcon', status: 'unknown', source: 'unknown', value: '', evidence: '' },
+    ],
+    features: [
+      { label: 'Parking', value: '1 place', source: 'annonce', evidence: 'Indiqué dans l’annonce : « nb_parkings ».' },
+      { label: 'Lumineux', value: '', source: 'ia', evidence: 'très lumineux' },
+    ],
+  } as Partial<HousingListing>);
+  const jargon = /\bAPI\b|Apify|structur|provenance/i;
+
+  it('la liste de résultats ne contient aucun terme technique', () => {
+    api.state.data = search({ listings: [rich()] });
+    renderPage();
+    expect(document.body.textContent).not.toMatch(jargon);
+    expect(screen.getByText('Indiqué dans l’annonce')).toBeInTheDocument();
+    expect(screen.getByText('À lire dans la description')).toBeInTheDocument();
+  });
+
+  it('la fiche détaillée ouverte non plus, et nomme l’origine des informations en clair', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [rich()] });
+    renderPage();
+    await user.click(screen.getByTestId('text-listing-title-1'));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).not.toMatch(jargon);
+    expect(within(dialog).getAllByText('Indiqué dans l’annonce').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText('Lu dans la description').length).toBeGreaterThan(0);
+    expect(within(dialog).getByText('Caractéristiques')).toBeInTheDocument();
   });
 });
 

@@ -84,3 +84,12 @@ test("« parking sécurisé » ne doit pas être confirmé par nb_parkings seul"
   const status = evaluateStructured(criteria, listing, { nb_parkings: 1 }).find(check => check.id === "wish-1")?.status;
   assert.notEqual(status, "confirmed");
 });
+
+test("evaluateStructured : les preuves sont en langage courant, sans mention d'API", () => {
+  const results = evaluateStructured({ ...base, maxPrice: 650, minArea: 20 }, listing, {}).filter(check => check.source === "api");
+  assert.ok(results.length >= 2);
+  for (const result of results) {
+    assert.match(result.evidence, /^Indiqué dans l’annonce : « .+ »\.$/);
+    assert.doesNotMatch(result.evidence, /API|structur/i);
+  }
+});

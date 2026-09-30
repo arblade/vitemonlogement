@@ -1,4 +1,4 @@
-import { completeSearch, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type Listing } from "./store";
+import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type Listing } from "./store";
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
@@ -131,7 +131,7 @@ function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Fe
       value = `${count} ${spec.count}`;
     }
     features.push({ label: spec.label, value, source: "annonce",
-      evidence: `Champ structuré « ${key} » fourni par l’API de l’annonce.` });
+      evidence: `Indiqué dans l’annonce : « ${key} ».` });
   }
   return features;
 }
@@ -241,7 +241,8 @@ export async function syncSearch(id: number, criteria: Criteria) {
         throw error;
       }
     } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
-      await setFailure(id, text(run.statusMessage) || `Exécution Apify : ${status}`, Boolean(row.analyzed) || phase === "broad");
+      logger.error({ searchId: id, status, statusMessage: text(run.statusMessage) }, "Apify run did not succeed");
+      await setFailure(id, FAILURE_MESSAGE, Boolean(row.analyzed) || phase === "broad");
     }
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");

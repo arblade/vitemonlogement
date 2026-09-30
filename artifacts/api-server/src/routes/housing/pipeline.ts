@@ -1,7 +1,7 @@
 import { logger } from "../../lib/logger";
 import { interpret } from "./ai";
 import { startSearch, syncSearch } from "./apify";
-import { getSearchRow, recordAttemptFailure, setCriteria, setFailure, setRun, type Criteria } from "./store";
+import { FAILURE_MESSAGE, getSearchRow, recordAttemptFailure, setCriteria, setFailure, setRun, type Criteria } from "./store";
 
 export const MAX_STEP_ATTEMPTS = 3;
 const POLL_MS = 5_000; // entre deux contrôles d'un run Apify
@@ -61,7 +61,7 @@ export async function advanceSearch(id: number): Promise<number> {
     const attempts = await recordAttemptFailure(id, message);
     logger.error({ err: error, searchId: id, attempts }, "Housing search step failed");
     if (attempts >= MAX_STEP_ATTEMPTS) {
-      await setFailure(id, message, isRefresh);
+      await setFailure(id, FAILURE_MESSAGE, isRefresh);
       return 0;
     }
     return RETRY_MS * attempts;

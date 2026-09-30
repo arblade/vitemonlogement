@@ -27,8 +27,8 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
     unknown: 'Non précisé',
   };
   const sourceCopy = {
-    api: 'Champ standard',
-    description: 'Description',
+    api: 'Indiqué dans l’annonce',
+    description: 'Lu dans la description',
     unknown: 'À vérifier dans l’annonce',
   };
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -85,10 +85,10 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
                 </section>
                 <section aria-labelledby={`features-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">
                   <div className="mb-2 font-data text-xs uppercase tracking-[.12em] text-moss">03 / En complément</div>
-                  <div className="flex items-center gap-2"><Info size={17} className="text-[#717171]"/><h2 id={`features-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Caractéristiques & provenances</h2></div>
+                  <div className="flex items-center gap-2"><Info size={17} className="text-[#717171]"/><h2 id={`features-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Caractéristiques</h2></div>
                   {features.length ? <div className="mt-5 space-y-3">{features.map((feature, index) => <div key={`${feature.label}-${index}`} className="rounded-xl border border-[#dddddd] bg-[#ffffff] p-4">
-                     <div className="flex flex-wrap items-start justify-between gap-2"><strong className="text-[13px]">{feature.label}{feature.value ? ` · ${feature.value}` : ''}</strong><span className={`rounded-full px-2 py-1 font-data text-xs uppercase tracking-[.04em] ${feature.source === 'ia' ? 'bg-[#ffe3e8] text-[#c13515]' : 'bg-[#ebebeb] text-[#484848]'}`}>{feature.source === 'ia' ? 'Extrait IA' : 'Champ standard'}</span></div>
-                    <p className="mt-2 text-xs leading-relaxed text-stone"><span className="font-semibold text-[#484848]">{feature.source === 'ia' ? 'Extrait justificatif : ' : 'Source : '}</span>{feature.evidence || 'Aucune précision fournie.'}</p>
+                     <div className="flex flex-wrap items-start justify-between gap-2"><strong className="text-[13px]">{feature.label}{feature.value ? ` · ${feature.value}` : ''}</strong><span className={`rounded-full px-2 py-1 font-data text-xs uppercase tracking-[.04em] ${feature.source === 'ia' ? 'bg-[#ffe3e8] text-[#c13515]' : 'bg-[#ebebeb] text-[#484848]'}`}>{feature.source === 'ia' ? 'Lu dans la description' : 'Indiqué dans l’annonce'}</span></div>
+                    <p className="mt-2 text-xs leading-relaxed text-stone"><span className="font-semibold text-[#484848]">{feature.source === 'ia' ? 'Extrait de la description : ' : 'Dans l’annonce : '}</span>{feature.evidence || 'Aucune précision fournie.'}</p>
                   </div>)}</div> : <p className="mt-4 text-sm text-stone">Aucune caractéristique documentée pour cette annonce.</p>}
                 </section>
                 <section aria-labelledby={`description-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">

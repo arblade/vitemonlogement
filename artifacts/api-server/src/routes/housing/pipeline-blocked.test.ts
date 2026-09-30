@@ -7,15 +7,16 @@ import test, { after, before } from "node:test";
 // (et non après plusieurs minutes d'attente, avec le texte technique du fournisseur).
 let fake: Server;
 let openaiCalls = 0;
+let reply = { status: 429, code: "credit_balance_exhausted" };
 
 before(async () => {
   fake = createServer((req, res) => {
     req.resume();
     req.on("end", () => {
       openaiCalls++;
-      res.statusCode = 429;
+      res.statusCode = reply.status;
       res.setHeader("content-type", "application/json");
-      res.end(JSON.stringify({ error: { message: "You have no credits remaining.", type: "insufficient_quota", code: "credit_balance_exhausted" } }));
+      res.end(JSON.stringify({ error: { message: "You have no credits remaining.", type: "insufficient_quota", code: reply.code } }));
     });
   });
   await new Promise<void>(resolve => fake.listen(0, "127.0.0.1", resolve));
@@ -54,4 +55,19 @@ test("blockingFailure : crédit, quota et clé invalide sont bloquants ; une pan
   assert.equal(blockingFailure({ status: 503 }), null);
   assert.equal(blockingFailure(new Error("timeout")), null);
   assert.equal(blockingFailure(undefined), null);
+});
+
+test("échec persistant : après les tentatives, message lisible, sans terme technique ni détail du fournisseur", async () => {
+  reply = { status: 400, code: "invalid_request_error" }; // erreur non retentée par le SDK, non bloquante pour nous
+  const { createSearch, getSearch, FAILURE_MESSAGE } = await import("./store");
+  const { advanceSearch } = await import("./pipeline");
+  const id = await createSearch("Un studio à Lille");
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    assert.equal((await getSearch(id))?.status, "running", `encore en cours avant l'essai ${attempt}`);
+    await advanceSearch(id);
+  }
+  const search = await getSearch(id);
+  assert.equal(search?.status, "failed");
+  assert.equal(search?.error, FAILURE_MESSAGE);
+  assert.doesNotMatch(search?.error ?? "", /api|apify|openai|400|credit/i);
 });

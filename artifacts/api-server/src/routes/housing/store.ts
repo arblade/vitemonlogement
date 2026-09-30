@@ -83,6 +83,9 @@ export async function setAnalyzing(id: number) {
   await db().update(housingSearches).set({ stage: "analyzing" }).where(eq(housingSearches.id, id));
 }
 
+/** Message affiché à l'utilisateur quand une recherche échoue : jamais le détail technique (il reste dans les journaux du serveur). */
+export const FAILURE_MESSAGE = "La recherche n’a pas pu aboutir. Réessayez dans un instant.";
+
 export async function setFailure(id: number, message: string, refresh = false) {
   await db().update(housingSearches)
     .set({ status: refresh ? "completed" : "failed", stage: refresh ? "ready" : "failed", error: message.slice(0, 500), attempts: 0 })

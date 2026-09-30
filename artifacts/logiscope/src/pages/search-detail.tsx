@@ -33,9 +33,9 @@ function createErrorMessage(error: unknown) {
 }
 
 const checkGroups = [
-  { availability: 'api', title: 'Champs standards', detail: 'Vérifiables directement.', tone: 'border-ok-line bg-ok-wash text-ok-deep' },
-  { availability: 'hybrid', title: 'Champs optionnels', detail: 'Parfois complets ; sinon, dans la description.', tone: 'border-line bg-sage text-ink' },
-  { availability: 'description', title: 'À lire dans la description', detail: 'Recherchés dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
+  { availability: 'api', title: 'Indiqué dans l’annonce', detail: 'Visible directement dans les informations de l’annonce.', tone: 'border-ok-line bg-ok-wash text-ok-deep' },
+  { availability: 'hybrid', title: 'Parfois indiqué', detail: 'Parfois dans les informations de l’annonce, sinon à lire dans la description.', tone: 'border-line bg-sage text-ink' },
+  { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
 function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, onSelect, onFavorite, onViewed }: {
@@ -81,7 +81,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
          </div>}
          {features.length > 0 && <div className="mt-4" data-testid={`card-features-${listing.id}`}>
            <div className="mb-2 font-data text-xs uppercase tracking-[.1em] text-moss">Autres caractéristiques</div>
-           <div className="flex flex-wrap gap-1.5">{features.slice(0,2).map((feature, i) => <span key={`${feature.label}-${i}`} className="rounded-md bg-sage px-2.5 py-1.5 text-xs text-[#484848]"><strong>{feature.label}</strong>{feature.value ? ` · ${feature.value}` : ''}<span className="ml-1.5 text-xs text-[#484848]">({feature.source === 'ia' ? 'IA' : 'API'})</span></span>)}</div>
+           <div className="flex flex-wrap gap-1.5">{features.slice(0,2).map((feature, i) => <span key={`${feature.label}-${i}`} className="rounded-md bg-sage px-2.5 py-1.5 text-xs text-[#484848]"><strong>{feature.label}</strong>{feature.value ? ` · ${feature.value}` : ''}</span>)}</div>
          </div>}
          {listing.aiSummary && <div className="mt-5 rounded-lg bg-sage px-4 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.08em] text-moss"><Sparkles size={12}/> Pourquoi ce logement ?</span><p ref={summaryRef} id={`listing-summary-${listing.id}`} data-testid={`text-card-summary-${listing.id}`} className={`mt-1.5 text-[13px] leading-[1.65] text-[#484848] ${expandedSummary ? '' : 'line-clamp-4'}`}>{listing.aiSummary}</p>{(canExpandSummary || expandedSummary) && <button type="button" data-testid={`button-expand-summary-${listing.id}`} aria-controls={`listing-summary-${listing.id}`} aria-expanded={expandedSummary} onClick={() => setExpandedSummary(value => !value)} className="relative z-20 mt-2 text-xs font-semibold text-[#c13515] underline underline-offset-4 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c13515]">{expandedSummary ? 'Réduire le résumé' : 'Lire le résumé complet'}</button>}</div>}
          <span className="mt-4 text-xs font-semibold text-[#c13515] underline underline-offset-4">Détails, sources et preuves <ArrowRight size={12} className="inline"/></span>

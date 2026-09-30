@@ -65,7 +65,7 @@ function structured(value: unknown, label: string, check: Criterion, valid: bool
   return {
     id: check.id, label: check.label, status: valid ? "confirmed" : "contradicted",
     source: "api", value: String(value),
-    evidence: `Champ structuré « ${label} » fourni par l’API de l’annonce.`,
+    evidence: `Indiqué dans l’annonce : « ${label} ».`,
   };
 }
 
