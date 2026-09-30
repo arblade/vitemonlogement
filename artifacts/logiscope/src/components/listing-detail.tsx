@@ -27,9 +27,9 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
     unknown: 'Non précisé',
   };
   const sourceCopy = {
-    api: 'Donnée structurée · API',
-    description: 'Description · lecture IA',
-    unknown: 'Aucune source disponible',
+    api: 'Champ standard',
+    description: 'Description',
+    unknown: 'À vérifier dans l'annonce',
   };
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
