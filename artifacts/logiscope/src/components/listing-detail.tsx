@@ -58,7 +58,7 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
               </div>
             </section>
 
-            <div className="py-6"><ListingContact listing={listing}/></div>
+            <div className="py-6"><ListingContact listing={listing} results={checkedResults}/></div>
 
             <div className="grid gap-10 py-9 lg:grid-cols-[minmax(0,1fr)_310px]">
               <div>
