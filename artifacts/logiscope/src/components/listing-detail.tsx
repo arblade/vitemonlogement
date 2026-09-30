@@ -1,8 +1,9 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { HousingCriterion, HousingListing } from '@workspace/api-client-react';
-import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles, X } from 'lucide-react';
+import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, MessageCircle, Minus, Sparkles, X } from 'lucide-react';
 import { ListingGallery } from '@/components/listing-gallery';
 import { generalIcons, listingFacts } from '@/components/listing-facts';
+import { ListingContact } from '@/components/listing-contact';
 
 function sourceName(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -47,7 +48,7 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
                 <DialogPrimitive.Title data-testid={`text-detail-title-${listing.id}`} className="text-[clamp(1.8rem,4vw,3rem)] font-semibold leading-[1.08] tracking-[-.03em]">{listing.title}</DialogPrimitive.Title>
                 <p id={`listing-detail-intro-${listing.id}`} className="mt-3 text-xs text-stone">Les informations et extraits ci-dessous proviennent de l’annonce et de son analyse. Vérifiez-les auprès de la source.</p>
               </div>
-              <span className="shrink-0 rounded-full bg-lime-wash px-4 py-2 font-data text-xs font-semibold">{Math.round(listing.score)}/100 · pertinence</span>
+              <div className="flex shrink-0 flex-wrap items-center gap-2"><span className="shrink-0 rounded-full bg-lime-wash px-4 py-2 font-data text-xs font-semibold">{Math.round(listing.score)}/100 · pertinence</span><button type="button" data-testid={`button-contact-${listing.id}`} onClick={() => document.getElementById(`contact-${listing.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-paper transition-colors hover:bg-brand-dark"><MessageCircle size={16} aria-hidden="true"/> Contacter</button></div>
             </div>
 
             <section aria-labelledby={`generals-${listing.id}`} className="border-b border-line-soft py-7">
@@ -56,6 +57,8 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
                 {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`general-${listing.id}-${label}`} className="min-w-0 rounded-xl bg-mist p-4"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.08em] text-stone">{Icon && <Icon size={14} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className="mt-2 block break-words text-[16px] font-semibold">{value}</strong></div>; })}
               </div>
             </section>
+
+            <div className="py-7"><ListingContact listing={listing} results={checkedResults} onViewed={() => undefined}/></div>
 
             <div className="grid gap-10 py-9 lg:grid-cols-[minmax(0,1fr)_310px]">
               <div>
