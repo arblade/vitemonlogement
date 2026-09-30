@@ -8,6 +8,7 @@
 - Bloc promotionnel « Le tri est fait » supprimé ; bandeau de la page résultats et titres réduits ; « Affiner votre recherche » compacté.
 - Vocabulaire : « Refresh » → « Chercher d'autres annonces », « J'aime / annonces aimées » → « Favoris ».
 - Style : une seule police (DM Sans ; Instrument Serif et Space Mono retirées), aucun texte sous 12 px (52 occurrences de 8 à 11 px), 14 couleurs principales passées en jetons de thème (`ink`, `lime`, `line`, `sage`…). Il reste environ 190 occurrences de couleurs en dur moins fréquentes.
+- Refonte visuelle « moderne, épurée » (30/09/2026) : thème clair neutre, police Inter, une seule couleur d'accent (émeraude), boutons noirs, suppression des bandeaux sombres, du grain et des italiques serif. Accueil centré avec grand champ de saisie arrondi (bouton « Rechercher » intégré, exemples en pastilles). Toutes les couleurs en dur ont été converties vers la nouvelle palette ; les jetons de thème (`ink`, `stone`, `line`, `sage`, `lime` = accent…) restent les points d'entrée.
 - Non fait de cette phase : accueil orienté bénéfice et bloc avant/après (phase 2), groupes « Correspond / Pistes proches » (phase 2).
  Doc complet : « Vite mon logement — Audit UX et plan de refonte ».
 **Source :** conversation « Design et UX de l'app » (30/09/2026)

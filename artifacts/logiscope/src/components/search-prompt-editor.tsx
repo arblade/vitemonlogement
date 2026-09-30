@@ -23,7 +23,7 @@ export function SearchPromptEditor({ prompt, pending, error, onSubmit }: {
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div><h2 className="text-base font-semibold">Affiner votre recherche</h2>
         {editing && <p className="mt-1 text-xs leading-relaxed text-stone">Modifiez votre demande et lancez une nouvelle recherche. Celle-ci restera dans votre historique.</p>}</div>
-      {!editing && <Button type="button" data-testid="button-edit-prompt" onClick={() => setEditing(true)} className="h-10 rounded-lg bg-ink px-4 text-xs font-semibold text-lime-light hover:bg-[#454050]"><Pencil size={14} className="mr-2"/> Modifier ma demande</Button>}
+      {!editing && <Button type="button" data-testid="button-edit-prompt" onClick={() => setEditing(true)} className="h-10 rounded-lg bg-ink px-4 text-xs font-semibold text-lime-light hover:bg-[#27272a]"><Pencil size={14} className="mr-2"/> Modifier ma demande</Button>}
     </div>
     {editing && <Form {...form}><form onSubmit={form.handleSubmit(({ prompt: value }) => onSubmit(value.trim()))} className="mt-5 space-y-3">
       <FormField control={form.control} name="prompt" rules={{
@@ -36,7 +36,7 @@ export function SearchPromptEditor({ prompt, pending, error, onSubmit }: {
       </FormItem>}/>
       {error && <ErrorNotice message={error}/>}
       <div className="flex flex-wrap gap-3">
-        <Button type="submit" data-testid="button-relaunch-search" disabled={pending} className="rounded-lg bg-ink text-lime-light hover:bg-[#454050]">{pending ? 'Lancement…' : 'Relancer avec cette demande'} <ArrowRight size={15} className="ml-2"/></Button>
+        <Button type="submit" data-testid="button-relaunch-search" disabled={pending} className="rounded-lg bg-ink text-lime-light hover:bg-[#27272a]">{pending ? 'Lancement…' : 'Relancer avec cette demande'} <ArrowRight size={15} className="ml-2"/></Button>
         <Button type="button" variant="outline" disabled={pending} onClick={() => { reset({ prompt }); setEditing(false); }}>Annuler</Button>
       </div>
     </form></Form>}

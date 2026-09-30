@@ -29,7 +29,7 @@ export function ListingGallery({ listing, large = false }: { listing: HousingLis
 
   return <div
     data-testid={`${large ? 'detail' : 'card'}-gallery-${listing.id}`}
-    className={`relative isolate overflow-hidden bg-[#dce1ca] ${large ? 'h-[280px] sm:h-[420px] lg:h-[510px]' : 'h-[230px] md:h-full md:min-h-[270px]'}`}
+    className={`relative isolate overflow-hidden bg-sage ${large ? 'h-[280px] sm:h-[420px] lg:h-[510px]' : 'h-[230px] md:h-full md:min-h-[270px]'}`}
     onClick={stop}
     onKeyDown={onKeyDown}
     tabIndex={images.length > 1 ? 0 : undefined}
@@ -43,12 +43,12 @@ export function ListingGallery({ listing, large = false }: { listing: HousingLis
       alt={`${listing.title}, photo ${visibleIndex + 1} sur ${images.length}`}
       className="h-full w-full object-cover"
       onError={() => setFailed(previous => previous.includes(current) ? previous : [...previous, current])}
-    /> : <div role="status" className="flex h-full flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_80%_20%,#e9eecf_0%,#d8dfc3_55%,#c6d0b0_100%)] px-8 text-center text-[#59654c]">
+    /> : <div role="status" className="flex h-full flex-col items-center justify-center gap-3 bg-sage px-8 text-center text-stone">
       <ImageOff size={30} strokeWidth={1.4} aria-hidden="true"/>
       <span className="max-w-[230px] text-sm font-semibold">{broken ? 'Cette photo n’a pas pu être chargée.' : 'Aucune photo fournie pour cette annonce.'}</span>
       {broken && <span className="text-xs">Vous pouvez consulter les autres photos ou l’annonce d’origine.</span>}
     </div>}
-    {images.length > 0 && <span className="absolute left-4 top-4 rounded-full bg-cream/95 px-3 py-1.5 font-data text-xs uppercase tracking-[.08em] text-[#343341]">
+    {images.length > 0 && <span className="absolute left-4 top-4 rounded-full bg-cream/95 px-3 py-1.5 font-data text-xs uppercase tracking-[.08em] text-[#27272a]">
       Photo {visibleIndex + 1} / {images.length}
     </span>}
     {images.length > 1 && <>

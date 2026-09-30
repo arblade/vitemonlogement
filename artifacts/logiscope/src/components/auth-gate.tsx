@@ -61,10 +61,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <div className="w-full max-w-[380px]">
       <div className="mb-6 flex items-center gap-3">
         <span className="grid size-10 place-items-center rounded-full bg-ink text-lime"><Compass size={20} strokeWidth={1.8}/></span>
-        <span className="text-[21px] font-bold tracking-[-.065em]">vite mon logement</span>
+        <span className="text-[21px] font-bold tracking-[-.03em]">vite mon logement</span>
       </div>
       {state === 'error'
-        ? <div role="alert" className="space-y-3 border-l-[3px] border-brick bg-[#f4e9e4] px-5 py-4 text-sm text-[#723c37]">
+        ? <div role="alert" className="space-y-3 border-l-[3px] border-brick bg-[#fef3f2] px-5 py-4 text-sm text-[#b42318]">
             <p>{message}</p>
             <button type="button" onClick={() => { setState('loading'); void check(); }} className="font-semibold underline underline-offset-4">Réessayer</button>
           </div>
@@ -72,8 +72,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <label htmlFor="password" className="block text-sm font-semibold">Mot de passe</label>
             <input id="password" data-testid="input-password" type="password" autoComplete="current-password" autoFocus required value={password}
               onChange={event => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-line bg-paper px-4 py-3 text-base outline-none focus:border-[#8a9551]"/>
-            {message && <p role="alert" data-testid="status-login-error" className="text-sm text-[#723c37]">{message}</p>}
+              className="w-full rounded-lg border border-line bg-paper px-4 py-3 text-base outline-none focus:border-[#10a37f]"/>
+            {message && <p role="alert" data-testid="status-login-error" className="text-sm text-[#b42318]">{message}</p>}
             <Button type="submit" data-testid="button-login" disabled={busy || !password} className="w-full">{busy ? 'Connexion…' : 'Entrer'}</Button>
           </form>}
     </div>

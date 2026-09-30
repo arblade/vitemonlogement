@@ -23,16 +23,16 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
         ? 'Nous parcourons les annonces qui pourraient vous convenir.'
         : 'Nous repérons vos critères dans votre description.';
 
-  return <section className="rounded-2xl border border-[#d7dcbc] bg-lime-wash px-5 py-6 md:px-8 md:py-7" aria-label="Recherche en cours" aria-live="polite">
-    <div className="flex items-center gap-2 font-data text-xs uppercase tracking-[.14em] text-[#66704d]">
-      <span className="pulse-dot size-2 rounded-full bg-[#77874c]" aria-hidden="true" />
+  return <section className="rounded-2xl border border-[#c7f0e2] bg-lime-wash px-5 py-6 md:px-8 md:py-7" aria-label="Recherche en cours" aria-live="polite">
+    <div className="flex items-center gap-2 font-data text-xs uppercase tracking-[.14em] text-[#0b7a5f]">
+      <span className="pulse-dot size-2 rounded-full bg-[#0b7a5f]" aria-hidden="true" />
       Recherche en cours
     </div>
     <h3 data-testid="text-current-activity" className="mt-3 max-w-xl text-lg font-semibold leading-snug tracking-tight text-ink">{activity}</h3>
-    <p className="mt-1 text-xs leading-relaxed text-[#626b51]">{phase === 'broad' ? 'Les premières annonces sont disponibles plus bas.' : 'Les résultats apparaîtront sur cette page dès qu’ils seront prêts.'}</p>
+    <p className="mt-1 text-xs leading-relaxed text-[#0b7a5f]">{phase === 'broad' ? 'Les premières annonces sont disponibles plus bas.' : 'Les résultats apparaîtront sur cette page dès qu’ils seront prêts.'}</p>
 
     <div
-      className="mt-6 h-2 overflow-hidden rounded-full bg-[#cdd5ae]"
+      className="mt-6 h-2 overflow-hidden rounded-full bg-[#5cc9a7]"
       role="progressbar"
       aria-label="Étapes de la recherche"
       aria-valuemin={0}
@@ -40,22 +40,22 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
       aria-valuenow={progress}
       aria-valuetext={phase === 'broad' ? 'Recherche élargie en cours' : steps[activeIndex].label}
     >
-      <div className="h-full rounded-full bg-[#77874c] transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
+      <div className="h-full rounded-full bg-[#0b7a5f] transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
     </div>
 
     <ol className="mt-5 space-y-2">
       {steps.slice(0, activeIndex + 1).map((step, index) => {
         const complete = phase === 'broad' || index < activeIndex;
-        return <li key={step.key} data-testid={`stage-${step.key}`} aria-current={!complete ? 'step' : undefined} className="flex items-center gap-2.5 text-sm text-[#3c4233]">
-          <span className={`grid size-5 shrink-0 place-items-center rounded-full ${complete ? 'bg-[#77874c] text-paper' : 'border-2 border-[#77874c]'}`} aria-hidden="true">
+        return <li key={step.key} data-testid={`stage-${step.key}`} aria-current={!complete ? 'step' : undefined} className="flex items-center gap-2.5 text-sm text-[#085c48]">
+          <span className={`grid size-5 shrink-0 place-items-center rounded-full ${complete ? 'bg-[#0b7a5f] text-paper' : 'border-2 border-[#0b7a5f]'}`} aria-hidden="true">
             {complete && <Check size={12} strokeWidth={2.5} />}
           </span>
-          <span className={complete ? 'text-[#68705a]' : 'font-semibold'}>{step.label}</span>
+          <span className={complete ? 'text-[#3f3f46]' : 'font-semibold'}>{step.label}</span>
           <span className="sr-only">{complete ? 'terminée' : 'en cours'}</span>
         </li>;
       })}
-      {phase === 'broad' && <li data-testid="stage-broad" aria-current="step" className="flex items-center gap-2.5 text-sm font-semibold text-[#3c4233]">
-        <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-[#77874c]" aria-hidden="true" />
+      {phase === 'broad' && <li data-testid="stage-broad" aria-current="step" className="flex items-center gap-2.5 text-sm font-semibold text-[#085c48]">
+        <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-[#0b7a5f]" aria-hidden="true" />
         Recherche élargie <span className="sr-only">en cours</span>
       </li>}
     </ol>

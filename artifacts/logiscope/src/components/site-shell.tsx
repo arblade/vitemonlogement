@@ -18,17 +18,17 @@ export function SiteShell({ children }: { children: ReactNode }) {
     window.addEventListener('keydown', onEscape);
     return () => window.removeEventListener('keydown', onEscape);
   }, [mobileOpen]);
-  return <div className="grain min-h-[100dvh] bg-background">
-    <header className="relative z-40 border-b border-line bg-paper">
-      <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 md:px-10 lg:px-16">
+  return <div className="min-h-[100dvh] bg-background">
+    <header className="sticky top-0 z-40 border-b border-line-soft bg-paper/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 md:px-10 lg:px-16">
         <Link href="/" data-testid="link-home-logo" className="flex items-center gap-3 group">
-          <span className="grid size-10 place-items-center rounded-full bg-ink text-lime transition-transform group-hover:rotate-[-12deg]"><Compass size={20} strokeWidth={1.8}/></span>
-          <span className="text-[21px] font-bold tracking-[-.065em]">vite mon logement<span className="text-[#9ca858]">.</span></span>
+          <span className="grid size-8 place-items-center rounded-lg bg-ink text-paper transition-transform group-hover:rotate-[-8deg]"><Compass size={17} strokeWidth={1.8}/></span>
+          <span className="text-lg font-semibold tracking-[-.03em]">vite mon logement</span>
         </Link>
-        <nav aria-label="Navigation principale" className="hidden items-center gap-7 text-[12px] font-semibold tracking-wide md:flex">
-          <Link href="/" data-testid="link-new-search" aria-current={path === '/' ? 'page' : undefined} className={`transition-colors hover:text-[#8a9551] ${path === '/' ? 'text-ink' : 'text-stone-soft'}`}>Nouvelle recherche</Link>
-          <Link href="/searches" data-testid="link-history" aria-current={onHistory ? 'page' : undefined} className={`transition-colors hover:text-[#8a9551] ${onHistory ? 'text-ink' : 'text-stone-soft'}`}>Mes recherches</Link>
-          <Link href="/likes" data-testid="link-likes" aria-current={path === '/likes' ? 'page' : undefined} className={`inline-flex items-center gap-1.5 transition-colors hover:text-[#8a9551] ${path === '/likes' ? 'text-ink' : 'text-stone-soft'}`}><Heart size={15}/> <span>Favoris</span>{favoriteCount > 0 && <span className="font-data text-xs">{favoriteCount}</span>}</Link>
+        <nav aria-label="Navigation principale" className="hidden items-center gap-1 text-sm font-medium md:flex">
+          <Link href="/" data-testid="link-new-search" aria-current={path === '/' ? 'page' : undefined} className={`transition-colors hover:text-[#10a37f] ${path === '/' ? 'text-ink' : 'text-stone-soft'}`}>Nouvelle recherche</Link>
+          <Link href="/searches" data-testid="link-history" aria-current={onHistory ? 'page' : undefined} className={`rounded-lg px-3 py-2 transition-colors hover:bg-sage ${onHistory ? 'bg-sage text-ink' : 'text-stone'}`}>Mes recherches</Link>
+          <Link href="/likes" data-testid="link-likes" aria-current={path === '/likes' ? 'page' : undefined} className={`inline-flex items-center gap-1.5 transition-colors hover:text-[#10a37f] ${path === '/likes' ? 'text-ink' : 'text-stone-soft'}`}><Heart size={15}/> <span>Favoris</span>{favoriteCount > 0 && <span className="font-data text-xs">{favoriteCount}</span>}</Link>
         </nav>
         <button type="button" data-testid="button-mobile-menu" aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'} aria-expanded={mobileOpen} aria-controls="mobile-navigation" onClick={() => setMobileOpen(value => !value)} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-3 text-xs font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss md:hidden">
           {mobileOpen ? <X size={18} aria-hidden="true"/> : <Menu size={18} aria-hidden="true"/>} Menu
@@ -52,12 +52,12 @@ export function SiteShell({ children }: { children: ReactNode }) {
   </div>;
 }
 
-export function Eyebrow({ number, children, light = false }: { number: string; children: ReactNode; light?: boolean }) {
-  return <div className={`flex items-center gap-3 font-data text-xs uppercase tracking-[.17em] ${light ? 'text-lime' : 'text-[#757956]'}`}><span className={`grid size-6 place-items-center rounded-full border ${light ? 'border-lime/40' : 'border-[#a8af77]'}`}>{number}</span>{children}</div>;
+export function Eyebrow({ children }: { number?: string; children: ReactNode; light?: boolean }) {
+  return <div className="text-sm font-medium text-stone">{children}</div>;
 }
 
 export function ErrorNotice({ message, retry }: { message: string; retry?: () => void }) {
-  return <div role="alert" data-testid="status-error" className="flex flex-col gap-3 border-l-[3px] border-brick bg-[#f4e9e4] px-5 py-4 text-sm text-[#723c37] sm:flex-row sm:items-center sm:justify-between">
+  return <div role="alert" data-testid="status-error" className="flex flex-col gap-3 border-l-[3px] border-brick bg-[#fef3f2] px-5 py-4 text-sm text-[#b42318] sm:flex-row sm:items-center sm:justify-between">
     <span>{message}</span>{retry && <button data-testid="button-retry" type="button" onClick={retry} className="shrink-0 font-semibold underline underline-offset-4">Réessayer</button>}
   </div>;
 }
