@@ -29,7 +29,7 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
   const sourceCopy = {
     api: 'Champ standard',
     description: 'Description',
-    unknown: 'À vérifier dans l'annonce',
+    unknown: 'À vérifier dans l’annonce',
   };
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
