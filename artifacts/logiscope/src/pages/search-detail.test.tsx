@@ -80,9 +80,9 @@ describe('Page résultats : contenu', () => {
     expect(document.body).not.toHaveTextContent('Le tri est fait');
   });
 
-  it('l’explication « Comment les critères sont vérifiés » est repliée par défaut', () => {
+  it('l’explication « Où on cherche les critères » est repliée par défaut', () => {
     renderPage();
-    const details = screen.getByText('Comment les critères sont vérifiés').closest('details');
+    const details = screen.getByText('Où on cherche les critères').closest('details');
     expect(details).not.toBeNull();
     expect(details).not.toHaveAttribute('open');
   });
@@ -152,6 +152,56 @@ describe('Galerie photo d’une carte', () => {
     await user.click(screen.getByTestId('button-open-listing-1'));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée'));
+  });
+});
+
+describe('Ouverture de la carte au clic', () => {
+  const photos = ['https://img.test/a.jpg', 'https://img.test/b.jpg'];
+  const dialog = () => screen.queryByRole('dialog');
+  beforeEach(() => { api.state.data = search({ listings: [listing(1, { images: photos, image: photos[0] })] }); });
+
+  it('un clic sur la photo ouvre la fiche complète', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    expect(dialog()).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('card-image-1'));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('un clic sur le cadre de la photo, sur le titre ou sur le score ouvre aussi la fiche', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId('card-gallery-1').parentElement!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(dialog()).not.toBeInTheDocument());
+    await user.click(screen.getByTestId('text-listing-title-1'));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(dialog()).not.toBeInTheDocument());
+    await user.click(screen.getByText('/100').closest('div')!);
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('les flèches, les points, le cœur et « Comparer » n’ouvrent pas la fiche', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(screen.getByTestId('card-photo-next-1'));
+    await user.click(screen.getByTestId('card-photo-prev-1'));
+    await user.click(screen.getByTestId('card-photo-dot-1-1'));
+    await user.click(screen.getByTestId('button-like-1'));
+    await user.click(screen.getByTestId('button-compare-1'));
+    expect(dialog()).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-listing-1')).not.toHaveTextContent('déjà consultée');
+  });
+
+  it('un clic sur « Voir sur leboncoin » ouvre l’annonce d’origine, pas la fiche', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const link = within(screen.getByTestId('card-listing-1')).getByRole('link', { name: /leboncoin/i });
+    link.addEventListener('click', event => event.preventDefault());
+    await user.click(link);
+    expect(dialog()).not.toBeInTheDocument();
   });
 });
 

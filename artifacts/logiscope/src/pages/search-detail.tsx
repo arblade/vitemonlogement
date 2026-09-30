@@ -33,9 +33,9 @@ function createErrorMessage(error: unknown) {
 }
 
 const checkGroups = [
-  { availability: 'api', title: 'Données API', detail: 'Vérifiables par données structurées de l’annonce.', tone: 'border-ok-line bg-ok-wash text-ok-deep' },
-  { availability: 'hybrid', title: 'API selon l’annonce', detail: 'Parfois disponibles en données structurées ; sinon, lecture de la description.', tone: 'border-line bg-sage text-ink' },
-  { availability: 'description', title: 'Description nécessaire', detail: 'Recherchés dans le texte de l’annonce par l’IA.', tone: 'border-line bg-mist text-stone' },
+  { availability: 'api', title: 'Champs standards', detail: 'Vérifiables directement.', tone: 'border-ok-line bg-ok-wash text-ok-deep' },
+  { availability: 'hybrid', title: 'Champs optionnels', detail: 'Parfois complets ; sinon, dans la description.', tone: 'border-line bg-sage text-ink' },
+  { availability: 'description', title: 'À lire dans la description', detail: 'Recherchés dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
 function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, onSelect, onFavorite, onViewed }: {
@@ -56,7 +56,8 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
     return () => observer.disconnect();
   }, [listing.aiSummary, expandedSummary]);
   const { generals, criteria, features } = listingFacts(listing, checks);
-  return <><article data-testid={`card-listing-${listing.id}`} className={`group relative overflow-hidden rounded-3xl border border-line transition-all duration-300 hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:shadow-[0_12px_34px_rgba(34,32,44,.08)] ${viewed ? 'bg-sage opacity-85 grayscale-[.2]' : 'bg-cream'}`}>
+  return <><article data-testid={`card-listing-${listing.id}`} className={`group relative overflow-hidden rounded-3xl border border-line transition-all duration-300 hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:shadow-[0_12px_34px_rgba(34,32,44,.08)] ${viewed ? 'bg-sage opacity-85 grayscale-[.2]' : 'bg-cream'}`}
+    onClick={event => { if ((event.target as HTMLElement).closest('button, a, input, select, textarea, label, summary')) return; onViewed(); setOpen(true); }}>
     <button type="button" data-testid={`button-open-listing-${listing.id}`} onClick={() => { onViewed(); setOpen(true); }} aria-label={`Lire le détail de l’annonce : ${listing.title}`} className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-moss"/>
     <div className="grid md:grid-cols-[260px_1fr] xl:grid-cols-[310px_1fr]">
       <div className="relative z-20 min-h-[230px] p-3 md:min-h-full">

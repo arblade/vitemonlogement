@@ -78,10 +78,13 @@ test("galerie (mobile) : faire défiler les photos ne grise pas l'annonce, même
   await page.click("[data-testid=card-photo-next-1]");
   await page.click("[data-testid=card-photo-prev-1]");
   assert.match(await text(page, "[data-testid=card-gallery-1]"), /photo 2 \/ 3/i);
+  assert.equal(await page.locator("[role=dialog]").count(), 0, "les flèches n'ouvrent pas la fiche");
   assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
   await page.reload();
   await page.waitForSelector("[data-testid=card-listing-1]");
   assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
+  await page.tap("[data-testid=card-gallery-1]"); // toucher le centre de la galerie (hors boutons) ouvre la fiche complète
+  await page.waitForSelector("[role=dialog]");
   await page.close();
 });
 

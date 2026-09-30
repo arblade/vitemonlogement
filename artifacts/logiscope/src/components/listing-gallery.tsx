@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { KeyboardEvent, MouseEvent } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { HousingListing } from '@workspace/api-client-react';
 import { ArrowLeft, ArrowRight, ImageOff } from 'lucide-react';
 
@@ -25,12 +25,10 @@ export function ListingGallery({ listing, large = false }: { listing: HousingLis
       move(event.key === 'ArrowLeft' ? -1 : 1);
     }
   };
-  const stop = (event: MouseEvent<HTMLDivElement>) => event.stopPropagation();
 
   return <div
     data-testid={`${large ? 'detail' : 'card'}-gallery-${listing.id}`}
     className={`relative isolate overflow-hidden rounded-2xl bg-sage ${large ? 'h-[280px] sm:h-[420px] lg:h-[510px]' : 'h-[230px] md:h-full md:min-h-[270px]'}`}
-    onClick={stop}
     onKeyDown={onKeyDown}
     tabIndex={images.length > 1 ? 0 : undefined}
     role={images.length > 1 ? 'group' : undefined}
