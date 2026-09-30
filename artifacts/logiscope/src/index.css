@@ -97,7 +97,10 @@
 @media (prefers-reduced-motion: reduce) { .reveal,.pulse-dot,.shimmer,.spin-arc,.pulse-ring,.progress-fill::after { animation:none } }
 /* Carte de la fiche (MapLibre) : pastilles façon Airbnb. Chaque marqueur est un point de taille nulle ; la pastille se centre dessus. */
 .vml-pin, .vml-badge { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 9999px; font-weight: 700; line-height: 1; box-shadow: 0 2px 4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.14); }
-.vml-pin-home { background: var(--color-ink); color: #fff; padding: 8px 12px; font-size: 13px; transform: translate(-50%, -100%) translateY(-8px); }
+.vml-pin-home { background: var(--color-ink); color: #fff; width: 40px; height: 40px; justify-content: center; transform: translate(-50%, -100%) translateY(-8px); border: 2px solid #fff; }
+/* Zone approximative : la maison est posée au centre du cercle, pas « piquée » sur un point précis. */
+.vml-pin-area { transform: translate(-50%, -50%); }
+.vml-pin-area::after { display: none; }
 .vml-pin-home::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: var(--color-ink); transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
 .vml-pin-place { background: #fff; color: var(--color-ink); padding: 4px 11px 4px 4px; font-size: 12px; border: 1px solid rgba(0,0,0,.06); }
 .vml-pin-dot { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9999px; background: var(--color-brand); color: #fff; }

@@ -114,20 +114,21 @@ async function checkListingMap(page) {
   await page.waitForSelector("[data-testid=listing-map-1]");
   assert.match(await text(page, "[data-testid=map-precision-1]"), /Adresse exacte/);
   await page.waitForSelector("[data-testid=map-marker-home]");
-  assert.match(await text(page, "[data-testid=map-marker-home]"), /600\s€/);
+  assert.equal((await text(page, "[data-testid=map-marker-home]")).trim(), "", "pastille du logement : une icône, sans prix");
   assert.match(await text(page, "[data-testid=map-marker-place-1]"), /Travail/);
   await page.waitForSelector("[data-testid=map-duration-place-1]");
   assert.match(await text(page, "[data-testid=map-duration-place-1]"), /18 min/);
   await page.waitForSelector("[data-testid=listing-map-canvas][data-routes]");
   assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-routes"), "1", "trajet dessiné sur la carte");
   assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-crow"), "0", "pas de ligne droite quand le trajet est connu");
+  assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-area"), "false", "adresse exacte : pas de cercle");
   assert.match(await text(page, "[data-testid=map-travel-place-1]"), /18 min[\s\S]*à vélo · 1,4 km/);
   assert.match(await text(page, "[data-testid=map-place-place-1]"), /Gare Lille Flandres/);
   const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
 }
 
-test("carte (mobile) : adresse exacte → carte avec le logement, le lieu de travail, le trajet et sa durée ; commune seule → pas de carte", async () => {
+test("carte (mobile) : adresse exacte → logement, lieu de travail, trajet et durée ; commune seule → cercle et lieu, sans trajet", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");
   await page.waitForSelector("[data-testid=card-listing-1]");
@@ -137,9 +138,16 @@ test("carte (mobile) : adresse exacte → carte avec le logement, le lieu de tra
   assert.ok(overflow <= 0, `défilement horizontal de ${overflow}px`);
   await page.click("[data-testid=button-close-listing-1]");
   await page.click("[data-testid=button-open-listing-2]");
-  await page.waitForSelector("[data-testid=dialog-listing-2]");
-  await page.waitForTimeout(400);
-  assert.equal(await page.locator("[data-testid=listing-map-2]").count(), 0, "annonce localisée à la commune : pas de carte");
+  await page.waitForSelector("[data-testid=listing-map-2]");
+  assert.match(await text(page, "[data-testid=map-precision-2]"), /Commune seulement/);
+  await page.waitForSelector("[data-testid=dialog-listing-2] [data-testid=listing-map-canvas][data-area]");
+  const zone = "[data-testid=dialog-listing-2] [data-testid=listing-map-canvas]";
+  assert.equal(await page.getAttribute(zone, "data-area"), "true", "zone approximative dessinée en cercle");
+  assert.equal(await page.getAttribute(zone, "data-routes"), "0", "aucun trajet depuis une zone");
+  assert.equal(await page.getAttribute(zone, "data-crow"), "0", "ni ligne droite");
+  assert.equal(await page.locator("[data-testid=dialog-listing-2] [data-testid=map-marker-place-1]").count(), 1, "le lieu de travail reste affiché");
+  assert.equal(await page.locator("[data-testid=dialog-listing-2] [data-testid^=map-duration-]").count(), 0);
+  assert.equal((await text(page, "[data-testid=dialog-listing-2] [data-testid=map-travel-place-1]")).trim(), "", "ni durée ni distance");
   await page.close();
 });
 

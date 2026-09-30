@@ -11,11 +11,11 @@ Résumés des études de features menées le 30/09/2026. Un fichier par feature.
 | Refonte UX et saisie en deux temps | Phase 1 + refonte visuelle (style Airbnb, icônes, mobile) faites ; phases 2 à 4 à faire | [refonte-ux-et-saisie-en-deux-temps.md](refonte-ux-et-saisie-en-deux-temps.md) |
 | Contacter l'annonceur | Implémenté (une ligne dans la fiche) | [contact-annonceur.md](contact-annonceur.md) |
 | Suivi des favoris (statuts liké / contacté / visite, note) | Réflexion seulement, au backlog | [suivi-des-favoris.md](suivi-des-favoris.md) |
-| Carte des logements (style Airbnb) | Preuve de concept faite : carte dans la fiche (adresse exacte ou rue), lieux de vie extraits de la demande, trajet Google si clé ; carte de la liste de résultats à faire | [carte-des-logements.md](carte-des-logements.md) |
+| Carte des logements (style Airbnb) | Preuve de concept faite : carte dans la fiche (point si adresse exacte ou rue, cercle si quartier ou commune), lieux de vie extraits de la demande, trajet Google si clé ; carte de la liste de résultats à faire | [carte-des-logements.md](carte-des-logements.md) |
 
 La carte est sur `develop` ; le reste est aussi sur `main`.
 
 ## Tests (à lancer à chaque fois : voir `CLAUDE.md`)
-- `pnpm test` : serveur (`node:test`, 85 + 4 `todo` connus) et front (Vitest, 99).
+- `pnpm test` : serveur (`node:test`, 85 + 4 `todo` connus) et front (Vitest, 101).
 - `pnpm test:e2e` : scénario navigateur mobile puis desktop (12).
 - `pnpm test:prod` : vrais Apify/OpenAI, sur demande explicite seulement (non validé : crédit OpenAI épuisé lors du dernier essai).

@@ -3,13 +3,13 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { HousingListing, HousingPlace, ListingRoute } from '@workspace/api-client-react';
 import { ListingMap } from '@/components/listing-map';
-import { crowDistance, formatDistance, formatDuration, listingPoint, locatedPlaces } from '@/lib/geo';
+import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces } from '@/lib/geo';
 import { listing, mockFetch } from '@/test/fixtures';
 
 // jsdom n'a pas de WebGL : la carte MapLibre est remplacée par un témoin des données reçues (le vrai rendu est vérifié en e2e).
 vi.mock('@/components/listing-map-canvas', () => ({
-  default: ({ price, places, routes }: { price: string; places: HousingPlace[]; routes: ListingRoute[] }) =>
-    <div data-testid="canvas" data-price={price} data-places={places.map(place => place.id).join(',')} data-routes={routes.map(route => route.placeId).join(',')}/>,
+  default: ({ radius, places, routes }: { radius: number; places: HousingPlace[]; routes: ListingRoute[] }) =>
+    <div data-testid="canvas" data-radius={radius} data-places={places.map(place => place.id).join(',')} data-routes={routes.map(route => route.placeId).join(',')}/>,
 }));
 
 const home = { lat: 50.6408, lng: 3.0611 };
@@ -24,13 +24,21 @@ function renderMap(props: Partial<Parameters<typeof ListingMap>[0]> = {}) {
 }
 
 describe('geo : utilitaires', () => {
-  it('listingPoint : seules l’adresse exacte et la rue donnent un point', () => {
-    expect(listingPoint(precise())).toEqual(home);
-    expect(listingPoint(precise({ geoPrecision: 'street' }))).toEqual(home);
-    expect(listingPoint(precise({ geoPrecision: 'district' }))).toBeNull();
-    expect(listingPoint(precise({ geoPrecision: 'city' }))).toBeNull();
-    expect(listingPoint(precise({ geoPrecision: null }))).toBeNull();
-    expect(listingPoint(listing(2))).toBeNull();
+  it('listingArea : adresse exacte et rue = point précis ; quartier et commune = zone (cercle) ; sinon rien', () => {
+    expect(listingArea(precise())).toEqual({ ...home, radius: 0, precise: true });
+    expect(listingArea(precise({ geoPrecision: 'street' }))).toEqual({ ...home, radius: 0, precise: true });
+    expect(listingArea(precise({ geoPrecision: 'district' }))).toEqual({ ...home, radius: AREA_RADIUS.district, precise: false });
+    expect(listingArea(precise({ geoPrecision: 'city' }))).toEqual({ ...home, radius: AREA_RADIUS.city, precise: false });
+    expect(AREA_RADIUS.city).toBeGreaterThan(AREA_RADIUS.district);
+    expect(listingArea(precise({ geoPrecision: null }))).toBeNull();
+    expect(listingArea(listing(2))).toBeNull();
+  });
+
+  it('circle : polygone fermé dont chaque sommet est à la bonne distance du centre', () => {
+    const ring = circle(home, 600);
+    expect(ring).toHaveLength(65);
+    expect(ring[0]).toEqual(ring[64]);
+    for (const [lng, lat] of ring) expect(Math.abs(crowDistance(home, { lat, lng }) - 600)).toBeLessThan(6);
   });
 
   it('durées, distances et vol d’oiseau en français', () => {
@@ -48,17 +56,33 @@ describe('geo : utilitaires', () => {
 });
 
 describe('Encart « Où se trouve le logement »', () => {
-  it('annonce localisée au quartier ou à la commune : aucun encart', () => {
+  it('annonce sans coordonnées : aucun encart', () => {
     mockFetch([]);
-    renderMap({ listing: precise({ geoPrecision: 'district' }) });
+    renderMap({ listing: listing(2) });
     expect(screen.queryByText('Où se trouve le logement')).not.toBeInTheDocument();
   });
 
-  it('adresse exacte : carte avec le prix, sans lieu cité ni appel de trajet', async () => {
+  it('quartier ou commune : cercle et lieux sur la carte, mais ni trajet, ni appel, ni distance', async () => {
+    for (const geoPrecision of ['district', 'city'] as const) {
+      const calls = mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: [route] } }) }]);
+      const { unmount } = renderMap({ listing: precise({ geoPrecision }), routingAvailable: true });
+      expect(screen.getByTestId('map-precision-1')).toHaveTextContent(geoPrecision === 'district' ? /Quartier seulement/ : /Commune seulement/);
+      const canvas = await screen.findByTestId('canvas');
+      expect(canvas).toHaveAttribute('data-radius', String(AREA_RADIUS[geoPrecision]));
+      expect(canvas).toHaveAttribute('data-places', 'place-1');
+      expect(canvas).toHaveAttribute('data-routes', '');
+      expect(screen.getByTestId('map-place-place-1')).toHaveTextContent('Gare Lille Flandres, Lille');
+      expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent('');
+      expect(calls).toHaveLength(0);
+      unmount();
+    }
+  });
+
+  it('adresse exacte : un point (sans prix), sans lieu cité ni appel de trajet', async () => {
     const calls = mockFetch([]);
     renderMap({ places: [], routingAvailable: true });
     expect(screen.getByText('Adresse exacte indiquée par l’annonce.')).toBeInTheDocument();
-    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-price', '650 €');
+    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-radius', '0');
     expect(screen.queryByRole('list', { name: 'Vos lieux' })).not.toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
