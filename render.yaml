@@ -1,10 +1,12 @@
-# Blueprint Render : un seul service web sert l'API (/api) et le front compilé.
-# La base Postgres existe déjà : collez son « Internal Database URL » dans DATABASE_URL.
+# Blueprint Render : un seul service web sert l'API (/api), le worker de recherches et le front compilé.
+# La base Postgres (Neon) existe déjà : collez sa chaîne de connexion dans DATABASE_URL.
+# Le worker tourne dans ce même processus : il faut un plan payant (pas de mise en veille) pour que
+# les recherches avancent même quand personne n'a l'application ouverte.
 services:
   - type: web
     name: vitemonlogement
     runtime: node
-    plan: free # passer à « starter » pour éviter la mise en veille (les recherches Apify tournent en arrière-plan)
+    plan: starter
     buildCommand: pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/logiscope run build && pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     healthCheckPath: /api/healthz
@@ -13,9 +15,15 @@ services:
         value: production
       - key: NODE_VERSION
         value: 22.22.2
+      - key: TRUST_PROXY
+        value: "1"
       - key: DATABASE_URL
         sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: APIFY_TOKEN
         sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

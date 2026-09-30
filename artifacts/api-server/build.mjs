@@ -29,6 +29,7 @@ async function buildAll() {
     // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
+      "@electric-sql/pglite", // Postgres embarqué : dev/tests seulement, chargé à la demande
       "sharp",
       "better-sqlite3",
       "sqlite3",

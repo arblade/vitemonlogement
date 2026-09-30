@@ -11,14 +11,13 @@ function intEnv(name: string, fallback: number) {
   const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
-const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
+export const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
 const CANDIDATE_LIMIT = Math.max(10, intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
-const polling = new Set<number>();
 
 async function apify(path: string, init?: { method: string; headers: Record<string, string>; body: string }) {
   const token = process.env.APIFY_TOKEN;
   if (!token) throw new Error("APIFY_TOKEN n'est pas configuré.");
-  const response = await fetch(`https://api.apify.com${path}`, {
+  const response = await fetch(`${process.env.APIFY_BASE_URL || "https://api.apify.com"}${path}`, {
     ...init,
     headers: { ...init?.headers, Authorization: `Bearer ${token}` },
   });
@@ -174,13 +173,13 @@ export async function startSearch(criteria: Criteria, batch: SearchBatch = "focu
   return { runId, request };
 }
 
-export async function syncSearch(id: number, criteria: Criteria, continueSearch: () => Promise<void>) {
+/** Contrôle une fois le run Apify d'une recherche ; à appeler sous bail (voir worker.ts). */
+export async function syncSearch(id: number, criteria: Criteria) {
   const row = await getSearchRow(id);
-  if (!row || row.status !== "running" || !row.run_id || polling.has(id)) return;
+  if (!row || row.status !== "running" || !row.runId) return;
   const phase: SearchBatch = row.phase === "broad" ? "broad" : "focused";
-  polling.add(id);
   try {
-    const result = object(await apify(`/v2/actor-runs/${encodeURIComponent(row.run_id)}`));
+    const result = object(await apify(`/v2/actor-runs/${encodeURIComponent(row.runId)}`));
     const run = object(result.data);
     const status = text(run.status);
     if (status === "SUCCEEDED") {
@@ -235,13 +234,10 @@ export async function syncSearch(id: number, criteria: Criteria, continueSearch:
         // contradictions. A large raw dataset is not 40 usable matches.
         runBroad = phase === "focused" && shouldRunBroad(saved.length, Boolean(focusedSearchTerm(criteria)));
         await completeSearch(id, saved, phase, runBroad, RESULT_LIMIT);
-        if (runBroad) {
-          // The same startup lock handles a competing client poll. If the
-          // server restarts now, the pending broad phase resumes from SQLite.
-          await continueSearch();
-        }
+        // Si la phase élargie est nécessaire, completeSearch a laissé la recherche « running » sans run :
+        // le worker la reprend au prochain passage, même après un redémarrage du serveur.
       } catch (error) {
-        await setFailure(id, error instanceof Error ? error.message : "L'analyse des annonces a échoué.", Boolean(row.analyzed) || runBroad || phase === "broad");
+        // Pas d'échec définitif ici : le worker réessaie (l'analyse déjà payée est en cache) puis abandonne.
         throw error;
       }
     } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
@@ -249,9 +245,7 @@ export async function syncSearch(id: number, criteria: Criteria, continueSearch:
     }
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");
-    // A transient Apify or AI failure remains retriable on the next poll.
+    // Échec transitoire (Apify, IA) : le worker compte les tentatives et réessaie ou abandonne.
     throw error;
-  } finally {
-    polling.delete(id);
   }
 }

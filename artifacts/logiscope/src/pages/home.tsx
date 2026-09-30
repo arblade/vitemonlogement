@@ -48,7 +48,7 @@ export default function Home() {
       <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-10 md:py-14 lg:px-16">
         <p className="font-data text-[11px] uppercase tracking-[.15em] text-[#dfe89b]">Rechercher une location</p>
         <h1 className="mt-4 max-w-[900px] text-[clamp(2.2rem,5vw,4.2rem)] font-semibold leading-[1.05] tracking-[-.055em]">Décrivez le logement que vous cherchez.</h1>
-        <p className="mt-4 max-w-[760px] text-sm leading-relaxed text-[#d1cfd4] md:text-base">Indiquez la ville, votre budget et ce qui compte pour vous. Logiscope parcourt les annonces et indique quels critères sont confirmés ou restent à vérifier.</p>
+        <p className="mt-4 max-w-[760px] text-sm leading-relaxed text-[#d1cfd4] md:text-base">Indiquez la ville, votre budget et ce qui compte pour vous. Vite mon logement parcourt les annonces et indique quels critères sont confirmés ou restent à vérifier.</p>
         <div className="mt-8 max-w-[1000px] rounded-xl bg-[#f5f3eb] p-2 text-[#292635] md:p-3">
           <Form {...promptForm}>
             <form onSubmit={promptForm.handleSubmit(onCreate)} className="flex flex-col gap-2 md:flex-row md:items-stretch">

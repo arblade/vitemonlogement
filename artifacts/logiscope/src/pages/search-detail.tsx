@@ -12,6 +12,7 @@ import { listingFacts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
+import { useAppConfig } from '@/hooks/use-app-config';
 import { listingKey, markListingViewed, toggleListingFavorite, useListingInteractions } from '@/lib/listing-interactions';
 
 function sourceName(url: string) {
@@ -106,7 +107,7 @@ export default function SearchDetail() {
   const [interactionError, setInteractionError] = useState('');
   const interactions = useListingInteractions();
   const viewedUrls = new Set(interactions.viewed);
-  const perCallLimit = import.meta.env.DEV ? 5 : 100;
+  const perCallLimit = useAppConfig().data?.resultsPerCall;
   const search = useGetHousingSearch(id, { query: { queryKey: getGetHousingSearchQueryKey(id), enabled: validId, refetchInterval: query => query.state.data?.status === 'running' ? 3500 : false } });
   const refresh = useRefreshHousingSearch();
   const create = useCreateHousingSearch();
@@ -173,7 +174,7 @@ export default function SearchDetail() {
         {interactionError && <p role="alert" className="mb-5 text-sm text-[#a84d43]">{interactionError}</p>}
         {data.status !== 'running' && !refresh.isPending &&
         <div className="mb-9 flex flex-col justify-between gap-6 border-b border-[#d9d6c9] pb-8 md:flex-row md:items-end">
-           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-[38px] font-semibold leading-tight tracking-[-.055em] md:text-[52px]">{`${data.count} annonce${data.count>1?'s':''} à explorer`}<span className="font-editorial font-normal italic text-[#899259]">.</span></h2><p className="mt-2 text-xs text-[#77746a]">{perCallLimit} nouvelles annonces maximum par appel · Les anciennes restent disponibles, sans doublons</p></div>
+           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-[38px] font-semibold leading-tight tracking-[-.055em] md:text-[52px]">{`${data.count} annonce${data.count>1?'s':''} à explorer`}<span className="font-editorial font-normal italic text-[#899259]">.</span></h2><p className="mt-2 text-xs text-[#77746a]">{perCallLimit ? `${perCallLimit} nouvelles annonces maximum par appel · ` : ''}Les anciennes restent disponibles, sans doublons</p></div>
            {data.status==='completed' && !refresh.isPending && <div className="flex flex-wrap items-center gap-3"><Button type="button" data-testid="button-refresh" onClick={onRefresh} className="h-10 rounded-lg bg-[#292635] px-5 text-xs font-semibold text-[#e2eaa5] hover:bg-[#454050]"><RefreshCw size={15} className="mr-2"/> Refresh</Button>{listings.length>0 && <><label htmlFor="sort-results" className="font-data text-[10px] uppercase tracking-[.08em] text-[#77746a]">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#d6d2c5] bg-[#fbfaf5] px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#9aa464]"><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></>}</div>}
         </div>}
          {(data.status==='running'||refresh.isPending) && <div className="mx-auto max-w-3xl">

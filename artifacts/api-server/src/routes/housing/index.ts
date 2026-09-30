@@ -7,47 +7,19 @@ import {
   AnalyzeHousingSearchResponse, RefreshHousingSearchParams,
   RefreshHousingSearchResponse,
 } from "@workspace/api-zod";
+import { randomUUID } from "node:crypto";
 import { interpret, analyze } from "./ai";
-import { startSearch, syncSearch } from "./apify";
-import {
-  beginRefresh, createSearch, getSearch, getSearchRow, listSearches,
-  saveAnalysis, setCriteria, setFailure, setRun, type Criteria,
-} from "./store";
-import { logger } from "../../lib/logger";
+import { beginRefresh, createSearch, getSearch, getSearchRow, listSearches, saveAnalysis } from "./store";
+import { costlyRateLimit } from "../../lib/quota";
+import { claimSearch, releaseSearch } from "../../lib/queue";
+import { wakeWorker } from "../../lib/worker-registry";
 
 const router: IRouter = Router();
-const analyzing = new Set<number>();
-const starting = new Set<number>();
+const instanceId = `api-${randomUUID()}`;
+const ANALYZE_LEASE_MS = 5 * 60_000;
 
-async function beginSearch(id: number) {
-  if (starting.has(id)) return;
-  starting.add(id);
-  let isRefresh = false;
-  try {
-    const row = await getSearchRow(id);
-    if (!row || row.status !== "running" || row.run_id) return;
-    isRefresh = Boolean(row.analyzed);
-    let criteria = JSON.parse(row.criteria) as Criteria;
-    if (!criteria.location) {
-      criteria = await interpret(row.prompt);
-      if (!criteria.location.trim()) throw new Error("Indiquez une ville ou un département dans votre description.");
-      await setCriteria(id, criteria);
-    }
-    if (criteria.intent !== "rent") {
-      criteria = { ...criteria, intent: "rent" };
-      await setCriteria(id, criteria);
-    }
-    const { runId, request } = await startSearch(criteria, row.phase);
-    await setRun(id, runId, request);
-  } catch (error) {
-    logger.error({ err: error, searchId: id }, "Unable to start housing search");
-    await setFailure(id, error instanceof Error ? error.message : "La recherche a échoué.", isRefresh);
-  } finally {
-    starting.delete(id);
-  }
-}
-
-router.post("/housing/interpret", async (req, res): Promise<void> => {
+// Les routes coûteuses (IA, Apify) passent par costlyRateLimit : plafond global, par cookie et par IP.
+router.post("/housing/interpret", costlyRateLimit, async (req, res): Promise<void> => {
   const input = InterpretHousingRequestBody.safeParse(req.body);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
   res.json(InterpretHousingRequestResponse.parse(await interpret(input.data.prompt)));
@@ -57,34 +29,24 @@ router.get("/housing/searches", async (_req, res) => {
   res.json(ListHousingSearchesResponse.parse(await listSearches()));
 });
 
-router.post("/housing/searches", async (req, res): Promise<void> => {
+router.post("/housing/searches", costlyRateLimit, async (req, res): Promise<void> => {
   const input = CreateHousingSearchBody.safeParse(req.body);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
   const id = await createSearch(input.data.prompt.trim());
   res.status(201).json(CreateHousingSearchResponse.parse(await getSearch(id)));
-  void beginSearch(id);
+  wakeWorker(); // le worker serveur prend le relais ; le navigateur ne fait que suivre l'avancement
 });
 
+// Simple lecture : l'avancement ne dépend plus des appels du navigateur.
 router.get("/housing/searches/:id", async (req, res): Promise<void> => {
   const params = GetHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const row = await getSearchRow(params.data.id);
   if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
-  if (row.status === "running") {
-    if (row.run_id) {
-      // Polling must not hold the HTTP request open during Apify or LLM work.
-      void syncSearch(row.id, JSON.parse(row.criteria) as Criteria, () => beginSearch(row.id)).catch(error => {
-        logger.error({ err: error, searchId: row.id }, "Search synchronization failed");
-      });
-    } else {
-      // A restart during interpretation or actor startup resumes from SQLite.
-      void beginSearch(row.id);
-    }
-  }
   res.json(GetHousingSearchResponse.parse(await getSearch(row.id)));
 });
 
-router.post("/housing/searches/:id/refresh", async (req, res): Promise<void> => {
+router.post("/housing/searches/:id/refresh", costlyRateLimit, async (req, res): Promise<void> => {
   const params = RefreshHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const row = await getSearchRow(params.data.id);
@@ -98,10 +60,10 @@ router.post("/housing/searches/:id/refresh", async (req, res): Promise<void> => 
     return;
   }
   res.status(202).json(RefreshHousingSearchResponse.parse(await getSearch(row.id)));
-  void beginSearch(row.id);
+  wakeWorker();
 });
 
-router.post("/housing/searches/:id/analyze", async (req, res): Promise<void> => {
+router.post("/housing/searches/:id/analyze", costlyRateLimit, async (req, res): Promise<void> => {
   const params = AnalyzeHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const search = await getSearch(params.data.id);
@@ -111,16 +73,16 @@ router.post("/housing/searches/:id/analyze", async (req, res): Promise<void> => 
     return;
   }
   if (!search.analyzed) {
-    if (analyzing.has(search.id)) {
+    // Verrou en base (bail) : valable même avec plusieurs instances.
+    if (!await claimSearch(search.id, instanceId, ANALYZE_LEASE_MS)) {
       res.status(409).json({ error: "Une analyse est déjà en cours pour cette recherche." });
       return;
     }
-    analyzing.add(search.id);
     try {
       const enriched = await analyze(search.listings, search.criteria);
       await saveAnalysis(search.id, enriched);
     } finally {
-      analyzing.delete(search.id);
+      await releaseSearch(search.id, instanceId);
     }
   }
   res.json(AnalyzeHousingSearchResponse.parse(await getSearch(search.id)));

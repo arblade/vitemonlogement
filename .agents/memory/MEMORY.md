@@ -1,1 +1,0 @@
-- [Schéma de l’acteur Apify](apify-actor-schema.md) — Pour l’acteur Leboncoin Clearpath, vérifier le schéma de la version publiée plutôt que se fier au tableau de paramètres du README.

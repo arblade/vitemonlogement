@@ -23,7 +23,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between px-5 md:px-10 lg:px-16">
         <Link href="/" data-testid="link-home-logo" className="flex items-center gap-3 group">
           <span className="grid size-10 place-items-center rounded-full bg-[#292635] text-[#dfe89b] transition-transform group-hover:rotate-[-12deg]"><Compass size={20} strokeWidth={1.8}/></span>
-          <span className="text-[21px] font-bold tracking-[-.065em]">logiscope<span className="text-[#9ca858]">.</span></span>
+          <span className="text-[21px] font-bold tracking-[-.065em]">vite mon logement<span className="text-[#9ca858]">.</span></span>
         </Link>
         <nav aria-label="Navigation principale" className="hidden items-center gap-7 text-[12px] font-semibold tracking-wide md:flex">
           <Link href="/" data-testid="link-new-search" aria-current={path === '/' ? 'page' : undefined} className={`transition-colors hover:text-[#8a9551] ${path === '/' ? 'text-[#292635]' : 'text-[#79776f]'}`}>Nouvelle recherche</Link>
@@ -45,7 +45,7 @@ export function SiteShell({ children }: { children: ReactNode }) {
     {children}
     <footer className="border-t border-[#d9d6c9] bg-[#f5f3eb]">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-4 px-5 py-8 text-xs text-[#77746a] md:flex-row md:items-center md:justify-between md:px-10 lg:px-16">
-        <div className="flex items-center gap-2 font-semibold text-[#292635]"><Compass size={17}/> logiscope</div>
+        <div className="flex items-center gap-2 font-semibold text-[#292635]"><Compass size={17}/> vite mon logement</div>
         <span>Les informations proviennent des annonces. Vérifiez toujours auprès de la source. <ArrowUpRight size={12} className="inline"/></span>
       </div>
     </footer>
