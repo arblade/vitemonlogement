@@ -45,3 +45,26 @@ test("la migration s'applique sur une base vide, et deux fois de suite sans erre
   await handle.migrate();
   await handle.close();
 });
+
+test("la migration réécrit les anciennes preuves « fourni par l’API » en langage courant, sans toucher au reste", async () => {
+  const handle = await openDatabase({ dataDir: "memory://" });
+  for (const statement of LEGACY) await handle.db.execute(sql.raw(statement));
+  await handle.db.execute(sql`INSERT INTO housing_searches (prompt, criteria, status) VALUES ('ancienne recherche', '{}', 'completed')`);
+  const features = JSON.stringify([
+    { label: "Parking", value: "1 place", source: "annonce", evidence: "Champ structuré « nb_parkings » fourni par l’API de l’annonce." },
+    { label: "Balcon", value: "", source: "ia", evidence: "grand balcon plein sud" },
+  ]);
+  const results = JSON.stringify([{ id: "price", label: "Budget", status: "confirmed", source: "api", value: "600", evidence: "Champ structuré « price » fourni par l’API de l’annonce." }]);
+  await handle.db.execute(sql`INSERT INTO housing_listings (search_id, title, url, description, score, features, criterion_results)
+    VALUES (1, 't', 'https://www.leboncoin.fr/ad/locations/1', 'd', 70, ${features}, ${results})`);
+
+  await handle.migrate();
+
+  const rows = (await handle.db.execute(sql`SELECT features, criterion_results FROM housing_listings`) as unknown as { rows: { features: string; criterion_results: string }[] }).rows;
+  const after = JSON.parse(rows[0].features) as { evidence: string }[];
+  assert.equal(after[0].evidence, "Indiqué dans l’annonce : « nb_parkings ».");
+  assert.equal(after[1].evidence, "grand balcon plein sud");
+  assert.equal((JSON.parse(rows[0].criterion_results) as { evidence: string }[])[0].evidence, "Indiqué dans l’annonce : « price ».");
+  assert.doesNotMatch(rows[0].features + rows[0].criterion_results, /API|structuré/);
+  await handle.close();
+});
