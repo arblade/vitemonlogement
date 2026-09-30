@@ -49,6 +49,31 @@ Resend recommandé (offre gratuite : 3 000 mails/mois, 100/jour). Le SMTP direct
 - Inclure la phase élargie ou seulement la ciblée ?
 - Plafond d'alertes actives (proposition : 10).
 
+## Piste de réflexion : sélection des annonces envoyées (backlog, 30/09/2026)
+
+> **⚠️ Simple étape de réflexion, non décidée.** Si l'alerte mail est implémentée, elle **ne doit pas** intégrer le seuil de score, la règle « pas de mail si rien ne passe » ni les autres règles de cette section. Ces points sont à rediscuter avant toute implémentation.
+
+Échange sur la qualité des mails quotidiens (un envoi chaque matin vers 8 h, 5 annonces au maximum).
+
+**Règle anti-doublon (seule règle retenue sans débat)** : on ne regarde qu'une chose, « cette annonce a-t-elle déjà été envoyée par mail ? ». On ne tient compte ni des clics, ni des likes, ni du fait que l'utilisateur l'ait vue ou non. C'est ce que fait déjà la table `alert_deliveries` ci-dessus.
+
+**Idée explorée : ne pas envoyer d'annonces moyennes**
+- Un seuil fixe d'environ **75 %** de correspondance aux critères, non réglable par l'utilisateur en MVP.
+- Au-dessus du seuil : les 5 meilleures. Celles qui dépassent le seuil sans être retenues ne sont pas marquées envoyées et restent candidates pour le lendemain.
+- Moins de 5 annonces au-dessus du seuil : on n'envoie que celles-là, sans compléter.
+- Aucune annonce au-dessus du seuil : pas de mail ce jour-là.
+- Une variante avec un « plancher » plus bas (55-60 %) pour compléter jusqu'à 5 a été proposée puis écartée : elle réintroduit les annonces médiocres que l'on veut éviter.
+
+**Garde-fous évoqués**
+- Critères éliminatoires (budget, ville, surface minimale) appliqués **avant** le score, pour qu'un 75 % ne soit pas hors budget ; le pourcentage ne porte que sur les critères souples.
+- Ignorer les annonces publiées depuis plus de quelques jours (ex. 7), souvent déjà louées.
+- Objet du mail avec le nombre réel d'annonces (« 3 nouveaux logements »), pas un nombre fixe.
+
+**Risques et points ouverts**
+- Seuil trop strict : certains utilisateurs ne recevraient presque jamais de mail et croiraient l'outil cassé. Seuil à garder dans une constante facile à changer, et à calibrer en regardant combien de mails partent réellement.
+- Niveau de seuil (75 %), délai de péremption (7 jours) et répartition éliminatoire / souple : tous à valider.
+- À croiser avec le suivi des favoris : [suivi-des-favoris.md](suivi-des-favoris.md).
+
 ## Sources
 - [Tarifs Resend](https://resend.com/pricing.md)
 - [Render : ports SMTP bloqués pour les services gratuits](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports)
