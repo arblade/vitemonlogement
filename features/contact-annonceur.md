@@ -1,3 +1,5 @@
+> **Retiré le 30/09/2026.** Le bouton « Écrire » ne faisait qu'ouvrir l'annonce Le Bon Coin : le bloc (et le message proposé) est supprimé. À la place, un bouton « Voir l'annonce » est fixé dans la barre du haut de la fiche, visible pendant tout le défilement.
+
 # Contacter l'annonceur
 
 **Statut :** implémenté le 30/09/2026 sur `develop` (front seul).

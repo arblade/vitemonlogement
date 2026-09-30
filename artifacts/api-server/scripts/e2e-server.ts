@@ -52,7 +52,14 @@ await setCriteria(id, { location: "Lille", intent: "rent", maxPrice: 700, radius
   places: [{ id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille" }] });
 const listing = (n: number) => ({
   batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: `https://www.leboncoin.fr/ad/locations/${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
-  location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n, features: [],
+  location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n,
+  features: n === 1 ? [
+    { label: "Meublé", value: "", source: "annonce" as const, evidence: "furnished: 1" },
+    { label: "Étage", value: "3e sur 5", source: "annonce" as const, evidence: "floor_number: 3" },
+    { label: "Balcon", value: "plein sud", source: "ia" as const, evidence: "un joli balcon plein sud donnant sur cour" },
+    { label: "Cave", value: "", source: "ia" as const, evidence: "cave privative au sous-sol" },
+    { label: "Chauffage", value: "gaz individuel", source: "ia" as const, evidence: "chauffage individuel au gaz" },
+  ] : [],
   criterionResults: [
     { id: "price", label: "Budget ≤ 700 €", status: "confirmed" as const, source: "api" as const, value: "590 €", evidence: "" },
     { id: "wish-1", label: "chat accepté", status: "unknown" as const, source: "unknown" as const, value: "", evidence: "" },

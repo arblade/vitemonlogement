@@ -235,8 +235,7 @@ describe('Vocabulaire : aucun terme technique à l’écran', () => {
     await user.click(screen.getByTestId('text-listing-title-1'));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).not.toMatch(jargon);
-    expect(within(dialog).getAllByText('Indiqué dans l’annonce').length).toBeGreaterThan(0);
-    expect(within(dialog).getAllByText('Lu dans la description').length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/^(Indiqué dans l’annonce|Lu dans la description|À vérifier dans l’annonce)$/).length).toBeGreaterThan(0);
     expect(within(dialog).getByText('Caractéristiques')).toBeInTheDocument();
   });
 });
@@ -284,19 +283,50 @@ describe('Page résultats : favoris et comparaison', () => {
 });
 
 describe('Page résultats : fiche détaillée', () => {
-  it('ouvre la fiche avec repères à icônes et une ligne « Contacter le vendeur » (message replié)', async () => {
+  it('ouvre la fiche : repères à icônes, lien vers l’annonce en haut, plus de bloc « Contacter le vendeur »', async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(screen.getByTestId('button-open-listing-1'));
     const dialog = await screen.findByTestId('dialog-listing-1');
     expect(within(dialog).getByTestId('text-detail-title-1')).toHaveTextContent('Studio lumineux 1');
     expect(within(dialog).getByTestId('general-1-Surface').querySelector('svg')).not.toBeNull();
-    const contact = within(dialog).getByTestId('contact-1');
-    expect(contact).toHaveTextContent('Contacter le vendeur');
-    expect(within(contact).getByRole('link', { name: /écrire/i })).toHaveAttribute('href', listing(1).url);
-    expect(within(contact).queryByRole('textbox')).not.toBeInTheDocument();
-    await user.click(within(contact).getByRole('button', { name: /proposer un message/i }));
-    expect((within(contact).getByRole('textbox') as HTMLTextAreaElement).value).toContain('- chat accepté ?');
+    const top = within(dialog).getByTestId('link-detail-top-1');
+    expect(top).toHaveTextContent(/Voir l’annonce/);
+    expect(top).toHaveAttribute('href', listing(1).url);
+    expect(top).toHaveAttribute('target', '_blank');
+    expect(top.compareDocumentPosition(within(dialog).getByTestId('text-detail-title-1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(dialog).queryByText(/Contacter le vendeur/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('critères : libellé, statut et source seulement, sans justificatif ni avertissement', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { criterionResults: [
+      { id: 'wish-1', label: 'chat accepté', status: 'confirmed', source: 'description', value: 'oui', evidence: 'les chats sont les bienvenus' },
+    ] })], criteria: { ...search().criteria, checks: [...checks, { id: 'wish-2', label: 'balcon', availability: 'description', apiField: null }] } });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const dialog = await screen.findByTestId('dialog-listing-1');
+    const cat = within(dialog).getByTestId('criterion-result-1-wish-1');
+    expect(cat).toHaveTextContent('chat accepté');
+    expect(within(cat).getByTestId('status-criterion-1-wish-1')).toHaveTextContent('Critère satisfait');
+    expect(within(cat).getByTestId('source-criterion-1-wish-1')).toHaveTextContent('Lu dans la description');
+    expect(cat).not.toHaveTextContent(/bienvenus|Justificatif|Extrait/);
+    expect(within(dialog).getByTestId('criterion-result-1-wish-2')).not.toHaveTextContent(/Aucune information/);
+    expect(within(dialog).queryByText(/Une information absente/)).not.toBeInTheDocument();
+  });
+
+  it('caractéristiques : simple liste « libellé · valeur », sans source ni extrait', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { features: [
+      { label: 'Balcon', value: '', source: 'ia', evidence: 'joli balcon plein sud donnant sur cour' },
+      { label: 'Étage', value: '3', source: 'annonce', evidence: 'floor_number: 3' },
+    ] })] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const features = within(await screen.findByTestId('dialog-listing-1')).getByTestId('features-1');
+    expect(within(features).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Balcon', 'Étage · 3']);
+    expect(features).not.toHaveTextContent(/plein sud|floor_number|Lu dans la description|Indiqué dans l’annonce|Extrait/);
   });
 });
 

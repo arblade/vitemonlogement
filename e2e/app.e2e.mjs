@@ -95,17 +95,23 @@ test("galerie (mobile) : faire défiler les photos ne grise pas l'annonce, même
   await page.close();
 });
 
-test("fiche détaillée (mobile) : ligne « Contacter le vendeur », message replié puis déplié", async () => {
+test("fiche détaillée (mobile) : bouton « Voir l'annonce » visible en haut, même après défilement ; plus de bloc contact", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");
   await page.waitForSelector("[data-testid=card-listing-1]");
   await page.click("[data-testid=button-open-listing-1]");
-  await page.waitForSelector("[data-testid=contact-1]");
-  assert.match(await text(page, "[data-testid=contact-1]"), /Contacter le vendeur/);
-  assert.equal(await page.getAttribute("[data-testid=contact-open-1]", "href"), "https://www.leboncoin.fr/ad/locations/1");
-  assert.equal(await page.locator("[data-testid=contact-message-1]").count(), 0, "message replié par défaut");
-  await page.click("[data-testid=contact-toggle-1]");
-  assert.match(await page.inputValue("[data-testid=contact-message-1]"), /- chat accepté \?/);
+  const top = "[data-testid=link-detail-top-1]";
+  await page.waitForSelector(top);
+  assert.equal(await page.getAttribute(top, "href"), "https://www.leboncoin.fr/ad/locations/1");
+  assert.match(await text(page, top), /Voir l.annonce/);
+  await page.locator("[data-testid=listing-map-1]").scrollIntoViewIfNeeded();
+  const box = await page.locator(top).boundingBox();
+  assert.ok(box && box.y >= 0 && box.y < 200, `bouton toujours en haut après défilement (${JSON.stringify(box)})`);
+  assert.equal(await page.getByText("Contacter le vendeur").count(), 0);
+  assert.deepEqual(await page.locator("[data-testid=features-1] li").allInnerTexts(), ["Meublé", "Étage · 3e sur 5", "Balcon · plein sud", "Cave", "Chauffage · gaz individuel"]);
+  assert.doesNotMatch(await text(page, "[data-testid=features-1]"), /floor_number|donnant sur cour|Lu dans la description/);
+  assert.equal(await page.locator("[data-testid=criterion-result-1-wish-1]").count(), 1);
+  assert.doesNotMatch(await text(page, "[data-testid=dialog-listing-1]"), /Une information absente/);
   await page.close();
 });
 
@@ -223,5 +229,7 @@ test("carte (desktop) : même encart en grand écran, pour le premier compte", a
   await page.goto(base + "/searches/1");
   await page.click("[data-testid=button-open-listing-1]");
   await checkListingMap(page);
+  const dialog = await page.locator("[data-testid=dialog-listing-1]").boundingBox();
+  assert.ok(dialog && dialog.width >= 1000 && Math.abs(dialog.x + dialog.width / 2 - 640) < 2, `fiche centrée et large sur desktop (${JSON.stringify(dialog)})`);
   await context.close();
 });

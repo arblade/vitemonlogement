@@ -3,7 +3,6 @@ import type { HousingCriterion, HousingListing, HousingPlace } from '@workspace/
 import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles, X } from 'lucide-react';
 import { ListingGallery } from '@/components/listing-gallery';
 import { generalIcons, listingFacts } from '@/components/listing-facts';
-import { ListingContact } from '@/components/listing-contact';
 import { ListingMap } from '@/components/listing-map';
 
 function sourceName(url: string) {
@@ -38,10 +37,13 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#222222]/75 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"/>
-      <DialogPrimitive.Content data-testid={`dialog-listing-${listing.id}`} aria-describedby={`listing-detail-intro-${listing.id}`} className="fixed inset-x-0 bottom-0 z-50 flex max-h-[94dvh] flex-col overflow-hidden rounded-t-[24px] border border-line bg-cream text-ink shadow-2xl outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 sm:inset-x-5 sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[92dvh] sm:max-w-[1040px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px]">
+      <DialogPrimitive.Content data-testid={`dialog-listing-${listing.id}`} aria-describedby={`listing-detail-intro-${listing.id}`} className="fixed inset-x-0 bottom-0 z-50 flex max-h-[94dvh] flex-col overflow-hidden rounded-t-[24px] border border-line bg-cream text-ink shadow-2xl outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-4 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:max-h-[92dvh] sm:w-[calc(100%-40px)] sm:max-w-[1040px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[24px]">
         <div className="flex shrink-0 items-center justify-between gap-4 border-b border-line-soft px-5 py-3 md:px-8">
-          <span className="font-data text-xs uppercase tracking-[.14em] text-[#c13515]">Lecture de l’annonce <span className="mx-2 text-[#b0b0b0]">/</span> {Math.round(listing.score)} points de pertinence</span>
+          <span className="min-w-0 font-data text-xs uppercase tracking-[.14em] text-[#c13515]"><span className="hidden sm:inline">Lecture de l’annonce <span className="mx-2 text-[#b0b0b0]">/</span> </span>{Math.round(listing.score)} points<span className="hidden sm:inline"> de pertinence</span></span>
+          <div className="flex shrink-0 items-center gap-2">
+          <a href={listing.url} target="_blank" rel="noopener noreferrer" data-testid={`link-detail-top-${listing.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-brand px-4 text-xs font-semibold text-[#ffffff] transition-colors hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><span>Voir l’annonce<span className="hidden sm:inline"> sur {sourceName(listing.url)}</span></span><ArrowUpRight size={15} aria-hidden="true"/></a>
           <DialogPrimitive.Close data-testid={`button-close-listing-${listing.id}`} aria-label="Fermer le détail de l’annonce" className="grid size-9 shrink-0 place-items-center rounded-full border border-line transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><X size={17}/></DialogPrimitive.Close>
+          </div>
         </div>
         <div className="overflow-y-auto overscroll-contain">
           <ListingGallery key={`detail-${listing.id}`} listing={listing} large/>
@@ -64,38 +66,31 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
 
             <ListingMap listing={listing} searchId={searchId} places={places} routingAvailable={routingAvailable}/>
 
-            <div className="py-6"><ListingContact listing={listing} results={checkedResults}/></div>
-
             <div className="grid gap-10 py-9 lg:grid-cols-[minmax(0,1fr)_310px]">
               <div>
                 <section aria-labelledby={`checks-${listing.id}`}>
                   <div className="mb-2 font-data text-xs uppercase tracking-[.12em] text-moss">02 / Vos critères</div>
                   <div className="flex items-center gap-2"><Layers2 size={18} className="text-[#717171]"/><h2 id={`checks-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Votre demande, point par point.</h2></div>
-                  <p className="mt-2 max-w-xl text-xs leading-relaxed text-stone">Une information absente n’est pas une réponse négative. Chaque statut indique ce qui a réellement pu être vérifié dans cette annonce.</p>
-                  {checkedResults.length ? <div className="mt-5 space-y-3">
-                    {checkedResults.map(result => <div key={result.id} data-testid={`criterion-result-${listing.id}-${result.id}`} className={`rounded-xl border p-4 sm:p-5 ${result.status === 'confirmed' ? 'border-ok-line bg-ok-wash' : result.status === 'contradicted' ? 'border-[#fecdca] bg-[#fef3f2]' : 'border-[#dddddd] bg-[#ffffff]'}`}>
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <strong className="text-[14px] leading-snug">{result.label}</strong>
-                        <span data-testid={`status-criterion-${listing.id}-${result.id}`} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-data text-xs font-semibold uppercase tracking-[.05em] ${result.status === 'confirmed' ? 'bg-ok-wash text-ok-deep' : result.status === 'contradicted' ? 'bg-[#fecdca] text-[#b42318]' : 'bg-[#ebebeb] text-[#484848]'}`}>
-                          {result.status === 'confirmed' ? <Check size={12}/> : result.status === 'contradicted' ? <Minus size={12}/> : <CircleHelp size={12}/>}
-                          {statusCopy[result.status]}
-                        </span>
+                  {checkedResults.length ? <div className="mt-5 space-y-2">
+                    {checkedResults.map(result => <div key={result.id} data-testid={`criterion-result-${listing.id}-${result.id}`} className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border px-4 py-3 ${result.status === 'confirmed' ? 'border-ok-line bg-ok-wash' : result.status === 'contradicted' ? 'border-[#fecdca] bg-[#fef3f2]' : 'border-[#dddddd] bg-[#ffffff]'}`}>
+                      <div className="min-w-0">
+                        <strong className="block text-[14px] leading-snug">{result.label}</strong>
+                        <span data-testid={`source-criterion-${listing.id}-${result.id}`} className="text-xs text-stone">{sourceCopy[result.source]}</span>
                       </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                        <span className="font-data uppercase tracking-[.04em] text-[#717171]">Source : {sourceCopy[result.source]}</span>
-                        {result.value && <span data-testid={`value-criterion-${listing.id}-${result.id}`} className="font-semibold text-[#222222]">{result.value}</span>}
-                      </div>
-                      {result.evidence ? <p data-testid={`evidence-criterion-${listing.id}-${result.id}`} className="mt-3 border-l-2 border-[#b0b0b0] pl-3 text-xs leading-[1.7] text-[#484848]"><span className="font-semibold">{result.source === 'description' ? 'Extrait de l’annonce : ' : 'Justificatif : '}</span>« {result.evidence} »</p> : result.status === 'unknown' ? <p className="mt-2 text-xs text-stone">Aucune information permettant de conclure n’a été trouvée.</p> : null}
+                      <span data-testid={`status-criterion-${listing.id}-${result.id}`} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 font-data text-xs font-semibold uppercase tracking-[.05em] ${result.status === 'confirmed' ? 'bg-ok-wash text-ok-deep' : result.status === 'contradicted' ? 'bg-[#fecdca] text-[#b42318]' : 'bg-[#ebebeb] text-[#484848]'}`}>
+                        {result.status === 'confirmed' ? <Check size={12}/> : result.status === 'contradicted' ? <Minus size={12}/> : <CircleHelp size={12}/>}
+                        {statusCopy[result.status]}
+                      </span>
                     </div>)}
                   </div> : <div className="mt-5 rounded-xl border border-dashed border-line bg-[#ffffff] p-5 text-xs leading-relaxed text-stone">Aucun critère individuel n’a été transmis pour cette recherche.</div>}
                 </section>
                 <section aria-labelledby={`features-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">
                   <div className="mb-2 font-data text-xs uppercase tracking-[.12em] text-moss">03 / En complément</div>
                   <div className="flex items-center gap-2"><Info size={17} className="text-[#717171]"/><h2 id={`features-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Caractéristiques</h2></div>
-                  {features.length ? <div className="mt-5 space-y-3">{features.map((feature, index) => <div key={`${feature.label}-${index}`} className="rounded-xl border border-[#dddddd] bg-[#ffffff] p-4">
-                     <div className="flex flex-wrap items-start justify-between gap-2"><strong className="text-[13px]">{feature.label}{feature.value ? ` · ${feature.value}` : ''}</strong><span className={`rounded-full px-2 py-1 font-data text-xs uppercase tracking-[.04em] ${feature.source === 'ia' ? 'bg-[#ffe3e8] text-[#c13515]' : 'bg-[#ebebeb] text-[#484848]'}`}>{feature.source === 'ia' ? 'Lu dans la description' : 'Indiqué dans l’annonce'}</span></div>
-                    <p className="mt-2 text-xs leading-relaxed text-stone"><span className="font-semibold text-[#484848]">{feature.source === 'ia' ? 'Extrait de la description : ' : 'Dans l’annonce : '}</span>{feature.evidence || 'Aucune précision fournie.'}</p>
-                  </div>)}</div> : <p className="mt-4 text-sm text-stone">Aucune caractéristique documentée pour cette annonce.</p>}
+                  {features.length ? <ul data-testid={`features-${listing.id}`} className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{features.map((feature, index) => <li key={`${feature.label}-${index}`} className="flex min-w-0 items-center gap-3 rounded-xl bg-mist px-4 py-3">
+                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ffffff] text-ink"><Check size={13} aria-hidden="true"/></span>
+                    <span className="min-w-0 text-[14px] leading-snug"><strong className="font-semibold">{feature.label}</strong>{feature.value ? <span className="text-stone"> · {feature.value}</span> : null}</span>
+                  </li>)}</ul> : <p className="mt-4 text-sm text-stone">Aucune caractéristique documentée pour cette annonce.</p>}
                 </section>
                 <section aria-labelledby={`description-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">
                   <h2 id={`description-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">L’annonce, dans ses mots.</h2>
