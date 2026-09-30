@@ -137,8 +137,19 @@ async function checkListingMap(page) {
   assert.equal(await page.getAttribute("[data-testid=travel-choice-drive]", "aria-checked"), "true");
   assert.match(await text(page, "[data-testid=map-travel-place-1]"), /10 min[\s\S]*en voiture/);
   await page.waitForFunction(() => /10 min/.test(document.querySelector("[data-testid=map-duration-place-1]")?.textContent ?? ""));
+  const canvas = "[data-testid=listing-map-1] [data-testid=listing-map-canvas]";
+  await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-dotted") === "1", canvas);
+  assert.equal(await page.getAttribute(canvas, "data-parts"), "1", "voiture : un tracé plein, raccordé au logement en pointillés");
+  // Transports : marche en pointillés, métro M1 dans sa couleur, nom de la ligne sur la carte et dans la liste.
+  await page.click("[data-testid=travel-choice-transit]");
+  await page.waitForFunction(() => /25 min/.test(document.querySelector("[data-testid=map-duration-place-1]")?.textContent ?? ""));
+  await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-dotted") === "2", canvas);
+  assert.equal(await page.getAttribute(canvas, "data-parts"), "1");
+  assert.equal((await text(page, "[data-testid=listing-map-1] .vml-line")).trim(), "M1");
+  assert.equal((await text(page, "[data-testid=map-lines-place-1]")).trim(), "M1");
   await page.click("[data-testid=travel-choice-bike]");
   await page.waitForFunction(() => /18 min/.test(document.querySelector("[data-testid=map-duration-place-1]")?.textContent ?? ""));
+  assert.equal(await page.locator("[data-testid=listing-map-1] .vml-line").count(), 0);
   const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
 }

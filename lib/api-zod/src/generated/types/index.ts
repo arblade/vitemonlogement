@@ -33,4 +33,6 @@ export * from './housingSearchSummaryStage';
 export * from './housingSearchSummaryStatus';
 export * from './listingRoute';
 export * from './listingRoutes';
+export * from './routeSegment';
+export * from './routeSegmentLine';
 export * from './travelMode';

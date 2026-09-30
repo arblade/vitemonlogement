@@ -11,7 +11,35 @@ export const routingAvailable = () => Boolean(process.env.GOOGLE_MAPS_API_KEY);
 const baseUrl = () => process.env.GOOGLE_ROUTES_BASE_URL || "https://routes.googleapis.com";
 
 export type Point = { lat: number; lng: number };
-export type TravelRoute = { durationSeconds: number; distanceMeters: number; path: [number, number][] };
+/** Étape d'un trajet en transports : marche, ou une ligne (nom court, couleur, type de véhicule). */
+export type RouteSegment = { mode: TravelMode; path: [number, number][]; line: { name: string; color: string | null; vehicle: string | null } | null };
+export type TravelRoute = { durationSeconds: number; distanceMeters: number; path: [number, number][]; segments: RouteSegment[] };
+
+type GoogleStep = {
+  travelMode?: string;
+  polyline?: { encodedPolyline?: string };
+  transitDetails?: { transitLine?: { nameShort?: string; name?: string; color?: string; vehicle?: { type?: string } } };
+};
+
+/** Étapes Google → segments : marches consécutives fusionnées, une entrée par ligne de transport. */
+export function transitSegments(steps: GoogleStep[]): RouteSegment[] {
+  const segments: RouteSegment[] = [];
+  for (const step of steps) {
+    const path = step.polyline?.encodedPolyline ? decodePolyline(step.polyline.encodedPolyline) : [];
+    if (path.length < 2) continue;
+    const line = step.transitDetails?.transitLine;
+    if (step.travelMode === "TRANSIT" && line) {
+      const color = line.color && /^#[0-9a-f]{6}$/i.test(line.color) ? line.color.toLowerCase() : null;
+      const name = (line.nameShort || line.name || "").trim().slice(0, 24);
+      segments.push({ mode: "transit", path, line: { name, color, vehicle: line.vehicle?.type ?? null } });
+      continue;
+    }
+    const last = segments.at(-1);
+    if (last?.mode === "walk") last.path.push(...path.slice(1));
+    else segments.push({ mode: "walk", path, line: null });
+  }
+  return segments;
+}
 
 export class RoutingQuotaError extends Error {}
 
@@ -53,6 +81,10 @@ const round = (value: number) => value.toFixed(5);
 export const routeKey = (mode: TravelMode, from: Point, to: Point) =>
   `${mode}|${round(from.lat)},${round(from.lng)}|${round(to.lat)},${round(to.lng)}`;
 
+const FIELDS = "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline";
+// Étapes seulement en transports (lignes, couleurs) ; aucun de ces champs ne fait passer au tarif Pro.
+const TRANSIT_FIELDS = "routes.legs.steps.travelMode,routes.legs.steps.polyline.encodedPolyline,routes.legs.steps.transitDetails.transitLine";
+
 async function callGoogle(mode: TravelMode, from: Point, to: Point, fetcher: typeof fetch): Promise<TravelRoute | null> {
   const body: Record<string, unknown> = {
     origin: { location: { latLng: { latitude: from.lat, longitude: from.lng } } },
@@ -60,6 +92,8 @@ async function callGoogle(mode: TravelMode, from: Point, to: Point, fetcher: typ
     travelMode: GOOGLE_MODE[mode],
     languageCode: "fr-FR",
     units: "METRIC",
+    // Par défaut Google renvoie un tracé « OVERVIEW » à très peu de points, qui coupe à travers les pâtés de maisons.
+    polylineQuality: "HIGH_QUALITY",
   };
   if (mode === "drive") body.routingPreference = "TRAFFIC_UNAWARE";
   if (mode === "transit") body.arrivalTime = nextTuesdayNineParis();
@@ -68,19 +102,20 @@ async function callGoogle(mode: TravelMode, from: Point, to: Point, fetcher: typ
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY ?? "",
-      "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+      "X-Goog-FieldMask": mode === "transit" ? `${FIELDS},${TRANSIT_FIELDS}` : FIELDS,
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error(`Google Routes (${response.status}) : ${(await response.text()).slice(0, 200)}`);
-  const route = (await response.json() as { routes?: { duration?: string; distanceMeters?: number; polyline?: { encodedPolyline?: string } }[] }).routes?.[0];
+  const route = (await response.json() as { routes?: { duration?: string; distanceMeters?: number; polyline?: { encodedPolyline?: string }; legs?: { steps?: GoogleStep[] }[] }[] }).routes?.[0];
   // Aucun itinéraire (ex. pas de transport en commun) : réponse vide, pas une erreur.
   if (!route?.duration) return null;
   return {
     durationSeconds: Math.round(Number.parseFloat(route.duration)),
     distanceMeters: route.distanceMeters ?? 0,
     path: route.polyline?.encodedPolyline ? decodePolyline(route.polyline.encodedPolyline) : [[from.lat, from.lng], [to.lat, to.lng]],
+    segments: mode === "transit" ? transitSegments(route.legs?.flatMap(leg => leg.steps ?? []) ?? []) : [],
   };
 }
 
@@ -143,7 +178,10 @@ export async function travelRoute(mode: TravelMode, from: Point, to: Point, fetc
   const [cached] = await db().select().from(travelRoutes).where(eq(travelRoutes.key, key));
   if (cached) {
     if (cached.durationSeconds < 0) return null;
-    return { durationSeconds: cached.durationSeconds, distanceMeters: cached.distanceMeters, path: JSON.parse(cached.path) as [number, number][] };
+    return {
+      durationSeconds: cached.durationSeconds, distanceMeters: cached.distanceMeters,
+      path: JSON.parse(cached.path) as [number, number][], segments: cached.segments ? JSON.parse(cached.segments) as RouteSegment[] : [],
+    };
   }
   const usage = await consume("google-routes", 24 * 3_600_000);
   if (usage.count > intEnv("GOOGLE_ROUTES_PER_DAY", 300)) throw new RoutingQuotaError("Plafond quotidien de calculs de trajet atteint.");
@@ -151,7 +189,7 @@ export async function travelRoute(mode: TravelMode, from: Point, to: Point, fetc
   // « Aucun itinéraire » est mémorisé aussi (durée -1) pour ne pas repayer la même question.
   await db().insert(travelRoutes).values({
     key, durationSeconds: route?.durationSeconds ?? -1, distanceMeters: route?.distanceMeters ?? 0,
-    path: JSON.stringify(route?.path ?? []), createdAt: Date.now(),
+    path: JSON.stringify(route?.path ?? []), segments: route?.segments.length ? JSON.stringify(route.segments) : null, createdAt: Date.now(),
   }).onConflictDoNothing();
   return route;
 }

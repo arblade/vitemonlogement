@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { after, before, beforeEach } from "node:test";
 import { closeDatabase } from "./database";
 import { useMemoryDatabase } from "../test/helpers";
-import { commuteOptions, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, travelRoute } from "./travel";
+import { commuteOptions, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, transitSegments, travelRoute } from "./travel";
 
 before(async () => { await useMemoryDatabase(); });
 after(async () => { await closeDatabase(); });
@@ -34,11 +34,12 @@ test("nextTuesdayNineParis : mardi suivant 9 h de Paris, en heure d'hiver comme 
 test("travelRoute : requête Google conforme (clé, masque de champs, transport en commun arrivée mardi 9 h) et réponse décodée", async () => {
   const { fetcher, calls } = fakeGoogle();
   const route = await travelRoute("transit", home, work, fetcher);
-  assert.deepEqual(route, { durationSeconds: 1534, distanceMeters: 5210, path: [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]] });
+  assert.deepEqual(route, { durationSeconds: 1534, distanceMeters: 5210, path: [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]], segments: [] });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].url, "http://127.0.0.1:1/directions/v2:computeRoutes");
   assert.equal(calls[0].headers.get("X-Goog-Api-Key"), "cle-de-test");
-  assert.equal(calls[0].headers.get("X-Goog-FieldMask"), "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline");
+  assert.equal(calls[0].headers.get("X-Goog-FieldMask"), "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.steps.travelMode,routes.legs.steps.polyline.encodedPolyline,routes.legs.steps.transitDetails.transitLine");
+  assert.equal(calls[0].body.polylineQuality, "HIGH_QUALITY", "tracé précis, pas le tracé simplifié par défaut");
   assert.equal(calls[0].body.travelMode, "TRANSIT");
   assert.match(String(calls[0].body.arrivalTime), /^\d{4}-\d\d-\d\dT0[78]:00:00\.000Z$/);
   assert.equal(calls[0].body.routingPreference, undefined, "interdit en transport en commun");
@@ -52,6 +53,8 @@ test("travelRoute : voiture sans trafic (tarif le plus bas), vélo et marche san
   await travelRoute("walk", home, { lat: 48.22, lng: -1.7 }, fetcher);
   assert.deepEqual(calls.map(call => [call.body.travelMode, call.body.routingPreference, call.body.arrivalTime]),
     [["DRIVE", "TRAFFIC_UNAWARE", undefined], ["BICYCLE", undefined, undefined], ["WALK", undefined, undefined]]);
+  assert.ok(calls.every(call => call.body.polylineQuality === "HIGH_QUALITY"));
+  assert.ok(calls.every(call => call.headers.get("X-Goog-FieldMask") === "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline"), "étapes demandées seulement en transports");
 });
 
 test("travelRoute : un trajet déjà calculé est relu en base, sans nouvel appel payant", async () => {
@@ -89,6 +92,36 @@ test("travelRoute : au-delà du plafond quotidien, plus aucun appel Google ; le 
   await assert.rejects(travelRoute("drive", home, { lat: 48.6, lng: -1.7 }, fetcher), RoutingQuotaError);
   assert.equal(calls.length, 0);
   assert.ok(await travelRoute("walk", home, cachedTarget, fetcher));
+});
+
+// Polylines encodées de deux points : A→B, B→C, C→D, D→E.
+const A_B = "_p~iF~ps|U_ulLnnqC", B_C = "_mqlG~usyU_mqNvxq`@";
+const transitSteps = [
+  { travelMode: "WALK", polyline: { encodedPolyline: A_B } },
+  { travelMode: "WALK", polyline: { encodedPolyline: B_C } },
+  { travelMode: "TRANSIT", polyline: { encodedPolyline: B_C }, transitDetails: { transitLine: { nameShort: "M1", name: "Métro 1", color: "#FFCC00", vehicle: { type: "SUBWAY" } } } },
+  { travelMode: "TRANSIT", polyline: { encodedPolyline: A_B }, transitDetails: { transitLine: { name: "Liane 5", color: "red;background:url(x)", vehicle: { type: "BUS" } } } },
+  { travelMode: "WALK", polyline: { encodedPolyline: "" } },
+];
+
+test("transitSegments : marches consécutives fusionnées, une étape par ligne (nom court, couleur validée, véhicule)", () => {
+  const segments = transitSegments(transitSteps);
+  assert.deepEqual(segments.map(segment => [segment.mode, segment.line]), [
+    ["walk", null],
+    ["transit", { name: "M1", color: "#ffcc00", vehicle: "SUBWAY" }],
+    ["transit", { name: "Liane 5", color: null, vehicle: "BUS" }],
+  ]);
+  assert.equal(segments[0].path.length, 3, "A→B puis B→C, le point B n'est pas dupliqué");
+  assert.deepEqual(transitSegments([]), []);
+});
+
+test("travelRoute : en transports, les étapes sont renvoyées et relues depuis le cache", async () => {
+  const { fetcher, calls } = fakeGoogle({ routes: [{ duration: "1500s", distanceMeters: 4000, polyline: { encodedPolyline: A_B }, legs: [{ steps: transitSteps }] }] });
+  const to = { lat: 48.7, lng: -1.7 };
+  const fresh = await travelRoute("transit", home, to, fetcher);
+  assert.deepEqual(fresh?.segments.map(segment => segment.line?.name ?? segment.mode), ["walk", "M1", "Liane 5"]);
+  assert.deepEqual(await travelRoute("transit", home, to, fetcher), fresh);
+  assert.equal(calls.length, 1);
 });
 
 test("routeKey : arrondi à 5 décimales, mode inclus", () => {

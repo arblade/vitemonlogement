@@ -38,9 +38,17 @@ const google = createServer((req, res) => {
   let body = "";
   req.on("data", chunk => (body += chunk));
   req.on("end", () => {
-    const seconds = SECONDS[JSON.parse(body).travelMode as string];
+    const mode = JSON.parse(body).travelMode as string;
+    // Voiture : Google part de la rue la plus proche (le raccord en pointillés doit apparaître).
+    const route = mode === "DRIVE" ? path.slice(1) : path;
+    // Transports : marche, métro M1 (jaune), marche.
+    const steps = mode === "TRANSIT" ? [
+      { travelMode: "WALK", polyline: { encodedPolyline: encodePolyline(path.slice(0, 2)) } },
+      { travelMode: "TRANSIT", polyline: { encodedPolyline: encodePolyline(path.slice(1, 5)) }, transitDetails: { transitLine: { nameShort: "M1", color: "#ffcc00", vehicle: { type: "SUBWAY" } } } },
+      { travelMode: "WALK", polyline: { encodedPolyline: encodePolyline(path.slice(4)) } },
+    ] : undefined;
     res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify({ routes: [{ duration: `${seconds}s`, distanceMeters: 1400, polyline: { encodedPolyline: encodePolyline(path) } }] }));
+    res.end(JSON.stringify({ routes: [{ duration: `${SECONDS[mode]}s`, distanceMeters: 1400, polyline: { encodedPolyline: encodePolyline(route) }, legs: steps && [{ steps }] }] }));
   });
 });
 await new Promise<void>(resolve => google.listen(0, "127.0.0.1", resolve));

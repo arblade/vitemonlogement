@@ -210,7 +210,7 @@ components:
         Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive.
         Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.
       type: object
-      required: [placeId, mode, recommended, durationSeconds, distanceMeters, path]
+      required: [placeId, mode, recommended, durationSeconds, distanceMeters, path, segments]
       properties:
         placeId: { type: string }
         mode: { $ref: "#/components/schemas/TravelMode" }
@@ -222,6 +222,30 @@ components:
           items:
             type: array
             items: { type: number }
+        segments:
+          description: Transit only — walking parts and each line ridden, in order; empty for other modes
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteSegment"
+    RouteSegment:
+      type: object
+      required: [mode, path, line]
+      properties:
+        mode: { $ref: "#/components/schemas/TravelMode" }
+        path:
+          type: array
+          items:
+            type: array
+            items: { type: number }
+        line:
+          oneOf:
+            - type: "null"
+            - type: object
+              required: [name, color, vehicle]
+              properties:
+                name: { type: string }
+                color: { type: ["string", "null"] }
+                vehicle: { type: ["string", "null"], description: "Google vehicle type: SUBWAY, TRAM, BUS, RAIL…" }
     HousingCriterion:
       type: object
       required: [id, label, availability]

@@ -78,5 +78,7 @@ export const travelRoutes = pgTable("travel_routes", {
   distanceMeters: integer("distance_meters").notNull(),
   // [[lat, lng], …] décodé depuis la polyline Google.
   path: text("path").notNull(),
+  // Étapes (transports en commun : marche, puis chaque ligne), JSON ; null pour les autres modes.
+  segments: text("segments"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
 });

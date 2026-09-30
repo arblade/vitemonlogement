@@ -5,6 +5,7 @@
  * API Logiscope
  * OpenAPI spec version: 0.1.0
  */
+import type { RouteSegment } from './routeSegment';
 import type { TravelMode } from './travelMode';
 
 /**
@@ -17,4 +18,6 @@ export interface ListingRoute {
   durationSeconds: number;
   distanceMeters: number;
   path: number[][];
+  /** Transit only — walking parts and each line ridden, in order; empty for other modes */
+  segments: RouteSegment[];
 }

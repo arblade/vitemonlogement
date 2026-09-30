@@ -117,6 +117,23 @@ export const TravelMode = {
   walk: 'walk',
 } as const;
 
+export type RouteSegmentLine = {
+  name: string;
+  /** @nullable */
+  color: string | null;
+  /**
+     * Google vehicle type: SUBWAY, TRAM, BUS, RAIL…
+     * @nullable
+     */
+  vehicle: string | null;
+} | null;
+
+export interface RouteSegment {
+  mode: TravelMode;
+  path: number[][];
+  line: RouteSegmentLine;
+}
+
 /**
  * Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive. Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.
  */
@@ -127,6 +144,8 @@ export interface ListingRoute {
   durationSeconds: number;
   distanceMeters: number;
   path: number[][];
+  /** Transit only — walking parts and each line ridden, in order; empty for other modes */
+  segments: RouteSegment[];
 }
 
 export interface ListingRoutes {

@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { HousingListing, HousingPlace, ListingRoute } from '@workspace/api-client-react';
 import { ListingMap } from '@/components/listing-map';
-import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces } from '@/lib/geo';
+import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, ROUTE_COLOR, routeDrawing, textOn, type LatLng } from '@/lib/geo';
 import { listing, mockFetch } from '@/test/fixtures';
 
 // jsdom n'a pas de WebGL : la carte MapLibre est remplacée par un témoin des données reçues (le vrai rendu est vérifié en e2e).
@@ -16,7 +16,7 @@ const home = { lat: 50.6408, lng: 3.0611 };
 const precise = (overrides: Partial<HousingListing> = {}) => listing(1, { price: 650, ...home, geoPrecision: 'streetNumber', ...overrides });
 const work: HousingPlace = { id: 'place-1', label: 'Travail', kind: 'work', address: 'gare Lille Flandres', lat: 50.6366, lng: 3.0706, resolved: 'Gare Lille Flandres, Lille' };
 const lost: HousingPlace = { id: 'place-2', label: 'École', kind: 'school', address: '12 rue Inconnue', lat: null, lng: null, resolved: null };
-const route: ListingRoute = { placeId: 'place-1', mode: 'bike', recommended: true, durationSeconds: 1080, distanceMeters: 1400, path: [[50.64, 3.06], [50.63, 3.07]] };
+const route: ListingRoute = { placeId: 'place-1', mode: 'bike', recommended: true, durationSeconds: 1080, distanceMeters: 1400, path: [[50.64, 3.06], [50.63, 3.07]], segments: [] };
 
 function renderMap(props: Partial<Parameters<typeof ListingMap>[0]> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -52,6 +52,43 @@ describe('geo : utilitaires', () => {
     expect(Math.round(crowDistance(home, { lat: 50.6366, lng: 3.0706 }))).toBeGreaterThan(750);
     expect(Math.round(crowDistance(home, { lat: 50.6366, lng: 3.0706 }))).toBeLessThan(850);
     expect(locatedPlaces([work, lost])).toEqual([work]);
+  });
+});
+
+const metro = { mode: 'transit' as const, path: [[50.639, 3.063], [50.637, 3.068]], line: { name: 'M1', color: '#FFCC00', vehicle: 'SUBWAY' } };
+const transitRoute: ListingRoute = {
+  ...route, mode: 'transit', path: [[50.6405, 3.0615], [50.639, 3.063], [50.637, 3.068], [50.6366, 3.0706]],
+  segments: [
+    { mode: 'walk', path: [[50.6405, 3.0615], [50.639, 3.063]], line: null },
+    metro,
+    { mode: 'transit', path: [[50.637, 3.068], [50.6368, 3.07]], line: { name: 'Liane 5', color: 'red', vehicle: 'BUS' } },
+    { mode: 'walk', path: [[50.6368, 3.07], [50.6366, 3.0706]], line: null },
+  ],
+};
+
+describe('geo : dessin des trajets', () => {
+  it('vélo, voiture, marche : un seul tracé rose ; raccords en pointillés seulement si la route part loin du point', () => {
+    const drawing = routeDrawing(home, work as LatLng, route);
+    expect(drawing.solid).toEqual([{ coordinates: [[3.06, 50.64], [3.07, 50.63]], color: ROUTE_COLOR }]);
+    expect(drawing.lines).toEqual([]);
+    expect(drawing.dotted).toEqual([[[home.lng, home.lat], [3.06, 50.64]], [[3.07, 50.63], [work.lng, work.lat]]]);
+    const exact = routeDrawing({ lat: 50.64, lng: 3.06 }, { lat: 50.63, lng: 3.07 }, route);
+    expect(exact.dotted).toEqual([]);
+  });
+
+  it('transports : marche en pointillés, chaque ligne dans sa couleur (couleur invalide → rose), nom là où l’on monte', () => {
+    const drawing = routeDrawing({ lat: 50.6405, lng: 3.0615 }, work as LatLng, transitRoute);
+    expect(drawing.solid.map(part => part.color)).toEqual(['#ffcc00', ROUTE_COLOR]);
+    expect(drawing.dotted).toHaveLength(2);
+    expect(drawing.lines).toEqual([
+      { name: 'M1', color: '#ffcc00', text: '#222222', at: [3.063, 50.639] },
+      { name: 'Liane 5', color: ROUTE_COLOR, text: '#ffffff', at: [3.068, 50.637] },
+    ]);
+  });
+
+  it('textOn : encre sur fond clair, blanc sur fond foncé', () => {
+    expect(textOn('#ffcc00')).toBe('#222222');
+    expect(textOn('#003f87')).toBe('#ffffff');
   });
 });
 
@@ -126,7 +163,7 @@ describe('Encart « Où se trouve le logement »', () => {
 
   const school: HousingPlace = { id: 'place-3', label: 'École', kind: 'school', address: 'école', lat: 50.63, lng: 3.05, resolved: 'École Pasteur' };
   const option = (placeId: string, mode: ListingRoute['mode'], minutes: number, recommended = false): ListingRoute =>
-    ({ placeId, mode, recommended, durationSeconds: minutes * 60, distanceMeters: 3000, path: [[50.64, 3.06], [50.63, 3.07]] });
+    ({ placeId, mode, recommended, durationSeconds: minutes * 60, distanceMeters: 3000, path: [[50.64, 3.06], [50.63, 3.07]], segments: [] });
   const threeWays = [
     option('place-1', 'bike', 25, true), option('place-1', 'transit', 30), option('place-1', 'drive', 12),
     option('place-3', 'walk', 8, true),
@@ -169,6 +206,17 @@ describe('Encart « Où se trouve le logement »', () => {
     renderMap({ listing: precise({ geoPrecision: 'district' }), routingAvailable: true });
     await screen.findByTestId('canvas');
     expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('transports : les lignes empruntées s’affichent dans l’ordre, dans leurs couleurs, sous l’adresse du lieu', async () => {
+    mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: [{ ...transitRoute, recommended: true }, option('place-1', 'bike', 45)] } }) }]);
+    renderMap({ routingAvailable: true });
+    const lines = await screen.findByTestId('map-lines-place-1');
+    expect(lines).toHaveTextContent('M1→Liane 5');
+    expect(lines).toHaveAccessibleName('Lignes : M1, Liane 5');
+    expect(screen.getByText('M1')).toHaveStyle({ background: '#FFCC00', color: '#222222' });
+    fireEvent.click(screen.getByRole('radio', { name: 'Vélo' }));
+    expect(screen.queryByTestId('map-lines-place-1')).not.toBeInTheDocument();
   });
 
   it('avec clé mais échec du calcul : pas de message d’erreur, repli sur le vol d’oiseau', async () => {

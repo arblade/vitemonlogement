@@ -503,7 +503,16 @@ export const GetListingRoutesResponse = zod.object({
   "recommended": zod.boolean(),
   "durationSeconds": zod.number().int(),
   "distanceMeters": zod.number().int(),
-  "path": zod.array(zod.array(zod.number()))
+  "path": zod.array(zod.array(zod.number())),
+  "segments": zod.array(zod.object({
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "path": zod.array(zod.array(zod.number())),
+  "line": zod.union([zod.null(),zod.object({
+  "name": zod.string(),
+  "color": zod.string().nullable(),
+  "vehicle": zod.string().nullable().describe('Google vehicle type: SUBWAY, TRAM, BUS, RAIL…')
+})])
+})).describe('Transit only — walking parts and each line ridden, in order; empty for other modes')
 }).describe('Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive. Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.\n'))
 })
 

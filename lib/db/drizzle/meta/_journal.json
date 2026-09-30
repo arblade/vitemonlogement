@@ -29,6 +29,13 @@
       "when": 1790799905012,
       "tag": "0003_carte_et_trajets",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790806281786,
+      "tag": "0004_trajets_precis",
+      "breakpoints": true
     }
   ]
 }

@@ -119,7 +119,7 @@ test("la position et les lieux de vie sont enregistrés en base et relus avec la
 });
 
 const path = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
-const route = (mode: string, recommended: boolean) => ({ placeId: "place-1", mode, recommended, durationSeconds: 1534, distanceMeters: 5210, path });
+const route = (mode: string, recommended: boolean) => ({ placeId: "place-1", mode, recommended, durationSeconds: 1534, distanceMeters: 5210, path, segments: [] });
 
 test("GET …/routes : à pied 25 min → vélo, transports et voiture proposés (vélo recommandé), puis resservis depuis la base", async () => {
   const { id, cookie, precise } = await searchFor("carte-2@test.fr");

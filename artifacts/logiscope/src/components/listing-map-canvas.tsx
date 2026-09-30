@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { ListingRoute } from '@workspace/api-client-react';
-import { circle, formatDuration, type LatLng, type LocatedPlace } from '@/lib/geo';
+import { circle, formatDuration, routeDrawing, type LatLng, type LocatedPlace } from '@/lib/geo';
 import { mapIcon, type MapIconName } from '@/components/map-icons';
 
 // OpenFreeMap : tuiles vectorielles OpenStreetMap, gratuites, sans clé ni plafond (usage commercial autorisé).
@@ -38,7 +38,7 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
-  const [drawn, setDrawn] = useState<{ routes: number; crow: number; area: boolean } | null>(null);
+  const [drawn, setDrawn] = useState<{ routes: number; crow: number; area: boolean; parts: number; dotted: number } | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -58,6 +58,7 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
 
     const withRoute = places.map(place => ({ place, route: routes.find(item => item.placeId === place.id && item.path.length > 1) }));
+    const drawings = withRoute.flatMap(({ place, route }) => route ? [routeDrawing(home, place, route)] : []);
     for (const { place } of withRoute) {
       const html = `<div class="vml-pin vml-pin-place" data-testid="map-marker-${escape(place.id)}"><span class="vml-pin-dot">${mapIcon(placeIcon(place.kind), 14)}</span><span>${escape(place.label)}</span></div>`;
       new maplibregl.Marker({ element: element(html, place.resolved || place.address) }).setLngLat(lngLat(place)).addTo(map);
@@ -67,6 +68,10 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
       const [lat, lng] = route.path[Math.floor(route.path.length / 2)];
       const html = `<div class="vml-badge" data-testid="map-duration-${escape(route.placeId)}">${mapIcon(route.mode, 13)}<span>${formatDuration(route.durationSeconds)}</span></div>`;
       new maplibregl.Marker({ element: element(html, 'Durée du trajet') }).setLngLat([lng, lat]).addTo(map);
+    }
+    for (const badge of drawings.flatMap(drawing => drawing.lines)) {
+      const html = `<div class="vml-line" style="background:${badge.color};color:${badge.text}">${escape(badge.name)}</div>`;
+      new maplibregl.Marker({ element: element(html, `Ligne ${badge.name}`) }).setLngLat(badge.at).addTo(map);
     }
     const homeHtml = `<div class="vml-pin vml-pin-home${radius ? ' vml-pin-area' : ''}" data-testid="map-marker-home">${mapIcon('house', 16)}</div>`;
     new maplibregl.Marker({ element: element(homeHtml, 'Le logement') }).setLngLat(lngLat(home)).addTo(map);
@@ -88,7 +93,8 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
     map.on('load', () => {
       // Crédit OpenStreetMap replié en « i » (déplié, il masquerait les marqueurs sur mobile).
       container.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
-      const routeLines = withRoute.flatMap(({ route }) => route ? [line(route.path.map(([lat, lng]) => [lng, lat]))] : []);
+      const routeLines = drawings.flatMap(drawing => drawing.solid.map(part => ({ ...line(part.coordinates), properties: { color: part.color } })));
+      const dotted = drawings.flatMap(drawing => drawing.dotted.map(line));
       // Ligne droite seulement depuis une position exacte : depuis une zone, elle ferait croire à un trajet connu.
       const crowLines = radius ? [] : withRoute.flatMap(({ place, route }) => route ? [] : [line([lngLat(home), lngLat(place)])]);
       if (zone.length) {
@@ -98,10 +104,13 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
       }
       map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: routeLines } });
       map.addSource('crow', { type: 'geojson', data: { type: 'FeatureCollection', features: crowLines } });
+      map.addSource('walks', { type: 'geojson', data: { type: 'FeatureCollection', features: dotted } });
+      // Marche et raccords : points ronds serrés, sous les lignes de transport.
+      map.addLayer({ id: 'walk-line', type: 'line', source: 'walks', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#222222', 'line-opacity': .7, 'line-width': 3.5, 'line-dasharray': [0, 2] } });
       map.addLayer({ id: 'route-casing', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 9 } });
-      map.addLayer({ id: 'route-line', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ff385c', 'line-width': 5 } });
+      map.addLayer({ id: 'route-line', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 5 } });
       map.addLayer({ id: 'crow-line', type: 'line', source: 'crow', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#222222', 'line-opacity': .5, 'line-width': 2, 'line-dasharray': [1, 3] } });
-      setDrawn({ routes: routeLines.length, crow: crowLines.length, area: zone.length > 0 });
+      setDrawn({ routes: drawings.length, crow: crowLines.length, area: zone.length > 0, parts: routeLines.length, dotted: dotted.length });
     });
     map.on('error', () => undefined); // tuiles injoignables : la carte reste utilisable avec ses marqueurs
 
@@ -112,7 +121,7 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
   }, [home.lat, home.lng, radius, places, routes]);
 
   if (failed) return <div className="grid h-full place-items-center px-6 text-center text-xs text-stone">La carte ne peut pas s’afficher sur cet appareil.</div>;
-  // data-routes / data-crow : trajets et lignes droites réellement tracés (utilisé par les tests navigateur).
-  return <div ref={container} data-testid="listing-map-canvas" data-routes={drawn?.routes} data-crow={drawn?.crow} data-area={drawn?.area}
+  // data-* : trajets, tronçons pleins, pointillés et lignes droites réellement tracés (utilisé par les tests navigateur).
+  return <div ref={container} data-testid="listing-map-canvas" data-routes={drawn?.routes} data-crow={drawn?.crow} data-area={drawn?.area} data-parts={drawn?.parts} data-dotted={drawn?.dotted}
     className="h-full w-full" role="region" aria-label={radius ? 'Carte : zone du logement et vos lieux' : 'Carte : position du logement et de vos lieux'}/>;
 }

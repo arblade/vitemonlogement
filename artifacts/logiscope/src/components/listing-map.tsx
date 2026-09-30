@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Bike, Briefcase, Car, Footprints, GraduationCap, MapPin, Navigation, TrainFront } from 'lucide-react';
 import { getGetListingRoutesQueryKey, useGetListingRoutes, type HousingListing, type HousingPlace, type ListingRoute, type TravelMode } from '@workspace/api-client-react';
-import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, MODE_LABEL } from '@/lib/geo';
+import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, MODE_LABEL, ROUTE_COLOR, textOn } from '@/lib/geo';
 
 // MapLibre n'est chargé qu'à l'ouverture d'une fiche qui a une position.
 const ListingMapCanvas = lazy(() => import('@/components/listing-map-canvas'));
@@ -34,6 +34,21 @@ const PlaceIcon = ({ kind }: { kind: HousingPlace['kind'] }) => {
   const Icon = kind === 'work' ? Briefcase : kind === 'school' ? GraduationCap : MapPin;
   return <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#ffe3e8] text-brand"><Icon size={16} aria-hidden="true"/></span>;
 };
+
+/** Lignes empruntées, dans l'ordre, dans leurs couleurs (ex. « M1 → Liane 5 »). */
+function TransitLines({ route }: { route: ListingRoute }) {
+  const lines = route.segments.flatMap(segment => segment.line?.name ? [segment.line] : []);
+  if (!lines.length) return null;
+  return <p className="mt-1 flex flex-wrap items-center gap-1 text-xs text-stone" data-testid={`map-lines-${route.placeId}`} aria-label={`Lignes : ${lines.map(line => line.name).join(', ')}`}>
+    {lines.map((line, index) => {
+      const color = line.color && /^#[0-9a-f]{6}$/i.test(line.color) ? line.color : ROUTE_COLOR;
+      return <span key={index} className="contents">
+        {index > 0 && <span aria-hidden="true">→</span>}
+        <span className="rounded-[5px] px-1.5 py-0.5 text-[12px] font-extrabold leading-none" style={{ background: color, color: textOn(color) }}>{line.name}</span>
+      </span>;
+    })}
+  </p>;
+}
 
 const PRECISION_TEXT = {
   streetNumber: 'Adresse exacte indiquée par l’annonce.',
@@ -93,6 +108,7 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
           <div className="min-w-0 flex-1">
             <p className="text-[14px] font-semibold leading-tight">{place.label}</p>
             <p className="truncate text-xs text-stone">{hasPoint ? place.resolved || place.address : `${place.address} · adresse introuvable`}</p>
+            {route?.mode === 'transit' && <TransitLines route={route}/>}
           </div>
           <div className="shrink-0 text-right text-xs" data-testid={`map-travel-${place.id}`}>
             {route ? <><strong className="flex items-center justify-end gap-1.5 text-[15px] text-ink">{(() => { const Icon = MODE_ICON[route.mode]; return <Icon size={15} className="text-brand" aria-hidden="true"/>; })()}{formatDuration(route.durationSeconds)}</strong><span className="text-stone">{MODE_LABEL[route.mode]} · {formatDistance(route.distanceMeters)}</span></>
