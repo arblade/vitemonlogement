@@ -120,6 +120,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HousingSearchDetail"
+  /housing/searches/{id}/listings/{listingId}/routes:
+    get:
+      operationId: getListingRoutes
+      tags: [housing]
+      summary: Travel routes from a listing to each geocoded place of the search (only when routing is configured)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: One entry per place that could be reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingRoutes"
 components:
   schemas:
     HealthStatus:
@@ -152,6 +175,46 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HousingCriterion"
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousingPlace"
+    HousingPlace:
+      type: object
+      required: [id, label, kind, address, mode]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        kind: { type: string, enum: [work, school, other] }
+        address: { type: string }
+        mode: { $ref: "#/components/schemas/TravelMode" }
+        lat: { type: ["number", "null"] }
+        lng: { type: ["number", "null"] }
+        resolved: { type: ["string", "null"] }
+    TravelMode:
+      type: string
+      enum: [transit, drive, bike, walk]
+    ListingRoutes:
+      type: object
+      required: [routes]
+      properties:
+        routes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ListingRoute"
+    ListingRoute:
+      type: object
+      required: [placeId, mode, durationSeconds, distanceMeters, path]
+      properties:
+        placeId: { type: string }
+        mode: { $ref: "#/components/schemas/TravelMode" }
+        durationSeconds: { type: integer }
+        distanceMeters: { type: integer }
+        path:
+          type: array
+          items:
+            type: array
+            items: { type: number }
     HousingCriterion:
       type: object
       required: [id, label, availability]
@@ -240,6 +303,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HousingCriterionResult"
+        lat: { type: ["number", "null"] }
+        lng: { type: ["number", "null"] }
+        geoPrecision:
+          type: ["string", "null"]
+          enum: [streetNumber, street, district, city, null]
     HousingSearchDetail:
       allOf:
         - $ref: "#/components/schemas/HousingSearchSummary"
@@ -250,3 +318,6 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/HousingListing"
+            routingAvailable:
+              type: boolean
+              description: Travel times can be computed (a routing key is configured)

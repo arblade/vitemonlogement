@@ -5,11 +5,13 @@ import {
   ListHousingSearchesResponse, GetHousingSearchParams,
   GetHousingSearchResponse, AnalyzeHousingSearchParams,
   AnalyzeHousingSearchResponse, RefreshHousingSearchParams,
-  RefreshHousingSearchResponse,
+  RefreshHousingSearchResponse, GetListingRoutesParams, GetListingRoutesResponse,
 } from "@workspace/api-zod";
 import { randomUUID } from "node:crypto";
 import { interpret, analyze } from "./ai";
-import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, listSearches, saveAnalysis } from "./store";
+import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, isPrecise, listSearches, saveAnalysis } from "./store";
+import { RoutingQuotaError, routingAvailable, travelRoute } from "../../lib/travel";
+import { logger } from "../../lib/logger";
 import { costlyRateLimit } from "../../lib/quota";
 import { claimSearch, releaseSearch } from "../../lib/queue";
 import { wakeWorker } from "../../lib/worker-registry";
@@ -87,6 +89,34 @@ router.post("/housing/searches/:id/analyze", costlyRateLimit, async (req, res): 
     }
   }
   res.json(AnalyzeHousingSearchResponse.parse(await getSearch(search.id)));
+});
+
+// Trajets annonce → lieux de vie. Pas de costlyRateLimit : les trajets déjà calculés sont servis depuis la base,
+// et chaque vrai appel Google est décompté d'un plafond quotidien dédié (lib/travel.ts).
+router.get("/housing/searches/:id/listings/:listingId/routes", async (req, res): Promise<void> => {
+  const params = GetListingRoutesParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
+  const search = row ? await getSearch(row.id) : null;
+  const listing = search?.listings.find(item => item.id === params.data.listingId);
+  if (!search || !listing) { res.status(404).json({ error: "Annonce introuvable." }); return; }
+  if (!routingAvailable()) { res.status(503).json({ error: "Les temps de trajet ne sont pas disponibles." }); return; }
+  const places = (search.criteria.places ?? []).filter(place => place.lat != null && place.lng != null);
+  if (!isPrecise(listing) || !places.length) { res.json(GetListingRoutesResponse.parse({ routes: [] })); return; }
+  const routes = [];
+  for (const place of places) {
+    try {
+      const route = await travelRoute(place.mode, { lat: listing.lat, lng: listing.lng }, { lat: place.lat!, lng: place.lng! });
+      if (route) routes.push({ placeId: place.id, mode: place.mode, ...route });
+    } catch (error) {
+      if (error instanceof RoutingQuotaError) {
+        if (!routes.length) { res.status(429).json({ error: "Trop de calculs de trajet aujourd’hui. Réessayez demain." }); return; }
+        break;
+      }
+      logger.error({ err: error, searchId: search.id, listingId: listing.id }, "Travel route failed");
+    }
+  }
+  res.json(GetListingRoutesResponse.parse({ routes }));
 });
 
 export default router;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, useRefreshHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingListing } from '@workspace/api-client-react';
+import { useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, useRefreshHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,8 +38,9 @@ const checkGroups = [
   { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
-function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, onSelect, onFavorite, onViewed }: {
+function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, onSelect, onFavorite, onViewed, searchId, places, routingAvailable }: {
   listing: HousingListing; checks: HousingCriterion[]; index: number; selected: boolean; compareFull: boolean;
+  searchId?: number; places?: HousingPlace[]; routingAvailable?: boolean;
   liked: boolean; viewed: boolean; onSelect: () => void; onFavorite: () => void; onViewed: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -92,7 +93,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
       </div>
     </div>
      {(features.length > 0 || criteria.length > 0) && <div className="border-t border-line-soft px-5 py-4 text-xs font-semibold text-[#c13515] md:px-6"><span className="flex items-center gap-2"><Info size={15}/> {criteria.length} critère{criteria.length > 1 ? 's' : ''} · {features.length} autre{features.length > 1 ? 's' : ''} caractéristique{features.length > 1 ? 's' : ''} dans le détail <ArrowRight size={14}/></span></div>}
-  </article><div onClickCapture={onViewed}><ListingDetail listing={listing} checks={checks} open={open} onOpenChange={setOpen} selected={selected} compareFull={compareFull} onSelect={onSelect}/></div></>;
+  </article><div onClickCapture={onViewed}><ListingDetail listing={listing} checks={checks} searchId={searchId} places={places} routingAvailable={routingAvailable} open={open} onOpenChange={setOpen} selected={selected} compareFull={compareFull} onSelect={onSelect}/></div></>;
 }
 
 export default function SearchDetail() {
@@ -124,7 +125,7 @@ export default function SearchDetail() {
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
     <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
     <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
-    <div className="space-y-5">{listings.map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
+    <div className="space-y-5">{listings.map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
       liked={Boolean(interactions.favorites[listingKey(listing.url)])} viewed={viewedUrls.has(listingKey(listing.url))}
       onSelect={()=>toggle(listing.id)}
       onViewed={()=>{ if (!markListingViewed(listing.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }}

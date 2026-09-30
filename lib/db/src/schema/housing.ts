@@ -46,6 +46,10 @@ export const housingListings = pgTable("housing_listings", {
   aiSummary: text("ai_summary"),
   summaryEvidence: text("summary_evidence").notNull().default("[]"),
   criterionResults: text("criterion_results").notNull().default("[]"),
+  // Position donnée par l'annonce ; `geo_precision` : streetNumber (adresse exacte), street, district ou city (zone approximative).
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  geoPrecision: text("geo_precision"),
 }, table => [unique("housing_listings_search_id_url_unique").on(table.searchId, table.url)]);
 
 // Cache d'analyse LLM partagé entre toutes les recherches, par annonce et par version d'analyse.
@@ -66,3 +70,13 @@ export const usageCounters = pgTable("usage_counters", {
   windowStart: bigint("window_start", { mode: "number" }).notNull(),
   count: integer("count").notNull().default(0),
 }, table => [primaryKey({ columns: [table.key, table.windowStart] })]);
+
+// Trajets déjà calculés (Google Routes, payant) : clé = mode + origine + destination arrondies à ~1 m.
+export const travelRoutes = pgTable("travel_routes", {
+  key: text("key").primaryKey(),
+  durationSeconds: integer("duration_seconds").notNull(),
+  distanceMeters: integer("distance_meters").notNull(),
+  // [[lat, lng], …] décodé depuis la polyline Google.
+  path: text("path").notNull(),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+});

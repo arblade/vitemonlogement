@@ -46,6 +46,16 @@ export const InterpretHousingRequestResponse = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 })
 
@@ -74,6 +84,16 @@ export const ListHousingSearchesResponseItem = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -126,6 +146,16 @@ export const CreateHousingSearchResponse = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -170,8 +200,12 @@ export const CreateHousingSearchResponse = zod.object({
   "source": zod.enum(['api', 'description', 'unknown']),
   "value": zod.string(),
   "evidence": zod.string()
-}))
-}))
+})),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+})),
+  "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
 
 
@@ -203,6 +237,16 @@ export const GetHousingSearchResponse = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -247,8 +291,12 @@ export const GetHousingSearchResponse = zod.object({
   "source": zod.enum(['api', 'description', 'unknown']),
   "value": zod.string(),
   "evidence": zod.string()
-}))
-}))
+})),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+})),
+  "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
 
 
@@ -283,6 +331,16 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -327,8 +385,12 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "source": zod.enum(['api', 'description', 'unknown']),
   "value": zod.string(),
   "evidence": zod.string()
-}))
-}))
+})),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+})),
+  "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
 
 
@@ -363,6 +425,16 @@ export const RefreshHousingSearchResponse = zod.object({
   "label": zod.string(),
   "availability": zod.enum(['api', 'hybrid', 'description']),
   "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -407,8 +479,31 @@ export const RefreshHousingSearchResponse = zod.object({
   "source": zod.enum(['api', 'description', 'unknown']),
   "value": zod.string(),
   "evidence": zod.string()
+})),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+})),
+  "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
+
+
+/**
+ * @summary Travel routes from a listing to each geocoded place of the search (only when routing is configured)
+ */
+export const GetListingRoutesParams = zod.object({
+  "id": zod.coerce.number().int(),
+  "listingId": zod.coerce.number().int()
+})
+
+export const GetListingRoutesResponse = zod.object({
+  "routes": zod.array(zod.object({
+  "placeId": zod.string(),
+  "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "durationSeconds": zod.number().int(),
+  "distanceMeters": zod.number().int(),
+  "path": zod.array(zod.array(zod.number()))
 }))
-}))
+})
 
 

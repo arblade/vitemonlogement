@@ -42,5 +42,8 @@
     "vite": "catalog:",
     "vitest": "^5.0.2",
     "wouter": "^3.3.5"
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.24.0"
   }
 }

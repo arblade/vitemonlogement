@@ -10,7 +10,14 @@ let browser;
 let mobile;  // contexte du premier compte (celui qui adopte l'ancienne recherche)
 let desktop; // contexte du second compte
 
-const newContext = (name) => browser.newContext({ viewport: VIEWPORTS[name], isMobile: name === "mobile", hasTouch: name === "mobile", deviceScaleFactor: name === "mobile" ? 2 : 1 });
+const newContext = async (name) => {
+  const context = await browser.newContext({ viewport: VIEWPORTS[name], isMobile: name === "mobile", hasTouch: name === "mobile", deviceScaleFactor: name === "mobile" ? 2 : 1 });
+  // Aucun service externe : le fond de carte (OpenFreeMap) est remplacé par un style vide local.
+  await context.route(/tiles\.openfreemap\.org/, route => route.request().url().includes("/styles/")
+    ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: "fond", type: "background", paint: { "background-color": "#eeeeee" } }] }) })
+    : route.abort());
+  return context;
+};
 const text = (page, selector) => page.locator(selector).first().innerText();
 
 before(async () => { browser = await chromium.launch({ args: ["--no-sandbox"] }); mobile = await newContext("mobile"); desktop = await newContext("desktop"); });
@@ -102,6 +109,40 @@ test("fiche détaillée (mobile) : ligne « Contacter le vendeur », message rep
   await page.close();
 });
 
+/** Encart carte de la fiche 1 (adresse exacte à Lille, lieu « Travail » à vélo, trajet renvoyé par le faux Google). */
+async function checkListingMap(page) {
+  await page.waitForSelector("[data-testid=listing-map-1]");
+  assert.match(await text(page, "[data-testid=map-precision-1]"), /Adresse exacte/);
+  await page.waitForSelector("[data-testid=map-marker-home]");
+  assert.match(await text(page, "[data-testid=map-marker-home]"), /600\s€/);
+  assert.match(await text(page, "[data-testid=map-marker-place-1]"), /Travail/);
+  await page.waitForSelector("[data-testid=map-duration-place-1]");
+  assert.match(await text(page, "[data-testid=map-duration-place-1]"), /18 min/);
+  await page.waitForSelector("[data-testid=listing-map-canvas][data-routes]");
+  assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-routes"), "1", "trajet dessiné sur la carte");
+  assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-crow"), "0", "pas de ligne droite quand le trajet est connu");
+  assert.match(await text(page, "[data-testid=map-travel-place-1]"), /18 min[\s\S]*à vélo · 1,4 km/);
+  assert.match(await text(page, "[data-testid=map-place-place-1]"), /Gare Lille Flandres/);
+  const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
+  assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
+}
+
+test("carte (mobile) : adresse exacte → carte avec le logement, le lieu de travail, le trajet et sa durée ; commune seule → pas de carte", async () => {
+  const page = await mobile.newPage();
+  await page.goto(base + "/searches/1");
+  await page.waitForSelector("[data-testid=card-listing-1]");
+  await page.click("[data-testid=button-open-listing-1]");
+  await checkListingMap(page);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  assert.ok(overflow <= 0, `défilement horizontal de ${overflow}px`);
+  await page.click("[data-testid=button-close-listing-1]");
+  await page.click("[data-testid=button-open-listing-2]");
+  await page.waitForSelector("[data-testid=dialog-listing-2]");
+  await page.waitForTimeout(400);
+  assert.equal(await page.locator("[data-testid=listing-map-2]").count(), 0, "annonce localisée à la commune : pas de carte");
+  await page.close();
+});
+
 test("session (mobile) : déconnexion par le menu, message générique si le mot de passe est faux, reconnexion", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/");
@@ -161,3 +202,18 @@ for (const name of ["mobile", "desktop"]) {
     await page.close();
   });
 }
+
+test("carte (desktop) : même encart en grand écran, pour le premier compte", async () => {
+  const context = await newContext("desktop");
+  const page = await context.newPage();
+  await page.goto(base + "/");
+  await page.waitForSelector("[data-testid=input-email]");
+  await page.fill("[data-testid=input-email]", "dev@example.com");
+  await page.fill("[data-testid=input-password]", "motdepasse-1");
+  await page.click("[data-testid=button-login]");
+  await page.waitForSelector("[data-testid=button-start-search]");
+  await page.goto(base + "/searches/1");
+  await page.click("[data-testid=button-open-listing-1]");
+  await checkListingMap(page);
+  await context.close();
+});

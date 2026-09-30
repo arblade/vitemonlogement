@@ -11,10 +11,11 @@ const ads = [1, 2].map(n => ({
   url: `https://www.leboncoin.fr/ad/locations/${n}`,
   title: `Studio ${n} Lille`,
   description: `Studio ${n} calme. Les chats sont acceptés. Loyer 600 € par mois.`,
-  price_euros: 600, square: 28, rooms: 1, location: { city: "Lille" },
+  price_euros: 600, square: 28, rooms: 1,
+  location: n === 1 ? { city: "Lille", lat: 50.6365, lng: 3.0635, type: "streetNumber" } : { city: "Lille", lat: 50.63, lng: 3.06, type: "city" },
   images: { urls_large: [`https://img.leboncoin.fr/${n}.jpg`] },
 }));
-const counts = { interpret: 0, analyze: 0, apifyRuns: 0 };
+const counts = { interpret: 0, analyze: 0, apifyRuns: 0, geocode: 0 };
 let fake: Server;
 
 before(async () => {
@@ -27,12 +28,17 @@ before(async () => {
       if (req.method === "POST" && url.startsWith("/v2/actors/")) { counts.apifyRuns++; return json({ data: { id: "run-1" } }); }
       if (url.startsWith("/v2/actor-runs/")) return json({ data: { status: "SUCCEEDED", defaultDatasetId: "ds-1" } });
       if (url.startsWith("/v2/datasets/")) return json(ads);
+      if (url.startsWith("/geocodage/search")) {
+        counts.geocode++;
+        return json({ features: [{ geometry: { coordinates: [3.0706, 50.6372] }, properties: { type: "housenumber", score: 0.95, label: "1 Place de la Gare 59000 Lille" } }] });
+      }
       if (url.endsWith("/chat/completions")) {
         const request = JSON.parse(body) as { messages: { content: string }[] };
         let content: unknown;
         if (request.messages[0].content.includes("Interprète une demande")) {
           counts.interpret++;
-          content = { location: "Lille", intent: "rent", maxPrice: 700, radius: 5, keywords: "", uncertainChecks: [{ label: "chat accepté", availability: "description", apiField: null }] };
+          const places = request.messages[1].content.includes("travaille") ? [{ label: "Travail", kind: "work", address: "1 place de la Gare", mode: "bike" }] : [];
+          content = { location: "Lille", intent: "rent", maxPrice: 700, radius: 5, keywords: "", uncertainChecks: [{ label: "chat accepté", availability: "description", apiField: null }], places };
         } else {
           counts.analyze++;
           const { listings } = JSON.parse(request.messages[1].content) as { listings: { id: number; toVerify: { id: string }[]; wantGeneral: boolean }[] };
@@ -53,6 +59,7 @@ before(async () => {
   process.env.APIFY_TOKEN = "test";
   process.env.OPENAI_BASE_URL = `${origin}/v1`;
   process.env.OPENAI_API_KEY = "test";
+  process.env.GEOCODER_BASE_URL = `${origin}/geocodage`;
   const { useMemoryDatabase } = await import("../../test/helpers");
   await useMemoryDatabase();
 });
@@ -109,5 +116,40 @@ test("des échecs répétés d'Apify n'entraînent pas de boucle infinie : la re
     assert.equal(MAX_STEP_ATTEMPTS, 3);
   } finally {
     process.env.APIFY_BASE_URL = previous;
+  }
+});
+
+test("lieu de vie : extrait de la demande, géocodé une fois et enregistré avec la recherche ; position des annonces conservée", async () => {
+  const { createSearch, getSearch } = await import("./store");
+  const before = counts.geocode;
+  const id = await createSearch("Un studio à Lille, je travaille au 1 place de la Gare, j'y vais à vélo");
+  assert.equal((await runToCompletion(id)).status, "completed");
+  const search = await getSearch(id);
+  assert.deepEqual(search?.criteria.places, [{ id: "place-1", label: "Travail", kind: "work", address: "1 place de la Gare", mode: "bike",
+    lat: 50.6372, lng: 3.0706, resolved: "1 Place de la Gare 59000 Lille" }]);
+  assert.equal(counts.geocode - before, 1);
+  const exact = search?.listings.find(item => item.url.endsWith("/1"));
+  const vague = search?.listings.find(item => item.url.endsWith("/2"));
+  assert.deepEqual([exact?.lat, exact?.lng, exact?.geoPrecision], [50.6365, 3.0635, "streetNumber"]);
+  assert.equal(vague?.geoPrecision, "city");
+});
+
+test("sans lieu cité, aucun géocodage (et un géocodeur en panne ne bloque jamais la recherche)", async () => {
+  const { createSearch, getSearch } = await import("./store");
+  const before = counts.geocode;
+  const id = await createSearch("Un studio à Lille, 700 € max");
+  assert.equal((await runToCompletion(id)).status, "completed");
+  assert.deepEqual((await getSearch(id))?.criteria.places, []);
+  assert.equal(counts.geocode, before);
+  const previous = process.env.GEOCODER_BASE_URL;
+  process.env.GEOCODER_BASE_URL = "http://127.0.0.1:1";
+  try {
+    const down = await createSearch("Un studio à Lille, je travaille au 1 place de la Gare");
+    assert.equal((await runToCompletion(down)).status, "completed");
+    const place = (await getSearch(down))?.criteria.places?.[0];
+    assert.equal(place?.address, "1 place de la Gare");
+    assert.equal(place?.lat, null, "gardé, mais sans coordonnées : pas de point sur la carte");
+  } finally {
+    process.env.GEOCODER_BASE_URL = previous;
   }
 });

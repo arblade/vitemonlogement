@@ -1,6 +1,23 @@
 # Carte des logements (style Airbnb) — étude de faisabilité
 
-Étude du 30/09/2026. **Verdict : jouable.** L'API renvoie des coordonnées pour chaque annonce, avec un champ qui dit si elles sont exactes ou approximatives. Rien n'est encore codé.
+Étude du 30/09/2026. **Verdict : jouable.** L'API renvoie des coordonnées pour chaque annonce, avec un champ qui dit si elles sont exactes ou approximatives.
+
+## Preuve de concept (faite, branche `develop`)
+- **Où** : encart « Où se trouve le logement » dans la fiche d'une annonce, **seulement** si sa position est une adresse exacte (`streetNumber`) ou une rue (`street`, point placé dans la rue). Quartier ou commune : pas d'encart.
+- **Carte** : MapLibre GL + fond **OpenFreeMap** (style « positron », tuiles vectorielles OpenStreetMap, gratuit, sans clé ni plafond, usage commercial autorisé). Chargée à l'ouverture de la fiche seulement (≈ 280 ko compressés). Pastille noire « maison + loyer » pour le logement, pastilles blanches à icône rose pour les lieux de vie. Gestes « deux doigts » sur mobile (la fiche défile normalement), crédit OpenStreetMap replié en « i ». Sans WebGL : message, la liste des lieux reste.
+- **Écarté** : CARTO (les tuiles renvoient désormais un filigrane « API KEY REQUIRED »), tuiles OSM officielles (politique d'usage), Esri (compte requis en production).
+- **Lieux de vie** : l'interprétation de la demande (1er appel LLM) extrait jusqu'à 3 lieux cités par une adresse ou un nom d'établissement (travail, école…), avec le moyen de transport mentionné (transports par défaut). Géocodés une fois par la Géoplateforme IGN (adresse, sinon lieu nommé ; une simple commune est refusée) et enregistrés dans les critères de la recherche en base. Un géocodeur en panne ne bloque jamais la recherche.
+- **Trajets** : Google Routes (`computeRoutes`), annonce → lieu, durée + distance + tracé réel (polyline). Transports : arrivée mardi 9 h (heure de Paris) ; voiture : sans trafic (tarif le plus bas). Calculés à l'ouverture de la fiche, gardés en base (table `travel_routes`, « pas d'itinéraire » compris), plafond de 150 vrais appels Google par jour (`GOOGLE_ROUTES_PER_DAY`). **Sans `GOOGLE_MAPS_API_KEY`, rien n'est demandé ni affiché** en durée : la carte montre les deux points reliés en pointillés et la distance à vol d'oiseau.
+- **Base** : colonnes `lat`, `lng`, `geo_precision` sur `housing_listings` (migration 0003). Seules les nouvelles recherches ou les rafraîchissements ont des coordonnées.
+
+## Pour activer les temps de trajet
+Créer une clé Google Cloud avec l'**API Routes** activée (et restreinte à cette API), puis la poser dans la variable `GOOGLE_MAPS_API_KEY` du service Render. Aucun redéploiement de code nécessaire.
+
+## Reste à faire
+- Carte de la **liste** de résultats (toutes les annonces, pastilles de prix, zones approximatives en cercle).
+- Vie privée : numéro de rue des particuliers affiché tel quel (à décider).
+- Critère « à moins de 30 min du travail » (filtre / score), voir [criteres-de-trajet](criteres-de-trajet.md).
+- Non vérifié en réel : réponse de Google (clé absente), extraction des lieux par le LLM (testée avec un faux LLM).
 
 ## Méthode
 4 appels de l'acteur Apify `clearpath~leboncoin-api` (le même que l'appli), 10 annonces chacun, réponse brute complète (`clean=false`, aucun champ filtré) :

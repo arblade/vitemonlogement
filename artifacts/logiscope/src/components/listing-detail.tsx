@@ -1,18 +1,22 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import type { HousingCriterion, HousingListing } from '@workspace/api-client-react';
+import type { HousingCriterion, HousingListing, HousingPlace } from '@workspace/api-client-react';
 import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles, X } from 'lucide-react';
 import { ListingGallery } from '@/components/listing-gallery';
 import { generalIcons, listingFacts } from '@/components/listing-facts';
 import { ListingContact } from '@/components/listing-contact';
+import { ListingMap } from '@/components/listing-map';
 
 function sourceName(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
   catch { return 'la source'; }
 }
 
-export function ListingDetail({ listing, checks = [], open, onOpenChange, selected, compareFull, onSelect }: {
+export function ListingDetail({ listing, checks = [], open, onOpenChange, selected, compareFull, onSelect, searchId, places, routingAvailable }: {
   listing: HousingListing;
   checks?: HousingCriterion[];
+  searchId?: number;
+  places?: HousingPlace[];
+  routingAvailable?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selected: boolean;
@@ -57,6 +61,8 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
                 {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`general-${listing.id}-${label}`} className="min-w-0 rounded-xl bg-mist p-4"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.08em] text-stone">{Icon && <Icon size={14} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className="mt-2 block break-words text-[16px] font-semibold">{value}</strong></div>; })}
               </div>
             </section>
+
+            <ListingMap listing={listing} searchId={searchId} places={places} routingAvailable={routingAvailable}/>
 
             <div className="py-6"><ListingContact listing={listing} results={checkedResults}/></div>
 

@@ -8,6 +8,7 @@
 import type { HousingCriterionResult } from './housingCriterionResult';
 import type { HousingFeature } from './housingFeature';
 import type { HousingListingBatch } from './housingListingBatch';
+import type { HousingListingGeoPrecision } from './housingListingGeoPrecision';
 
 export interface HousingListing {
   id: number;
@@ -32,4 +33,10 @@ export interface HousingListing {
   score: number;
   features: HousingFeature[];
   criterionResults: HousingCriterionResult[];
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
+  /** @nullable */
+  geoPrecision?: HousingListingGeoPrecision;
 }

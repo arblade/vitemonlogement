@@ -15,7 +15,7 @@ function listingOf(url: string, criteria: Criteria, id = -1, text = description)
   return {
     id, batch: "focused", title: "Studio Lille", url, description: text, ...base, image: null, images: [],
     aiSummary: null, summaryEvidence: [], score: 60, features: [],
-    criterionResults: evaluateStructured(criteria, base, {}),
+    criterionResults: evaluateStructured(criteria, base, {}), lat: null, lng: null, geoPrecision: null,
   };
 }
 

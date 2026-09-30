@@ -25,7 +25,8 @@ import type {
   HousingPrompt,
   HousingSearchDetail,
   HousingSearchInput,
-  HousingSearchSummary
+  HousingSearchSummary,
+  ListingRoutes
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -585,4 +586,86 @@ export const useRefreshHousingSearch = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getRefreshHousingSearchMutationOptions(options));
     }
+
+export const getGetListingRoutesUrl = (id: number,
+    listingId: number,) => {
+
+
+
+
+  return `/api/housing/searches/${id}/listings/${listingId}/routes`
+}
+
+/**
+ * @summary Travel routes from a listing to each geocoded place of the search (only when routing is configured)
+ */
+export const getListingRoutes = async (id: number,
+    listingId: number, options?: Parameters<typeof customFetch>[1]): Promise<ListingRoutes> => {
+
+  return customFetch<ListingRoutes>(getGetListingRoutesUrl(id,listingId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetListingRoutesQueryKey = (id: number,
+    listingId: number,) => {
+    return [
+    `/api/housing/searches/${id}/listings/${listingId}/routes`
+    ] as const;
+    }
+
+
+export const getGetListingRoutesQueryOptions = <TData = Awaited<ReturnType<typeof getListingRoutes>>, TError = ErrorType<unknown>>(id: number,
+    listingId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingRoutes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetListingRoutesQueryKey(id,listingId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getListingRoutes>>> = ({ signal }) => getListingRoutes(id,listingId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && listingId !== null && listingId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getListingRoutes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetListingRoutesQueryResult = NonNullable<Awaited<ReturnType<typeof getListingRoutes>>>
+export type GetListingRoutesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Travel routes from a listing to each geocoded place of the search (only when routing is configured)
+ */
+
+export function useGetListingRoutes<TData = Awaited<ReturnType<typeof getListingRoutes>>, TError = ErrorType<unknown>>(
+ id: number,
+    listingId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getListingRoutes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetListingRoutesQueryOptions(id,listingId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

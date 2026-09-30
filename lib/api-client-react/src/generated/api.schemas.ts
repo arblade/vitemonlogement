@@ -42,6 +42,39 @@ export interface HousingCriterion {
   apiField?: string | null;
 }
 
+export type HousingPlaceKind = typeof HousingPlaceKind[keyof typeof HousingPlaceKind];
+
+
+export const HousingPlaceKind = {
+  work: 'work',
+  school: 'school',
+  other: 'other',
+} as const;
+
+export type TravelMode = typeof TravelMode[keyof typeof TravelMode];
+
+
+export const TravelMode = {
+  transit: 'transit',
+  drive: 'drive',
+  bike: 'bike',
+  walk: 'walk',
+} as const;
+
+export interface HousingPlace {
+  id: string;
+  label: string;
+  kind: HousingPlaceKind;
+  address: string;
+  mode: TravelMode;
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
+  /** @nullable */
+  resolved?: string | null;
+}
+
 export interface HousingCriteria {
   location: string;
   intent: HousingCriteriaIntent;
@@ -63,6 +96,19 @@ export interface HousingCriteria {
   keywords: string;
   wishes?: string[];
   checks?: HousingCriterion[];
+  places?: HousingPlace[];
+}
+
+export interface ListingRoute {
+  placeId: string;
+  mode: TravelMode;
+  durationSeconds: number;
+  distanceMeters: number;
+  path: number[][];
+}
+
+export interface ListingRoutes {
+  routes: ListingRoute[];
 }
 
 export interface HousingSearchInput {
@@ -182,6 +228,19 @@ export const HousingListingBatch = {
   broad: 'broad',
 } as const;
 
+/**
+ * @nullable
+ */
+export type HousingListingGeoPrecision = typeof HousingListingGeoPrecision[keyof typeof HousingListingGeoPrecision] | null;
+
+
+export const HousingListingGeoPrecision = {
+  streetNumber: 'streetNumber',
+  street: 'street',
+  district: 'district',
+  city: 'city',
+} as const;
+
 export interface HousingListing {
   id: number;
   batch: HousingListingBatch;
@@ -205,9 +264,17 @@ export interface HousingListing {
   score: number;
   features: HousingFeature[];
   criterionResults: HousingCriterionResult[];
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
+  /** @nullable */
+  geoPrecision?: HousingListingGeoPrecision;
 }
 
 export type HousingSearchDetail = HousingSearchSummary & {
   listings: HousingListing[];
+  /** Travel times can be computed (a routing key is configured) */
+  routingAvailable?: boolean;
 };
 

@@ -1,5 +1,6 @@
 import { logger } from "../../lib/logger";
 import { interpret } from "./ai";
+import { locatePlaces } from "../../lib/geocode";
 import { startSearch, syncSearch } from "./apify";
 import { FAILURE_MESSAGE, getSearchRow, recordAttemptFailure, setCriteria, setFailure, setRun, type Criteria } from "./store";
 
@@ -36,6 +37,7 @@ export async function advanceSearch(id: number): Promise<number> {
           await setFailure(id, "Indiquez une ville ou un département dans votre description.", isRefresh);
           return 0;
         }
+        if (criteria.places?.length) criteria = { ...criteria, places: await locatePlaces(criteria.places, criteria.location) };
         await setCriteria(id, criteria);
       }
       if (criteria.intent !== "rent") {

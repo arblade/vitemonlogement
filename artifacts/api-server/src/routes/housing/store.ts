@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
+import { routingAvailable } from "../../lib/travel";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 
 export type Criterion = {
@@ -19,6 +20,27 @@ export type CriterionResult = {
   evidence: string;
 };
 
+/** Lieu de vie cité dans la demande (travail, école…), géocodé si possible. */
+export type Place = {
+  id: string;
+  label: string;
+  kind: "work" | "school" | "other";
+  address: string;
+  mode: TravelMode;
+  lat?: number | null;
+  lng?: number | null;
+  /** Adresse telle que retrouvée par le géocodeur (affichée à l'utilisateur). */
+  resolved?: string | null;
+};
+
+export type TravelMode = "transit" | "drive" | "bike" | "walk";
+
+export type GeoPrecision = "streetNumber" | "street" | "district" | "city";
+
+/** Seules l'adresse exacte et la rue sont placées sur la carte : un quartier ou une commune n'est pas une position. */
+export const isPrecise = (listing: Pick<Listing, "lat" | "lng" | "geoPrecision">): listing is Listing & { lat: number; lng: number } =>
+  listing.lat != null && listing.lng != null && (listing.geoPrecision === "streetNumber" || listing.geoPrecision === "street");
+
 export type Criteria = {
   location: string;
   intent: "rent" | "buy";
@@ -31,6 +53,7 @@ export type Criteria = {
   keywords: string;
   wishes?: string[];
   checks?: Criterion[];
+  places?: Place[];
 };
 
 export type Feature = {
@@ -57,6 +80,9 @@ export type Listing = {
   score: number;
   features: Feature[];
   criterionResults: CriterionResult[];
+  lat: number | null;
+  lng: number | null;
+  geoPrecision: GeoPrecision | null;
 };
 
 export type SearchRow = typeof housingSearches.$inferSelect;
@@ -164,8 +190,9 @@ export async function getSearch(id: number) {
       summaryEvidence: JSON.parse(listing.summaryEvidence) as string[],
       criterionResults: JSON.parse(listing.criterionResults) as CriterionResult[],
       features: JSON.parse(listing.features) as Feature[],
+      lat: listing.lat, lng: listing.lng, geoPrecision: listing.geoPrecision as GeoPrecision | null,
     }));
-  return { ...await summary(row), listings };
+  return { ...await summary(row), listings, routingAvailable: routingAvailable() };
 }
 
 export async function completeSearch(id: number, listings: Omit<Listing, "id">[], batchName: SearchBatch, continueBroad = false, maxResults = 5) {
@@ -178,6 +205,7 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
         location: item.location, image: item.image, score: item.score, features: JSON.stringify(item.features),
         images: JSON.stringify(item.images), aiSummary: item.aiSummary,
         summaryEvidence: JSON.stringify(item.summaryEvidence), criterionResults: JSON.stringify(item.criterionResults),
+        lat: item.lat ?? null, lng: item.lng ?? null, geoPrecision: item.geoPrecision ?? null,
       };
       await tx.insert(t).values(values).onConflictDoUpdate({
         target: [t.searchId, t.url],
@@ -189,6 +217,9 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
           aiSummary: sql`COALESCE(${t.aiSummary}, excluded.ai_summary)`,
           summaryEvidence: sql`CASE WHEN ${t.summaryEvidence} = '[]' THEN excluded.summary_evidence ELSE ${t.summaryEvidence} END`,
           criterionResults: sql`excluded.criterion_results`,
+          lat: sql`COALESCE(excluded.lat, ${t.lat})`,
+          lng: sql`COALESCE(excluded.lng, ${t.lng})`,
+          geoPrecision: sql`COALESCE(excluded.geo_precision, ${t.geoPrecision})`,
         },
       });
     }

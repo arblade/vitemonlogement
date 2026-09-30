@@ -10,4 +10,6 @@ import type { HousingSearchSummary } from './housingSearchSummary';
 
 export type HousingSearchDetail = HousingSearchSummary & {
   listings: HousingListing[];
+  /** Travel times can be computed (a routing key is configured) */
+  routingAvailable?: boolean;
 };

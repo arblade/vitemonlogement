@@ -7,6 +7,7 @@
  */
 import type { HousingCriteriaIntent } from './housingCriteriaIntent';
 import type { HousingCriterion } from './housingCriterion';
+import type { HousingPlace } from './housingPlace';
 
 export interface HousingCriteria {
   location: string;
@@ -29,4 +30,5 @@ export interface HousingCriteria {
   keywords: string;
   wishes?: string[];
   checks?: HousingCriterion[];
+  places?: HousingPlace[];
 }

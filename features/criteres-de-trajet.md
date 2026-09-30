@@ -1,6 +1,6 @@
 # Critères de trajet (temps de transport / voiture)
 
-**Statut :** évaluation terminée, aucun appel réel testé (tout vient de la doc et du code).
+**Statut :** premier pas codé avec la carte (voir [carte-des-logements](carte-des-logements.md)) : lieux de vie extraits de la demande et géocodés, temps + tracé Google Routes par annonce dans la fiche, actifs dès que `GOOGLE_MAPS_API_KEY` est posée. Pas encore de filtre « moins de N minutes » ni de matrice par recherche.
 **Source :** conversation « Feature géographique pour logement » (30/09/2026)
 
 ## Demande

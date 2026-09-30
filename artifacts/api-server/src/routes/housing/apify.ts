@@ -1,4 +1,4 @@
-import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type Listing } from "./store";
+import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
@@ -136,6 +136,25 @@ function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Fe
   return features;
 }
 
+const PRECISIONS = ["streetNumber", "street", "district", "city"] as const;
+
+/** Coordonnées de l'annonce et leur précision (`location.type` / `origin_type` renvoyés par Le Bon Coin). */
+export function listingPosition(data: Record<string, unknown>): Pick<Listing, "lat" | "lng" | "geoPrecision"> {
+  const location = object(data.location);
+  // Pas `number()` : il est fait pour les prix et perdrait le signe des longitudes négatives (ouest de la France).
+  const coordinate = (value: unknown) => {
+    const n = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value.replace(",", ".")) : NaN;
+    return Number.isFinite(n) ? n : null;
+  };
+  const lat = coordinate(first(location, ["lat", "latitude"]));
+  const lng = coordinate(first(location, ["lng", "lon", "longitude"]));
+  const type = text(first(location, ["type", "origin_type"]));
+  const valid = lat != null && lng != null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && !(lat === 0 && lng === 0);
+  if (!valid) return { lat: null, lng: null, geoPrecision: null };
+  const geoPrecision = (PRECISIONS as readonly string[]).includes(type) ? type as GeoPrecision : null;
+  return { lat, lng, geoPrecision };
+}
+
 export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch = "focused"): Omit<Listing, "id"> | null {
   const source = object(raw);
   const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
@@ -153,7 +172,7 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const images = getImages(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
   const image = images[0] ?? null;
   const features = otherApiFeatures(data, criteria);
-  const listing = { batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features };
+  const listing = { batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data) };
   const criterionResults = evaluateStructured(criteria, listing, data);
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
@@ -228,6 +247,7 @@ export async function syncSearch(id: number, criteria: Criteria) {
           aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
           features,
           criterionResults,
+          lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision,
         }; }).filter(item => !item.criterionResults.some(check =>
           ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description"));
         // Count only homes that survived all checks, including description-based
