@@ -1,24 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-ink: #0d0d0d;
-  --color-stone: #6e6e80;
-  --color-line: #e5e5e7;
-  --color-sage: #f4f4f5;
+  --color-ink: #222222;
+  --color-stone: #6a6a6a;
+  --color-line: #dddddd;
+  --color-line-soft: #ebebeb;
+  --color-sage: #f7f7f7;
+  --color-mist: #fafafa;
   --color-cream: #ffffff;
-  --color-lime: #10a37f;
-  --color-line-soft: #efeff1;
-  --color-moss: #0b7a5f;
   --color-paper: #ffffff;
-  --color-mist: #f7f7f8;
-  --color-stone-soft: #8e8ea0;
-  --color-lime-wash: #ecfdf5;
+  --color-stone-soft: #8a8a8a;
+  --color-lime: #ff385c;
+  --color-moss: #c13515;
+  --color-lime-wash: #fff1f3;
   --color-lime-light: #ffffff;
   --color-brick: #b42318;
+  --color-brand: #ff385c;
+  --color-brand-dark: #e31c5f;
+  --color-ok: #0f7b3f;
+  --color-ok-wash: #eaf7ee;
+  --color-ok-line: #b5e0c3;
+  --color-ok-deep: #0b5d2f;
   --color-background: hsl(var(--background)); --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card)); --color-card-foreground: hsl(var(--card-foreground)); --color-card-border: hsl(var(--card-border));
   --color-popover: hsl(var(--popover)); --color-popover-foreground: hsl(var(--popover-foreground)); --color-popover-border: hsl(var(--popover-border));
@@ -36,20 +42,20 @@
   --radius-sm: calc(var(--radius) - 4px); --radius-md: calc(var(--radius) - 2px); --radius-lg: var(--radius); --radius-xl: calc(var(--radius) + 4px);
 }
 :root {
-  --background: 0 0% 100%; --foreground: 0 0% 5%; --border: 240 6% 90%; --input: 240 6% 90%; --ring: 160 84% 35%;
-  --card: 0 0% 100%; --card-foreground: 0 0% 5%; --card-border: 240 6% 90%;
-  --popover: 0 0% 100%; --popover-foreground: 0 0% 5%; --popover-border: 240 6% 90%;
-  --primary: 0 0% 5%; --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 96%; --secondary-foreground: 0 0% 5%;
-  --muted: 240 5% 96%; --muted-foreground: 240 4% 46%;
-  --accent: 240 5% 96%; --accent-foreground: 0 0% 5%;
+  --background: 0 0% 100%; --foreground: 0 0% 13%; --border: 0 0% 87%; --input: 0 0% 87%; --ring: 350 100% 61%;
+  --card: 0 0% 100%; --card-foreground: 0 0% 13%; --card-border: 240 6% 90%;
+  --popover: 0 0% 100%; --popover-foreground: 0 0% 13%; --popover-border: 240 6% 90%;
+  --primary: 350 100% 61%; --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 97%; --secondary-foreground: 0 0% 5%;
+  --muted: 0 0% 97%; --muted-foreground: 0 0% 42%;
+  --accent: 0 0% 97%; --accent-foreground: 0 0% 5%;
   --destructive: 4 74% 42%; --destructive-foreground: 0 0% 100%;
   --sidebar: 240 5% 98%; --sidebar-foreground: 0 0% 5%; --sidebar-border: 240 6% 90%;
   --sidebar-primary: 0 0% 5%; --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 96%; --sidebar-accent-foreground: 0 0% 5%; --sidebar-ring: 160 84% 35%;
+  --sidebar-accent: 240 5% 96%; --sidebar-accent-foreground: 0 0% 5%; --sidebar-ring: 350 100% 61%;
   --chart-1: 160 84% 35%; --chart-2: 0 0% 5%; --chart-3: 18 58% 62%; --chart-4: 175 20% 45%; --chart-5: 41 38% 60%;
   --primary-border: hsl(var(--primary)); --secondary-border: hsl(var(--secondary)); --muted-border: hsl(var(--muted)); --accent-border: hsl(var(--accent)); --destructive-border: hsl(var(--destructive)); --sidebar-primary-border: hsl(var(--sidebar-primary)); --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --app-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; --app-font-serif: var(--app-font-sans); --app-font-mono: var(--app-font-sans); --radius: .75rem;
+  --app-font-sans: 'Figtree', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; --app-font-serif: var(--app-font-sans); --app-font-mono: var(--app-font-sans); --radius: .75rem;
 }
 .dark {
   --background: 253 20% 12%; --foreground: 43 32% 95%; --border: 252 14% 28%; --input: 252 14% 28%; --ring: 61 61% 76%;
@@ -69,7 +75,7 @@
   * { @apply border-border; }
   body { @apply bg-background text-foreground antialiased font-sans; letter-spacing: -.005em; }
 }
-::selection { background: #c7f0e2; color: #0d0d0d; }
+::selection { background: #ffe3e8; color: #222222; }
 .font-editorial { font-family: var(--app-font-serif); }
 .font-data { font-family: var(--app-font-mono); font-variant-numeric: tabular-nums; }
 .reveal { animation: rise .7s cubic-bezier(.22,1,.36,1) both; }

@@ -11,9 +11,14 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '@/component
 import { ErrorNotice, formatDate } from '@/components/site-shell';
 
 const suggestions = [
-  'Un studio à Lille, 650 € maximum, chat accepté',
-  'Un T2 à Lyon, 1 200 € maximum, avec ascenseur',
-  'Une maison à Nantes, 3 chambres, avec jardin',
+  { emoji: '🐱', text: 'Un studio à Lille, 650 € maximum, chat accepté' },
+  { emoji: '🛗', text: 'Un T2 à Lyon, 1 200 € maximum, avec ascenseur' },
+  { emoji: '🌳', text: 'Une maison à Nantes, 3 chambres, avec jardin' },
+];
+const steps = [
+  { emoji: '✍️', title: 'Vous décrivez', text: 'Ville, budget, et tout ce qui compte pour vous, avec vos propres mots.' },
+  { emoji: '🔎', title: 'On cherche et on vérifie', text: 'Nous parcourons les annonces et contrôlons chacun de vos critères.' },
+  { emoji: '🏡', title: 'Vous choisissez', text: 'Vous voyez ce qui est confirmé, ce qui reste à vérifier, et vous comparez.' },
 ];
 type PromptForm = { prompt: string };
 const apiMessage = (error: unknown, fallback: string) => {
@@ -45,17 +50,17 @@ export default function Home() {
 
   return <main>
     <section className="mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:pt-24">
-      <h1 className="text-balance text-[clamp(1.9rem,4.6vw,3rem)] font-semibold leading-[1.1] tracking-[-.03em]">Quel logement cherchez‑vous ?</h1>
-      <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone">Décrivez-le avec vos mots : on parcourt les annonces, on vérifie vos critères et on vous montre ce qui est confirmé ou reste à vérifier.</p>
+      <h1 className="text-balance text-[clamp(1.9rem,4.6vw,3rem)] font-semibold leading-[1.1] tracking-[-.03em]">Trouvez votre prochain chez-vous</h1>
+      <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone">Racontez-nous le logement idéal. On lit les annonces à votre place et on vous montre lesquelles correspondent vraiment.</p>
       <Form {...promptForm}>
-        <form onSubmit={promptForm.handleSubmit(onCreate)} className="mt-9 rounded-3xl border border-line bg-paper p-3 text-left shadow-[0_2px_24px_rgba(0,0,0,.06)] transition-shadow focus-within:shadow-[0_4px_32px_rgba(0,0,0,.1)]">
+        <form onSubmit={promptForm.handleSubmit(onCreate)} className="mt-9 rounded-[28px] border border-line bg-paper p-3 text-left shadow-[0_6px_28px_rgba(0,0,0,.1)] transition-shadow focus-within:shadow-[0_8px_36px_rgba(0,0,0,.16)]">
           <FormField control={promptForm.control} name="prompt" rules={{ required: 'Décrivez le logement recherché.', minLength: { value: 10, message: 'Décrivez votre recherche en au moins 10 caractères.' }, maxLength: { value: 1000, message: 'Limitez votre description à 1 000 caractères.' } }} render={({ field }) => <FormItem className="space-y-0">
             <FormControl><Textarea {...field} rows={3} data-testid="input-housing-wish" aria-label="Décrivez votre recherche" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void promptForm.handleSubmit(onCreate)(); } }} placeholder="Ex. Un appartement à Bordeaux, proche du tram, avec deux chambres et un budget de 1 300 €…" className="min-h-[92px] resize-none border-0 bg-transparent px-3 py-2 text-base shadow-none placeholder:text-stone-soft focus-visible:ring-0 md:text-base"/></FormControl>
             <FormMessage className="px-3 pt-1"/>
           </FormItem>}/>
           <div className="flex items-center justify-between gap-3 px-3 pb-1 pt-2">
             <span className="hidden text-xs text-stone-soft sm:inline">Entrée pour lancer · Maj + Entrée pour une nouvelle ligne</span>
-            <Button data-testid="button-start-search" type="submit" disabled={create.isPending} aria-label="Lancer la recherche" className="ml-auto h-10 rounded-full bg-ink px-4 text-sm font-medium text-paper hover:bg-[#27272a] disabled:opacity-40">
+            <Button data-testid="button-start-search" type="submit" disabled={create.isPending} aria-label="Lancer la recherche" className="ml-auto h-11 rounded-full px-5 bg-brand px-4 text-sm font-medium text-paper hover:bg-brand-dark disabled:opacity-40">
               {create.isPending ? 'Préparation…' : <>Rechercher <ArrowUp size={16} className="ml-1.5"/></>}
             </Button>
           </div>
@@ -63,7 +68,17 @@ export default function Home() {
       </Form>
       {localError && <div role="alert" className="mt-5 text-left"><ErrorNotice message={localError}/></div>}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-        {suggestions.map((suggestion, index) => <button key={suggestion} type="button" data-testid={`button-suggestion-${index}`} onClick={() => { promptForm.setValue('prompt', suggestion, { shouldValidate: true }); promptForm.setFocus('prompt'); }} className="rounded-full border border-line px-4 py-2 text-sm text-stone transition-colors hover:border-[#d4d4d8] hover:bg-sage hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime">{suggestion}</button>)}
+        {suggestions.map(({ emoji, text: suggestion }, index) => <button key={suggestion} type="button" data-testid={`button-suggestion-${index}`} onClick={() => { promptForm.setValue('prompt', suggestion, { shouldValidate: true }); promptForm.setFocus('prompt'); }} className="rounded-full border border-line bg-paper px-4 py-2.5 text-sm text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-lime"><span aria-hidden="true" className="mr-2">{emoji}</span>{suggestion}</button>)}
+      </div>
+    </section>
+
+    <section aria-label="Comment ça marche" className="mx-auto max-w-5xl px-5 pb-14">
+      <div className="grid gap-4 md:grid-cols-3">
+        {steps.map((step, index) => <div key={step.title} className="rounded-3xl bg-sage p-6">
+          <div className="mb-3 flex items-center gap-3"><span aria-hidden="true" className="grid size-11 place-items-center rounded-2xl bg-paper text-xl shadow-sm">{step.emoji}</span><span className="text-xs font-semibold text-brand-deep">Étape {index + 1}</span></div>
+          <h2 className="text-lg font-semibold">{step.title}</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-stone">{step.text}</p>
+        </div>)}
       </div>
     </section>
 
