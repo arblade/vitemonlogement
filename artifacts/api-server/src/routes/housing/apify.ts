@@ -4,8 +4,15 @@ import { logger } from "../../lib/logger";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
 import { actorRequest, focusedSearchTerm, isHousingListingUrl, shouldRunBroad, type SearchBatch } from "./housing-search";
 
-const RESULT_LIMIT = process.env.NODE_ENV === "production" ? 100 : 5;
-const CANDIDATE_LIMIT = process.env.NODE_ENV === "production" ? 100 : 10;
+// Limites par appel Apify, identiques en développement et en production (protège le budget Apify).
+// Modifiables par variables d'environnement : APIFY_RESULT_LIMIT (annonces conservées, défaut 5),
+// APIFY_CANDIDATE_LIMIT (annonces examinées, défaut 10 : l'acteur exige adLimit >= 10).
+function intEnv(name: string, fallback: number) {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
+const CANDIDATE_LIMIT = Math.max(10, intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
 const polling = new Set<number>();
 
 async function apify(path: string, init?: { method: string; headers: Record<string, string>; body: string }) {
@@ -153,10 +160,9 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
 }
 
 export async function startSearch(criteria: Criteria, batch: SearchBatch = "focused") {
-  // The actor requires adLimit >= 10. In development inspect ten candidates
-  // but retain at most five per run. Production can inspect/retain up to 100.
-  const chargeCap = process.env.NODE_ENV === "production" ? "0.25" : "0.10";
-  const timeout = process.env.NODE_ENV === "production" ? 300 : 120;
+  // The actor requires adLimit >= 10: inspect CANDIDATE_LIMIT (10) candidates, retain RESULT_LIMIT (5).
+  const chargeCap = process.env.APIFY_MAX_CHARGE_USD || "0.10";
+  const timeout = intEnv("APIFY_TIMEOUT_SECONDS", 120);
   const request = actorRequest(criteria, batch, CANDIDATE_LIMIT, chargeCap, timeout);
   const response = object(await apify(request.path, {
     method: "POST",
