@@ -13,7 +13,7 @@ import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
 import { useAppConfig } from '@/hooks/use-app-config';
-import { listingKey, markListingViewed, toggleListingFavorite, useListingInteractions } from '@/lib/listing-interactions';
+import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
 
 function sourceName(url: string) {
   try { return new URL(url).hostname.replace(/^www\./, ''); }
@@ -107,6 +107,7 @@ export default function SearchDetail() {
   const [interactionError, setInteractionError] = useState('');
   const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
   const interactions = useListingInteractions();
+  const favoriteActions = useFavoriteActions();
   const viewedUrls = new Set(interactions.viewed);
   const perCallLimit = useAppConfig().data?.resultsPerCall;
   const search = useGetHousingSearch(id, { query: { queryKey: getGetHousingSearchQueryKey(id), enabled: validId, refetchInterval: query => query.state.data?.status === 'running' ? 3500 : false } });
@@ -126,7 +127,7 @@ export default function SearchDetail() {
       liked={Boolean(interactions.favorites[listingKey(listing.url)])} viewed={viewedUrls.has(listingKey(listing.url))}
       onSelect={()=>toggle(listing.id)}
       onViewed={()=>{ if (!markListingViewed(listing.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }}
-      onFavorite={()=>{ if (!toggleListingFavorite(listing, id)) setInteractionError('Impossible d’enregistrer vos favoris dans ce navigateur.'); else setInteractionError(''); }}
+      onFavorite={()=>{ void favoriteActions.toggle(listing, id).then(ok => setInteractionError(ok ? '' : 'Impossible d’enregistrer vos favoris pour le moment. Réessayez.')); }}
     />)}</div>
   </section>;
   const onRelaunch = async (prompt: string) => {

@@ -1,40 +1,27 @@
 # Comptes multi-utilisateurs
 
-**Statut :** plan proposé, en attente de décisions et de l'accès en écriture au dépôt. Rien de codé.
-**Source :** conversation « Multi-user login feature » (30/09/2026)
+**Statut :** implémenté le 30/09/2026 sur `develop` (plan A, avec les décisions ci-dessous).
 
-## Demande
-Plusieurs utilisateurs avec page de connexion (e-mail + mot de passe avec confirmation), stockés proprement en base, chacun avec son compte et ses recherches. Confirmation d'e-mail explicitement retirée. Objectif : plans rapides, demandant le moins d'actions possible à l'utilisateur.
+## Décisions prises
+1. **Inscription sur invitation :** `APP_PASSWORD` devient le code d'invitation. Lien à partager : `https://<site>/?invite=<APP_PASSWORD>` ; si le code est valide, l'écran propose de créer un compte (e-mail, mot de passe, confirmation). Sans lien valide, seul l'écran de connexion apparaît.
+2. **Mot de passe oublié :** réinitialisation manuelle, pas de récupération par e-mail : `DATABASE_URL=... pnpm --filter @workspace/api-server run user:reset-password <email> <nouveau-mot-de-passe>`.
+3. **Recherches existantes :** rattachées au **premier compte créé** (celui du développeur). Elles ont `owner_id` NULL jusqu'à cette première inscription.
+4. **Favoris :** en base (table `favorites`), liés à l'utilisateur. Les favoris déjà mémorisés dans un navigateur sont repris automatiquement dans le compte à la première connexion.
 
-## État actuel
-- Un seul mot de passe partagé (`APP_PASSWORD`) ; le cookie de session signé contient un `visitorId` aléatoire, déjà utilisé pour le quota.
-- `housing_searches` n'a aucune notion de propriétaire : toutes les recherches sont visibles par tous.
-- Favoris dans le `localStorage` (liés à l'appareil).
-- `SESSION_SECRET` non défini sur Render : le secret de signature retombe sur `APP_PASSWORD`.
+## Implémenté
+- Tables `users` (e-mail unique en minuscules, mot de passe haché `scrypt` avec sel) et `favorites` ; colonne `housing_searches.owner_id` (migration Drizzle `0001`, appliquée au démarrage).
+- Routes `/api/auth/register`, `login`, `logout`, `me`, `invite` ; cookie de session httpOnly portant l'identifiant du compte.
+- Toutes les routes de recherche filtrent par propriétaire : la recherche d'un autre compte répond **404**.
+- Quota par utilisateur (à la place du quota par cookie) ; freinage par IP de la recherche du code d'invitation et des mots de passe (10 essais / 15 min) ; erreur de connexion identique que l'e-mail existe ou non.
+- Front : écran de connexion / inscription, bouton « Se déconnecter » (menu mobile et barre desktop), favoris synchronisés avec le serveur.
+- Routes favoris : `GET/PUT/DELETE /api/favorites`, `POST /api/favorites/import`.
 
-## Plan A : comptes maison (recommandé)
-- Table `users` : id, e-mail (minuscules, index unique), hash du mot de passe, date de création.
-- Mot de passe haché avec `scrypt` (`node:crypto`), sel par utilisateur, comparaison à durée constante, 8 caractères minimum, confirmation vérifiée côté front et serveur.
-- Routes `/api/auth/register`, `login`, `logout`, `me` ; cookie httpOnly avec `userId` ; erreurs génériques ; rate limit par IP et par e-mail.
-- Colonne `owner_id` sur `housing_searches` (migration Drizzle) ; toutes les routes filtrent par utilisateur, une recherche d'un autre compte renvoie 404.
-- Quota par cookie remplacé par quota par utilisateur.
-- Front : `auth-gate.tsx` devient une page connexion / inscription.
-- Tests mis à jour et cas d'isolation entre deux utilisateurs ajoutés.
-- À faire côté utilisateur : ajouter `SESSION_SECRET` sur Render, relire et fusionner.
+## À faire au déploiement
+1. Ajouter `SESSION_SECRET` sur Render (sinon il retombe sur `APP_PASSWORD`).
+2. **Créer son propre compte en premier** (le premier compte adopte les anciennes recherches), puis partager le lien d'invitation.
+3. Les anciennes sessions (cookie sans compte) sont invalides : tout le monde doit se reconnecter.
 
-## Plan B : Better Auth
-Mêmes comptes via une bibliothèque, avec réinitialisation de mot de passe ou Google possibles plus tard. Plus long, plus de surface à maintenir, peu de gain tant que seuls e-mail et mot de passe sont nécessaires.
-
-## Plan C : service géré (Clerk, Auth0…)
-Le plus rapide côté code, mais compte, clés et domaines à créer, utilisateurs chez un tiers, service potentiellement payant. Contredit l'objectif de peu d'actions côté utilisateur.
-
-## Points à décider
-1. **Inscription libre ou sur invitation ?** Sans vérification d'e-mail, n'importe qui peut créer des comptes, et le plafond global de 300 requêtes/jour est le seul garde-fou. Proposition : exiger l'ancien `APP_PASSWORD` comme code d'invitation.
-2. **Mot de passe oublié :** sans e-mail, pas de récupération ; réinitialisation manuelle en base, ou ajout d'un e-mail plus tard.
-3. **Recherches existantes :** rattachées au premier compte créé, ou laissées orphelines.
-4. **Favoris :** restent dans le navigateur, ou passent en base par compte.
-
-Réponse par défaut proposée : code d'invitation obligatoire + rattachement des recherches existantes au premier compte.
-
-## Blocage
-Pas d'accès en écriture au dépôt depuis la session concernée.
+## Limites connues
+- Le code d'invitation est dans l'URL : il reste dans l'historique du navigateur et peut apparaître dans des journaux ; changer `APP_PASSWORD` invalide les anciens liens (les comptes existants ne sont pas touchés).
+- Pas de suppression de compte, ni de changement de mot de passe depuis l'application.
+- Les annonces « consultées » restent dans le navigateur (seuls les favoris sont en base).

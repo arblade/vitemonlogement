@@ -17,8 +17,8 @@ before(async () => {
   const { default: app } = await import("../app");
   server = app.listen(0);
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}/api`;
-  const login = await fetch(`${base}/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: "Arblade" }) });
-  cookie = (login.headers.get("set-cookie") ?? "").split(";")[0];
+  const register = await fetch(`${base}/auth/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: "Arblade", email: "villes@example.com", password: "motdepasse-1" }) });
+  cookie = (register.headers.get("set-cookie") ?? "").split(";")[0];
 });
 after(async () => { server.close(); await closeDatabase(); });
 

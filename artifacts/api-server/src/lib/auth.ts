@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
 import { isProduction } from "./env";
+import { ensureDevUser, getUser } from "./users";
 
 export const SESSION_COOKIE = "vml_session";
 const SESSION_MAX_AGE_MS = 30 * 86_400_000;
@@ -8,18 +9,21 @@ const SESSION_MAX_AGE_MS = 30 * 86_400_000;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
-    interface Request { visitorId?: string }
+    interface Request { visitorId?: string; userId?: number }
   }
 }
 
 const sha = (value: string) => createHash("sha256").update(value).digest();
 
-/** Accès protégé par un mot de passe partagé (APP_PASSWORD) : jamais dans le code ni dans le dépôt. */
+/**
+ * APP_PASSWORD est le CODE D'INVITATION : seules les personnes qui le connaissent peuvent créer un compte
+ * (lien /?invite=CODE). Il n'ouvre plus l'application à lui seul. Jamais dans le code ni dans le dépôt.
+ */
 export function passwordConfigured() {
   return Boolean(process.env.APP_PASSWORD);
 }
 
-export function checkPassword(input: unknown) {
+export function checkInviteCode(input: unknown) {
   const expected = process.env.APP_PASSWORD;
   if (!expected || typeof input !== "string") return false;
   return timingSafeEqual(sha(input), sha(expected)); // comparaison à durée constante
@@ -31,7 +35,14 @@ function secret() {
 
 const sign = (payload: string) => createHmac("sha256", secret()).update(payload).digest("base64url");
 
-/** Jeton de session signé : identifiant de visiteur (sert au quota par cookie) + date d'émission. */
+/** Identifiant de session d'un compte : « u12 ». Il sert aussi de clé du quota par utilisateur (checkQuotas). */
+export const visitorIdForUser = (userId: number) => `u${userId}`;
+export function userIdFromVisitor(visitorId: string): number | null {
+  const match = /^u(\d+)$/.exec(visitorId);
+  return match ? Number(match[1]) : null;
+}
+
+/** Jeton de session signé : identifiant de visiteur (« u<id> » pour un compte) + date d'émission. */
 export function issueSession(now = Date.now(), visitorId: string = randomUUID()) {
   const payload = `${visitorId}.${Math.floor(now / 1000)}`;
   return `${payload}.${sign(payload)}`;
@@ -59,15 +70,20 @@ export function clearSessionCookie(res: Response) {
   res.clearCookie(SESSION_COOKIE, { httpOnly: true, sameSite: "lax", secure: isProduction(), path: "/" });
 }
 
-/** Protège l'API métier. Sans APP_PASSWORD : ouvert en développement, fermé (503) en production. */
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+/** Protège l'API métier : il faut un compte connecté. Sans APP_PASSWORD : compte de développement en local, fermé (503) en production. */
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!passwordConfigured()) {
-    if (!isProduction()) { req.visitorId = "dev"; return next(); }
-    res.status(503).json({ error: "Accès non configuré : définissez APP_PASSWORD sur le serveur." });
-    return;
+    if (isProduction()) { res.status(503).json({ error: "Accès non configuré : définissez APP_PASSWORD sur le serveur." }); return; }
+    const user = await ensureDevUser();
+    req.userId = user.id;
+    req.visitorId = visitorIdForUser(user.id);
+    return next();
   }
   const session = readSession(req.cookies?.[SESSION_COOKIE]);
-  if (!session) { res.status(401).json({ error: "Authentification requise." }); return; }
-  req.visitorId = session.visitorId;
+  const userId = session ? userIdFromVisitor(session.visitorId) : null;
+  const user = userId === null ? undefined : await getUser(userId);
+  if (!user) { res.status(401).json({ error: "Authentification requise." }); return; }
+  req.userId = user.id;
+  req.visitorId = session!.visitorId;
   next();
 }

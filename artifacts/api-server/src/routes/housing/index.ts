@@ -9,7 +9,7 @@ import {
 } from "@workspace/api-zod";
 import { randomUUID } from "node:crypto";
 import { interpret, analyze } from "./ai";
-import { beginRefresh, createSearch, getSearch, getSearchRow, listSearches, saveAnalysis } from "./store";
+import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, listSearches, saveAnalysis } from "./store";
 import { costlyRateLimit } from "../../lib/quota";
 import { claimSearch, releaseSearch } from "../../lib/queue";
 import { wakeWorker } from "../../lib/worker-registry";
@@ -25,14 +25,14 @@ router.post("/housing/interpret", costlyRateLimit, async (req, res): Promise<voi
   res.json(InterpretHousingRequestResponse.parse(await interpret(input.data.prompt)));
 });
 
-router.get("/housing/searches", async (_req, res) => {
-  res.json(ListHousingSearchesResponse.parse(await listSearches()));
+router.get("/housing/searches", async (req, res) => {
+  res.json(ListHousingSearchesResponse.parse(await listSearches(req.userId!)));
 });
 
 router.post("/housing/searches", costlyRateLimit, async (req, res): Promise<void> => {
   const input = CreateHousingSearchBody.safeParse(req.body);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
-  const id = await createSearch(input.data.prompt.trim());
+  const id = await createSearch(input.data.prompt.trim(), req.userId!);
   res.status(201).json(CreateHousingSearchResponse.parse(await getSearch(id)));
   wakeWorker(); // le worker serveur prend le relais ; le navigateur ne fait que suivre l'avancement
 });
@@ -41,7 +41,7 @@ router.post("/housing/searches", costlyRateLimit, async (req, res): Promise<void
 router.get("/housing/searches/:id", async (req, res): Promise<void> => {
   const params = GetHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const row = await getSearchRow(params.data.id);
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
   if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
   res.json(GetHousingSearchResponse.parse(await getSearch(row.id)));
 });
@@ -49,7 +49,7 @@ router.get("/housing/searches/:id", async (req, res): Promise<void> => {
 router.post("/housing/searches/:id/refresh", costlyRateLimit, async (req, res): Promise<void> => {
   const params = RefreshHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  const row = await getSearchRow(params.data.id);
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
   if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
   if (row.status !== "completed") {
     res.status(409).json({ error: "Attendez la fin de la recherche avant de rafraîchir." });
@@ -66,6 +66,7 @@ router.post("/housing/searches/:id/refresh", costlyRateLimit, async (req, res): 
 router.post("/housing/searches/:id/analyze", costlyRateLimit, async (req, res): Promise<void> => {
   const params = AnalyzeHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  if (!await getOwnedSearchRow(params.data.id, req.userId!)) { res.status(404).json({ error: "Recherche introuvable." }); return; }
   const search = await getSearch(params.data.id);
   if (!search) { res.status(404).json({ error: "Recherche introuvable." }); return; }
   if (search.status !== "completed") {

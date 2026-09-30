@@ -30,7 +30,7 @@ test("la migration de base adopte une base existante et conserve ses données", 
 
   await handle.migrate();
 
-  const searches = await handle.db.execute(sql`SELECT prompt, lock_owner, lock_until, next_check_at, attempts FROM housing_searches`);
+  const searches = await handle.db.execute(sql`SELECT prompt, lock_owner, lock_until, next_check_at::int AS next_check_at, attempts FROM housing_searches`);
   assert.deepEqual((searches as unknown as { rows: unknown[] }).rows, [{ prompt: "ancienne recherche", lock_owner: null, lock_until: null, next_check_at: 0, attempts: 0 }]);
   const listings = await handle.db.execute(sql`SELECT count(*)::int AS n FROM housing_listings`);
   assert.equal((listings as unknown as { rows: { n: number }[] }).rows[0].n, 1);

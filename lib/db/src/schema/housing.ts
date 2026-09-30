@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, doublePrecision, index, integer, pgTable, primaryKey, serial, text, unique } from "drizzle-orm/pg-core";
+import { users } from "./accounts";
 
 // Les colonnes JSON restent en TEXT : c'est le format des tables déjà présentes en production.
 export const housingSearches = pgTable("housing_searches", {
@@ -23,7 +24,9 @@ export const housingSearches = pgTable("housing_searches", {
   nextCheckAt: bigint("next_check_at", { mode: "number" }).notNull().default(0),
   // Échecs consécutifs d'une étape : au-delà de MAX_STEP_ATTEMPTS la recherche passe en échec.
   attempts: integer("attempts").notNull().default(0),
-}, table => [index("housing_searches_status_idx").on(table.status)]);
+  // Propriétaire : chaque recherche appartient à un compte (NULL = ancienne recherche, adoptée par le premier compte créé).
+  ownerId: integer("owner_id").references(() => users.id),
+}, table => [index("housing_searches_status_idx").on(table.status), index("housing_searches_owner_idx").on(table.ownerId)]);
 
 export const housingListings = pgTable("housing_listings", {
   id: serial("id").primaryKey(),

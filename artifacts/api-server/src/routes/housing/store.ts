@@ -61,10 +61,11 @@ export type Listing = {
 
 export type SearchRow = typeof housingSearches.$inferSelect;
 
-export async function createSearch(prompt: string) {
+/** `ownerId` : le compte propriétaire (NULL uniquement pour les recherches antérieures aux comptes et les tests). */
+export async function createSearch(prompt: string, ownerId: number | null = null) {
   const placeholder: Criteria = { location: "", intent: "rent", keywords: "", radius: 5, wishes: [] };
   const [row] = await db().insert(housingSearches)
-    .values({ prompt, criteria: JSON.stringify(placeholder), status: "running", stage: "interpreting" })
+    .values({ prompt, criteria: JSON.stringify(placeholder), status: "running", stage: "interpreting", ownerId })
     .returning({ id: housingSearches.id });
   return row.id;
 }
@@ -111,6 +112,12 @@ export async function getSearchRow(id: number): Promise<SearchRow | undefined> {
   return row;
 }
 
+/** La recherche d'un autre compte est traitée comme inexistante (404), jamais comme interdite. */
+export async function getOwnedSearchRow(id: number, ownerId: number) {
+  const row = await getSearchRow(id);
+  return row && row.ownerId === ownerId ? row : undefined;
+}
+
 async function summary(row: SearchRow) {
   const urls = await db().select({ url: housingListings.url }).from(housingListings).where(eq(housingListings.searchId, row.id));
   const searchRequests = [row.focusedRequest, row.broadRequest]
@@ -132,8 +139,8 @@ async function summary(row: SearchRow) {
   };
 }
 
-export async function listSearches() {
-  const rows = await db().select().from(housingSearches).orderBy(desc(housingSearches.id)).limit(30);
+export async function listSearches(ownerId: number) {
+  const rows = await db().select().from(housingSearches).where(eq(housingSearches.ownerId, ownerId)).orderBy(desc(housingSearches.id)).limit(30);
   return Promise.all(rows.map(summary));
 }
 
