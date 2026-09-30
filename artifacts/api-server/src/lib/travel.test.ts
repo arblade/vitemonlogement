@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { after, before, beforeEach } from "node:test";
 import { closeDatabase } from "./database";
 import { useMemoryDatabase } from "../test/helpers";
-import { commute, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, travelRoute } from "./travel";
+import { commuteOptions, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, travelRoute } from "./travel";
 
 before(async () => { await useMemoryDatabase(); });
 after(async () => { await closeDatabase(); });
@@ -111,45 +111,68 @@ let unique = 0;
 const at = (meters: number) => ({ lat: 45 + meters / 111_320, lng: 5 + ++unique * 1e-4 });
 const start = () => ({ lat: 45, lng: 5 + unique * 1e-4 });
 
-test("commute : à pied si ≤ 20 min (un seul appel)", async () => {
+const summary = (options: { mode: string; recommended: boolean }[]) => options.map(option => option.recommended ? `${option.mode}*` : option.mode);
+
+test("commuteOptions : à pied si ≤ 20 min, seul (un seul appel, rien à choisir)", async () => {
   const { fetcher, modes } = googleByMode({ WALK: 15 });
-  const to = at(1_000);
-  assert.equal((await commute(start(), to, fetcher))?.mode, "walk");
+  assert.deepEqual(summary(await commuteOptions(start(), at(1_000), null, fetcher)), ["walk*"]);
   assert.deepEqual(modes, ["WALK"]);
+  assert.deepEqual(summary(await commuteOptions(start(), at(1_500), null, googleByMode({ WALK: 20 }).fetcher)), ["walk*"], "20 min pile : encore à pied");
 });
 
-test("commute : 20 min pile à pied, c'est encore à pied ; 40 min pile à vélo, encore à vélo", async () => {
-  assert.equal((await commute(start(), at(1_500), googleByMode({ WALK: 20 }).fetcher))?.mode, "walk");
-  assert.equal((await commute(start(), at(1_500), googleByMode({ WALK: 21, BICYCLE: 40 }).fetcher))?.mode, "bike");
+test("commuteOptions : marche > 20 min → vélo, transports et voiture calculés tous les trois ; vélo ≤ 40 min recommandé", async () => {
+  const { fetcher, modes } = googleByMode({ WALK: 25, BICYCLE: 9, TRANSIT: 14, DRIVE: 6 });
+  const options = await commuteOptions(start(), at(1_800), null, fetcher);
+  assert.deepEqual(summary(options), ["bike*", "transit", "drive"]);
+  assert.deepEqual(options.map(option => option.durationSeconds), [540, 840, 360]);
+  assert.deepEqual(modes.sort(), ["BICYCLE", "DRIVE", "TRANSIT", "WALK"]);
+  assert.ok(options.every(option => option.path.length > 1), "chaque mode a son tracé");
+  assert.deepEqual(summary(await commuteOptions(start(), at(1_500), null, googleByMode({ WALK: 21, BICYCLE: 40, TRANSIT: 20, DRIVE: 5 }).fetcher)), ["bike*", "transit", "drive"], "40 min pile : vélo");
 });
 
-test("commute : marche trop longue → vélo si ≤ 40 min", async () => {
-  const { fetcher, modes } = googleByMode({ WALK: 25, BICYCLE: 9 });
-  const route = await commute(start(), at(1_800), fetcher);
-  assert.deepEqual([route?.mode, route?.durationSeconds], ["bike", 540]);
-  assert.deepEqual(modes, ["WALK", "BICYCLE"]);
+test("commuteOptions : les trois appels partent en parallèle, pas l'un après l'autre", async () => {
+  let inFlight = 0, peak = 0;
+  const fetcher = (async (_input: string | URL, init?: RequestInit) => {
+    inFlight++; peak = Math.max(peak, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    inFlight--;
+    const mode = JSON.parse(String(init?.body)).travelMode;
+    return Response.json({ routes: [{ duration: mode === "BICYCLE" ? "600s" : "900s", distanceMeters: 1, polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC" } }] });
+  }) as typeof fetch;
+  assert.equal((await commuteOptions(start(), at(5_000), null, fetcher)).length, 3);
+  assert.equal(peak, 3);
 });
 
-test("commute : au-delà de 2 km à vol d'oiseau, la marche n'est même pas demandée ; vélo > 40 min → transports", async () => {
-  const { fetcher, modes } = googleByMode({ WALK: 5, BICYCLE: 45, TRANSIT: 30 });
-  assert.equal((await commute(start(), at(5_000), fetcher))?.mode, "transit");
-  assert.deepEqual(modes, ["BICYCLE", "TRANSIT"]);
+test("commuteOptions : au-delà de 2 km, marche non demandée ; vélo > 40 min → transports recommandés", async () => {
+  const { fetcher, modes } = googleByMode({ WALK: 5, BICYCLE: 45, TRANSIT: 30, DRIVE: 15 });
+  assert.deepEqual(summary(await commuteOptions(start(), at(5_000), null, fetcher)), ["bike", "transit*", "drive"]);
+  assert.ok(!modes.includes("WALK"));
 });
 
-test("commute : pas de transport en commun → voiture", async () => {
-  const { fetcher, modes } = googleByMode({ BICYCLE: 50, TRANSIT: null, DRIVE: 12 });
-  assert.equal((await commute(start(), at(8_000), fetcher))?.mode, "drive");
-  assert.deepEqual(modes, ["BICYCLE", "TRANSIT", "DRIVE"]);
+test("commuteOptions : pas de transport en commun → proposé seulement vélo et voiture, voiture recommandée", async () => {
+  assert.deepEqual(summary(await commuteOptions(start(), at(20_000), null, googleByMode({ BICYCLE: 70, TRANSIT: null, DRIVE: 12 }).fetcher)), ["bike", "drive*"]);
 });
 
-test("commute : au-delà de 12 km, ni marche ni vélo ; transports d'abord", async () => {
-  const { fetcher, modes } = googleByMode({ TRANSIT: 55 });
-  assert.equal((await commute(start(), at(20_000), fetcher))?.mode, "transit");
-  assert.deepEqual(modes, ["TRANSIT"]);
+test("commuteOptions : un moyen dit par l'utilisateur est recommandé, même si la marche suffirait", async () => {
+  const { fetcher, modes } = googleByMode({ WALK: 10, BICYCLE: 4, TRANSIT: 8, DRIVE: 3 });
+  assert.deepEqual(summary(await commuteOptions(start(), at(800), "drive", fetcher)), ["bike", "transit", "drive*"]);
+  assert.ok(!modes.includes("WALK"));
+  assert.deepEqual(summary(await commuteOptions(start(), at(3_000), "walk", googleByMode({ WALK: 40, BICYCLE: 10 }).fetcher)), ["walk*"], "« à pied » dit : la marche, même longue");
+  assert.deepEqual(summary(await commuteOptions(start(), at(3_000), "transit", googleByMode({ BICYCLE: 25, TRANSIT: null, DRIVE: 9 }).fetcher)), ["bike*", "drive"], "pas de transports : choix de l'app");
 });
 
-test("commute : aucun itinéraire d'aucune sorte → null ; seuils et distance cohérents", async () => {
-  assert.equal(await commute(start(), at(20_000), googleByMode({}).fetcher), null);
+test("commuteOptions : aucun itinéraire → [] ; marche longue mais seule possible → la marche", async () => {
+  assert.deepEqual(await commuteOptions(start(), at(20_000), null, googleByMode({}).fetcher), []);
+  assert.deepEqual(summary(await commuteOptions(start(), at(1_900), null, googleByMode({ WALK: 24 }).fetcher)), ["walk*"]);
   assert.deepEqual([COMMUTE.walkMaxSeconds, COMMUTE.bikeMaxSeconds], [1200, 2400]);
   assert.ok(Math.abs(crowDistance({ lat: 45, lng: 5 }, { lat: 45 + 1_000 / 111_320, lng: 5 }) - 1_000) < 10);
+});
+
+test("commuteOptions : un mode en erreur n'empêche pas les autres ; tout en erreur → exception", async () => {
+  const partly = (async (_input: string | URL, init?: RequestInit) => JSON.parse(String(init?.body)).travelMode === "TRANSIT"
+    ? new Response("boom", { status: 500 })
+    : Response.json({ routes: [{ duration: "600s", distanceMeters: 1, polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC" } }] })) as typeof fetch;
+  assert.deepEqual(summary(await commuteOptions(start(), at(5_000), null, partly)), ["bike*", "drive"]);
+  const broken = (async () => new Response("boom", { status: 500 })) as unknown as typeof fetch;
+  await assert.rejects(commuteOptions(start(), at(5_000), null, broken), /Google Routes \(500\)/);
 });

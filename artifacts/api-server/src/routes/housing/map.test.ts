@@ -118,16 +118,18 @@ test("la position et les lieux de vie sont enregistrés en base et relus avec la
   assert.equal((await getSearch(id))?.listings.find(item => item.id === precise.id)?.geoPrecision, "streetNumber");
 });
 
-test("GET …/routes : l'app choisit le trajet (à pied 25 min → vélo), puis le ressert depuis la base", async () => {
+const path = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
+const route = (mode: string, recommended: boolean) => ({ placeId: "place-1", mode, recommended, durationSeconds: 1534, distanceMeters: 5210, path });
+
+test("GET …/routes : à pied 25 min → vélo, transports et voiture proposés (vélo recommandé), puis resservis depuis la base", async () => {
   const { id, cookie, precise } = await searchFor("carte-2@test.fr");
   const url = `${base}/housing/searches/${id}/listings/${precise.id}/routes`;
   const response = await fetch(url, { headers: { cookie } });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { routes: [{ placeId: "place-1", mode: "bike", durationSeconds: 1534, distanceMeters: 5210, path: [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]] }] });
+  assert.deepEqual(await response.json(), { routes: [route("bike", true), route("transit", false), route("drive", false)] });
+  assert.equal(googleCalls, 4, "marche (trop longue) puis les trois autres modes");
   await fetch(url, { headers: { cookie } });
-  assert.equal(googleCalls, 2, "marche (trop longue) puis vélo");
-  await fetch(url, { headers: { cookie } });
-  assert.equal(googleCalls, 2, "le 2e affichage ne recoûte rien");
+  assert.equal(googleCalls, 4, "le 2e affichage ne recoûte rien");
 });
 
 test("GET …/routes : annonce approximative ou lieu non géocodé → aucun trajet, aucun appel", async () => {
@@ -160,17 +162,32 @@ test("GET …/routes : recherche d'un autre compte ou annonce inconnue → 404 ;
   assert.deepEqual(await failed.json(), { routes: [] });
 });
 
-test("GET …/routes : un moyen de transport dit par l'utilisateur l'emporte sur le choix automatique", async () => {
+test("GET …/routes : un moyen de transport dit par l'utilisateur est recommandé ; les autres restent proposés", async () => {
   const { id, cookie, precise } = await searchFor("carte-8@test.fr", [{ ...workPlace, lat: 48.12, mode: "drive" }]);
-  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string }[] };
-  assert.equal(body.routes[0].mode, "drive");
-  assert.deepEqual(googleModes, ["DRIVE"], "ni marche ni vélo demandés");
+  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string; recommended: boolean }[] };
+  assert.deepEqual(body.routes.map(item => [item.mode, item.recommended]), [["bike", false], ["transit", false], ["drive", true]]);
+  assert.ok(!googleModes.includes("WALK"), "marche non demandée : l'utilisateur a dit « en voiture »");
 });
 
-test("GET …/routes : mode dit par l'utilisateur mais sans itinéraire (pas de transports) → l'app choisit", async () => {
+test("GET …/routes : mode dit par l'utilisateur mais sans itinéraire (pas de transports) → l'app recommande", async () => {
   noRouteFor = new Set(["TRANSIT"]);
   const { id, cookie, precise } = await searchFor("carte-9@test.fr", [{ ...workPlace, lat: 48.13, mode: "transit" }]);
-  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string }[] };
-  assert.equal(body.routes[0].mode, "bike", "à 2,2 km : marche non demandée, vélo 25 min retenu");
-  assert.deepEqual(googleModes, ["TRANSIT", "BICYCLE"]);
+  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { mode: string; recommended: boolean }[] };
+  assert.deepEqual(body.routes.map(item => [item.mode, item.recommended]), [["bike", true], ["drive", false]]);
+});
+
+test("GET …/routes : plusieurs lieux (travail, école, travail du conjoint) → des trajets pour chacun", async () => {
+  const places: Place[] = [
+    { ...workPlace, lat: 48.14 },
+    { ...workPlace, id: "place-2", label: "École", kind: "school", lat: 48.15 },
+    { ...workPlace, id: "place-3", label: "Travail de Léa", lat: 48.16 },
+  ];
+  const { id, cookie, precise } = await searchFor("carte-10@test.fr", places);
+  const body = await (await fetch(`${base}/housing/searches/${id}/listings/${precise.id}/routes`, { headers: { cookie } })).json() as { routes: { placeId: string; recommended: boolean }[] };
+  for (const placeId of ["place-1", "place-2", "place-3"]) {
+    const mine = body.routes.filter(item => item.placeId === placeId);
+    assert.equal(mine.length, 3, placeId);
+    assert.equal(mine.filter(item => item.recommended).length, 1, placeId);
+  }
+  assert.equal(googleCalls, 9);
 });

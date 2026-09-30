@@ -500,10 +500,11 @@ export const GetListingRoutesResponse = zod.object({
   "routes": zod.array(zod.object({
   "placeId": zod.string(),
   "mode": zod.enum(['transit', 'drive', 'bike', 'walk']),
+  "recommended": zod.boolean(),
   "durationSeconds": zod.number().int(),
   "distanceMeters": zod.number().int(),
   "path": zod.array(zod.array(zod.number()))
-}).describe('Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)'))
+}).describe('Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive. Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.\n'))
 })
 
 

@@ -10,7 +10,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { interpret, analyze } from "./ai";
 import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, isPrecise, listSearches, saveAnalysis } from "./store";
-import { commute, RoutingQuotaError, routingAvailable, travelRoute } from "../../lib/travel";
+import { commuteOptions, RoutingQuotaError, routingAvailable } from "../../lib/travel";
 import { logger } from "../../lib/logger";
 import { costlyRateLimit } from "../../lib/quota";
 import { claimSearch, releaseSearch } from "../../lib/queue";
@@ -107,10 +107,7 @@ router.get("/housing/searches/:id/listings/:listingId/routes", async (req, res):
   for (const place of places) {
     try {
       const from = { lat: listing.lat, lng: listing.lng }, to = { lat: place.lat!, lng: place.lng! };
-      // Mode dit par l'utilisateur : il l'emporte ; s'il n'existe aucun itinéraire ainsi, l'app choisit.
-      const chosen = place.mode ? await travelRoute(place.mode, from, to) : null;
-      const route = chosen ? { mode: place.mode!, ...chosen } : await commute(from, to);
-      if (route) routes.push({ placeId: place.id, ...route });
+      for (const option of await commuteOptions(from, to, place.mode ?? null)) routes.push({ placeId: place.id, ...option });
     } catch (error) {
       if (error instanceof RoutingQuotaError) {
         if (!routes.length) { res.status(429).json({ error: "Trop de calculs de trajet aujourd’hui. Réessayez demain." }); return; }

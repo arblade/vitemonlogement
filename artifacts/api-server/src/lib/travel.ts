@@ -91,38 +91,52 @@ export function crowDistance(a: Point, b: Point) {
   return 2 * 6_371_000 * Math.asin(Math.sqrt(h));
 }
 
-/** Seuils du choix automatique du moyen de transport. */
+/** Seuils du choix du moyen de transport. */
 export const COMMUTE = {
   walkMaxSeconds: 20 * 60,
   bikeMaxSeconds: 40 * 60,
-  // Au-delà, marcher 20 min (≈ 1,7 km) ou pédaler 40 min (≈ 12 km) est impossible : on ne paie pas l'appel.
+  // Au-delà, marcher 20 min (≈ 1,7 km) est impossible : on ne paie pas l'appel.
   walkMaxCrowMeters: 2_000,
-  bikeMaxCrowMeters: 12_000,
 } as const;
 
+/** Proposés, au choix de l'utilisateur, quand la marche ne suffit pas. */
+export const ALTERNATIVES: TravelMode[] = ["bike", "transit", "drive"];
+
+export type CommuteOption = TravelRoute & { mode: TravelMode; recommended: boolean };
+
 /**
- * L'app choisit le trajet, pas l'utilisateur : à pied si ≤ 20 min, sinon vélo si ≤ 40 min, sinon transports en commun
- * s'il en existe, sinon voiture. Chaque mode est calculé seulement si le précédent ne convient pas (et mis en cache).
+ * À pied si ≤ 20 min : ce seul trajet. Sinon vélo, transports et voiture, calculés en parallèle (un appel chacun :
+ * Google ne sert qu'un mode par requête). Recommandé : le mode dit par l'utilisateur, sinon vélo si ≤ 40 min,
+ * sinon transports s'il en existe, sinon voiture.
  */
-export async function commute(from: Point, to: Point, fetcher: typeof fetch = fetch): Promise<(TravelRoute & { mode: TravelMode }) | null> {
-  const crow = crowDistance(from, to);
-  if (crow <= COMMUTE.walkMaxCrowMeters) {
-    const walk = await travelRoute("walk", from, to, fetcher);
-    if (walk && walk.durationSeconds <= COMMUTE.walkMaxSeconds) return { mode: "walk", ...walk };
+export async function commuteOptions(from: Point, to: Point, stated: TravelMode | null = null, fetcher: typeof fetch = fetch): Promise<CommuteOption[]> {
+  let walk: TravelRoute | null = null;
+  if (stated === "walk" || (!stated && crowDistance(from, to) <= COMMUTE.walkMaxCrowMeters)) {
+    walk = await travelRoute("walk", from, to, fetcher);
+    if (walk && (stated === "walk" || walk.durationSeconds <= COMMUTE.walkMaxSeconds)) return [{ mode: "walk", recommended: true, ...walk }];
   }
-  if (crow <= COMMUTE.bikeMaxCrowMeters) {
-    const bike = await travelRoute("bike", from, to, fetcher);
-    if (bike && bike.durationSeconds <= COMMUTE.bikeMaxSeconds) return { mode: "bike", ...bike };
+  const settled = await Promise.allSettled(ALTERNATIVES.map(async mode => {
+    const route = await travelRoute(mode, from, to, fetcher);
+    return route ? { mode, ...route } : null;
+  }));
+  const found = settled.flatMap(result => result.status === "fulfilled" && result.value ? [result.value] : []);
+  if (!found.length) {
+    if (walk) return [{ mode: "walk", recommended: true, ...walk }];
+    const failure = settled.find(result => result.status === "rejected");
+    if (failure) throw failure.reason;
+    return [];
   }
-  const transit = await travelRoute("transit", from, to, fetcher);
-  if (transit) return { mode: "transit", ...transit };
-  const drive = await travelRoute("drive", from, to, fetcher);
-  return drive ? { mode: "drive", ...drive } : null;
+  const pick = found.find(option => option.mode === stated)
+    ?? found.find(option => option.mode === "bike" && option.durationSeconds <= COMMUTE.bikeMaxSeconds)
+    ?? found.find(option => option.mode === "transit")
+    ?? found.find(option => option.mode === "drive")
+    ?? found[0];
+  return found.map(option => ({ ...option, recommended: option === pick }));
 }
 
 /**
  * Trajet from → to, depuis le cache en base si possible. Chaque vrai appel Google est décompté d'un plafond
- * quotidien global (GOOGLE_ROUTES_PER_DAY, 150 par défaut) : au-delà, RoutingQuotaError.
+ * quotidien global (GOOGLE_ROUTES_PER_DAY, 300 par défaut ≈ la gratuité Google de 10 000 par mois) : au-delà, RoutingQuotaError.
  */
 export async function travelRoute(mode: TravelMode, from: Point, to: Point, fetcher: typeof fetch = fetch): Promise<TravelRoute | null> {
   const key = routeKey(mode, from, to);
@@ -132,7 +146,7 @@ export async function travelRoute(mode: TravelMode, from: Point, to: Point, fetc
     return { durationSeconds: cached.durationSeconds, distanceMeters: cached.distanceMeters, path: JSON.parse(cached.path) as [number, number][] };
   }
   const usage = await consume("google-routes", 24 * 3_600_000);
-  if (usage.count > intEnv("GOOGLE_ROUTES_PER_DAY", 150)) throw new RoutingQuotaError("Plafond quotidien de calculs de trajet atteint.");
+  if (usage.count > intEnv("GOOGLE_ROUTES_PER_DAY", 300)) throw new RoutingQuotaError("Plafond quotidien de calculs de trajet atteint.");
   const route = await callGoogle(mode, from, to, fetcher);
   // « Aucun itinéraire » est mémorisé aussi (durée -1) pour ne pas repayer la même question.
   await db().insert(travelRoutes).values({

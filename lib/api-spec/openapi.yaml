@@ -138,7 +138,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: One entry per place that could be reached
+          description: One or several entries per place that could be reached (see ListingRoute)
           content:
             application/json:
               schema:
@@ -206,12 +206,15 @@ components:
           items:
             $ref: "#/components/schemas/ListingRoute"
     ListingRoute:
-      description: Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
+      description: >
+        Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive.
+        Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.
       type: object
-      required: [placeId, mode, durationSeconds, distanceMeters, path]
+      required: [placeId, mode, recommended, durationSeconds, distanceMeters, path]
       properties:
         placeId: { type: string }
         mode: { $ref: "#/components/schemas/TravelMode" }
+        recommended: { type: boolean }
         durationSeconds: { type: integer }
         distanceMeters: { type: integer }
         path:

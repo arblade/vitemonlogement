@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { HousingListing, HousingPlace, ListingRoute } from '@workspace/api-client-react';
 import { ListingMap } from '@/components/listing-map';
@@ -16,7 +16,7 @@ const home = { lat: 50.6408, lng: 3.0611 };
 const precise = (overrides: Partial<HousingListing> = {}) => listing(1, { price: 650, ...home, geoPrecision: 'streetNumber', ...overrides });
 const work: HousingPlace = { id: 'place-1', label: 'Travail', kind: 'work', address: 'gare Lille Flandres', lat: 50.6366, lng: 3.0706, resolved: 'Gare Lille Flandres, Lille' };
 const lost: HousingPlace = { id: 'place-2', label: 'École', kind: 'school', address: '12 rue Inconnue', lat: null, lng: null, resolved: null };
-const route: ListingRoute = { placeId: 'place-1', mode: 'bike', durationSeconds: 1080, distanceMeters: 1400, path: [[50.64, 3.06], [50.63, 3.07]] };
+const route: ListingRoute = { placeId: 'place-1', mode: 'bike', recommended: true, durationSeconds: 1080, distanceMeters: 1400, path: [[50.64, 3.06], [50.63, 3.07]] };
 
 function renderMap(props: Partial<Parameters<typeof ListingMap>[0]> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -113,7 +113,7 @@ describe('Encart « Où se trouve le logement »', () => {
     expect(calls.filter(call => call.url.includes('/routes'))).toHaveLength(1);
   });
 
-  it('affiche le moyen de transport choisi par l’app (à pied, vélo, transports, voiture), sans aucun sélecteur', async () => {
+  it('un seul trajet par lieu (ex. à pied ≤ 20 min) : il s’affiche, sans aucun sélecteur', async () => {
     for (const [mode, label] of [['walk', 'à pied'], ['bike', 'à vélo'], ['transit', 'en transports'], ['drive', 'en voiture']] as const) {
       mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: [{ ...route, mode }] } }) }]);
       const { unmount } = renderMap({ routingAvailable: true });
@@ -122,6 +122,53 @@ describe('Encart « Où se trouve le logement »', () => {
       expect(screen.queryByRole('radio')).not.toBeInTheDocument();
       unmount();
     }
+  });
+
+  const school: HousingPlace = { id: 'place-3', label: 'École', kind: 'school', address: 'école', lat: 50.63, lng: 3.05, resolved: 'École Pasteur' };
+  const option = (placeId: string, mode: ListingRoute['mode'], minutes: number, recommended = false): ListingRoute =>
+    ({ placeId, mode, recommended, durationSeconds: minutes * 60, distanceMeters: 3000, path: [[50.64, 3.06], [50.63, 3.07]] });
+  const threeWays = [
+    option('place-1', 'bike', 25, true), option('place-1', 'transit', 30), option('place-1', 'drive', 12),
+    option('place-3', 'walk', 8, true),
+  ];
+
+  it('marche trop longue : sélecteur Vélo / Transports / Voiture, le mode recommandé coché par défaut ; un appui change tous les trajets affichés', async () => {
+    mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: threeWays } }) }]);
+    renderMap({ routingAvailable: true, places: [work, school] });
+    const group = await screen.findByRole('radiogroup', { name: 'Trajet affiché' });
+    expect(Array.from(group.querySelectorAll('[role=radio]')).map(button => button.textContent)).toEqual(['Vélo', 'Transports', 'Voiture']);
+    expect(screen.getByRole('radio', { name: 'Vélo' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent('25 minà vélo');
+    expect(screen.getByTestId('map-travel-place-3')).toHaveTextContent('8 minà pied');
+    fireEvent.click(screen.getByRole('radio', { name: 'Voiture' }));
+    expect(screen.getByRole('radio', { name: 'Voiture' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Vélo' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent('12 minen voiture');
+    expect(screen.getByTestId('map-travel-place-3')).toHaveTextContent('8 minà pied', { normalizeWhitespace: true });
+    expect(screen.getByTestId('canvas')).toHaveAttribute('data-routes', 'place-1,place-3');
+    fireEvent.click(screen.getByRole('radio', { name: 'Transports' }));
+    expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent('30 minen transports');
+  });
+
+  it('plusieurs lieux : par défaut le mode le plus souvent recommandé ; un lieu sans ce mode garde le sien', async () => {
+    const spouse: HousingPlace = { ...work, id: 'place-4', label: 'Travail de Léa' };
+    mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: [
+      option('place-1', 'bike', 45), option('place-1', 'transit', 30, true), option('place-1', 'drive', 20),
+      option('place-4', 'bike', 50), option('place-4', 'transit', 35, true), option('place-4', 'drive', 25),
+      option('place-3', 'bike', 10, true), option('place-3', 'drive', 5),
+    ] } }) }]);
+    renderMap({ routingAvailable: true, places: [work, spouse, school] });
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Transports' })).toHaveAttribute('aria-checked', 'true'));
+    expect(screen.getByTestId('map-travel-place-1')).toHaveTextContent('30 minen transports');
+    expect(screen.getByTestId('map-travel-place-4')).toHaveTextContent('35 minen transports');
+    expect(screen.getByTestId('map-travel-place-3')).toHaveTextContent('10 minà vélo', { normalizeWhitespace: true });
+  });
+
+  it('quartier ou commune : jamais de sélecteur (aucun trajet)', async () => {
+    mockFetch([{ match: /\/routes$/, respond: () => ({ body: { routes: threeWays } }) }]);
+    renderMap({ listing: precise({ geoPrecision: 'district' }), routingAvailable: true });
+    await screen.findByTestId('canvas');
+    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
   });
 
   it('avec clé mais échec du calcul : pas de message d’erreur, repli sur le vol d’oiseau', async () => {

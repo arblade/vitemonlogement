@@ -32,12 +32,13 @@ function encodePolyline(points: [number, number][]) {
 const home = { lat: 50.6408, lng: 3.0611 };
 const work = { lat: 50.6366, lng: 3.0706 };
 const path: [number, number][] = [[home.lat, home.lng], [50.6399, 3.0632], [50.6386, 3.0651], [50.6379, 3.0672], [50.6371, 3.0689], [work.lat, work.lng]];
-// Durée selon le mode : 28 min à pied (trop long) puis 18 min à vélo → l'app doit choisir le vélo.
+// Durée selon le mode : 28 min à pied (trop long) → vélo 18 min (recommandé), transports 25 min, voiture 10 min proposés.
+const SECONDS: Record<string, number> = { WALK: 1680, BICYCLE: 1080, TRANSIT: 1500, DRIVE: 600 };
 const google = createServer((req, res) => {
   let body = "";
   req.on("data", chunk => (body += chunk));
   req.on("end", () => {
-    const seconds = JSON.parse(body).travelMode === "WALK" ? 1680 : 1080;
+    const seconds = SECONDS[JSON.parse(body).travelMode as string];
     res.setHeader("content-type", "application/json");
     res.end(JSON.stringify({ routes: [{ duration: `${seconds}s`, distanceMeters: 1400, polyline: { encodedPolyline: encodePolyline(path) } }] }));
   });

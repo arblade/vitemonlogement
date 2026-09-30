@@ -1,13 +1,35 @@
-import { lazy, Suspense, useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { Bike, Briefcase, Car, Footprints, GraduationCap, MapPin, Navigation, TrainFront } from 'lucide-react';
-import { getGetListingRoutesQueryKey, useGetListingRoutes, type HousingListing, type HousingPlace, type ListingRoute } from '@workspace/api-client-react';
+import { getGetListingRoutesQueryKey, useGetListingRoutes, type HousingListing, type HousingPlace, type ListingRoute, type TravelMode } from '@workspace/api-client-react';
 import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, MODE_LABEL } from '@/lib/geo';
 
-// Leaflet (≈ 40 ko) n'est chargé qu'à l'ouverture d'une fiche qui a une adresse précise.
+// MapLibre n'est chargé qu'à l'ouverture d'une fiche qui a une position.
 const ListingMapCanvas = lazy(() => import('@/components/listing-map-canvas'));
 
 const NO_ROUTES: ListingRoute[] = [];
 const MODE_ICON = { walk: Footprints, bike: Bike, transit: TrainFront, drive: Car } as const;
+const CHOICES: TravelMode[] = ['bike', 'transit', 'drive'];
+const CHOICE_LABEL: Record<TravelMode, string> = { walk: 'À pied', bike: 'Vélo', transit: 'Transports', drive: 'Voiture' };
+
+/**
+ * Un lieu à ≤ 20 min à pied n'a qu'un trajet. Les autres en ont jusqu'à trois (vélo, transports, voiture) : le sélecteur
+ * choisit lequel afficher pour tous ; par défaut, le mode recommandé le plus fréquent.
+ */
+function useTravelChoice(routes: ListingRoute[]) {
+  const [picked, setPicked] = useState<TravelMode | null>(null);
+  return useMemo(() => {
+    const byPlace = new Map<string, ListingRoute[]>();
+    for (const route of routes) byPlace.set(route.placeId, [...byPlace.get(route.placeId) ?? [], route]);
+    const multi = [...byPlace.values()].filter(options => options.length > 1);
+    const modes = CHOICES.filter(mode => multi.some(options => options.some(option => option.mode === mode)));
+    const votes = multi.map(options => options.find(option => option.recommended)?.mode).filter(mode => mode != null);
+    const fallback = modes.slice().sort((a, b) => votes.filter(mode => mode === b).length - votes.filter(mode => mode === a).length)[0] ?? null;
+    const selected = picked && modes.includes(picked) ? picked : fallback;
+    const shown = [...byPlace.values()].map(options =>
+      (options.length > 1 && options.find(option => option.mode === selected)) || options.find(option => option.recommended) || options[0]);
+    return { modes: modes.length > 1 ? modes : [], selected, shown, setPicked };
+  }, [routes, picked]);
+}
 const PlaceIcon = ({ kind }: { kind: HousingPlace['kind'] }) => {
   const Icon = kind === 'work' ? Briefcase : kind === 'school' ? GraduationCap : MapPin;
   return <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#ffe3e8] text-brand"><Icon size={16} aria-hidden="true"/></span>;
@@ -37,7 +59,8 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
   const routesQuery = useGetListingRoutes(searchId ?? 0, listing.id, {
     query: { queryKey: getGetListingRoutesQueryKey(searchId ?? 0, listing.id), enabled: wantRoutes, staleTime: Infinity, retry: false },
   });
-  const routes = routesQuery.data?.routes ?? NO_ROUTES;
+  const allRoutes = routesQuery.data?.routes ?? NO_ROUTES;
+  const { modes, selected, shown: routes, setPicked } = useTravelChoice(allRoutes);
   if (!area || !home) return null;
   return <section aria-labelledby={`map-${listing.id}`} data-testid={`listing-map-${listing.id}`} className="border-b border-line-soft py-7">
     <div className="mb-4 flex items-start justify-between gap-3">
@@ -51,6 +74,16 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
         <ListingMapCanvas home={home} radius={area.radius} places={located} routes={routes}/>
       </Suspense>
     </div>
+    {area.precise && modes.length > 0 && <div role="radiogroup" aria-label="Trajet affiché" className="mt-3 flex gap-2">
+      {modes.map(mode => {
+        const Icon = MODE_ICON[mode];
+        const checked = mode === selected;
+        return <button key={mode} type="button" role="radio" aria-checked={checked} data-testid={`travel-choice-${mode}`} onClick={() => setPicked(mode)}
+          className={`flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full border text-[13px] font-semibold transition-colors ${checked ? 'border-ink bg-ink text-[#ffffff]' : 'border-line bg-[#ffffff] text-ink hover:border-ink'}`}>
+          <Icon size={15} aria-hidden="true"/>{CHOICE_LABEL[mode]}
+        </button>;
+      })}
+    </div>}
     {places.length > 0 && <ul className="mt-3 divide-y divide-line-soft rounded-2xl border border-line bg-[#ffffff]" aria-label="Vos lieux">
       {places.map(place => {
         const route = routes.find(item => item.placeId === place.id);

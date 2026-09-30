@@ -130,6 +130,15 @@ async function checkListingMap(page) {
   assert.equal(await page.getAttribute("[data-testid=listing-map-canvas]", "data-area"), "false", "adresse exacte : pas de cercle");
   assert.match(await text(page, "[data-testid=map-travel-place-1]"), /18 min[\s\S]*à vélo · 1,4 km/);
   assert.match(await text(page, "[data-testid=map-place-place-1]"), /Gare Lille Flandres/);
+  // Marche trop longue : l'utilisateur choisit le trajet affiché (vélo recommandé, coché d'office).
+  assert.equal(await page.getAttribute("[data-testid=travel-choice-bike]", "aria-checked"), "true");
+  assert.deepEqual(await page.locator("[role=radiogroup][aria-label='Trajet affiché'] [role=radio]").allTextContents(), ["Vélo", "Transports", "Voiture"]);
+  await page.click("[data-testid=travel-choice-drive]");
+  assert.equal(await page.getAttribute("[data-testid=travel-choice-drive]", "aria-checked"), "true");
+  assert.match(await text(page, "[data-testid=map-travel-place-1]"), /10 min[\s\S]*en voiture/);
+  await page.waitForFunction(() => /10 min/.test(document.querySelector("[data-testid=map-duration-place-1]")?.textContent ?? ""));
+  await page.click("[data-testid=travel-choice-bike]");
+  await page.waitForFunction(() => /18 min/.test(document.querySelector("[data-testid=map-duration-place-1]")?.textContent ?? ""));
   const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
 }

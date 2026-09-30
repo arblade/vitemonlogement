@@ -8,11 +8,12 @@
 import type { TravelMode } from './travelMode';
 
 /**
- * Mode stated by the user, else chosen by the app (walk ≤ 20 min, else bike ≤ 40 min, else transit if any, else drive)
+ * Walk alone when ≤ 20 min; otherwise one entry per available mode among bike, transit and drive. Exactly one entry per place is recommended: the mode stated by the user, else bike ≤ 40 min, else transit if any, else drive.
  */
 export interface ListingRoute {
   placeId: string;
   mode: TravelMode;
+  recommended: boolean;
   durationSeconds: number;
   distanceMeters: number;
   path: number[][];
