@@ -85,4 +85,13 @@
 @keyframes rise { from {opacity:0;transform:translateY(18px)} to {opacity:1;transform:translateY(0)} }
 .pulse-dot { animation: pulse 1.8s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity:.28; transform:scale(.75) } }
-@media (prefers-reduced-motion: reduce) { .reveal,.pulse-dot { animation:none } }
+@keyframes shimmer { from { background-position: 200% 0 } to { background-position: -200% 0 } }
+.shimmer { background: linear-gradient(90deg, #f2f2f2 25%, #fafafa 50%, #f2f2f2 75%); background-size: 200% 100%; animation: shimmer 1.8s linear infinite; }
+.spin-arc { animation: spin-arc 1s linear infinite; }
+@keyframes spin-arc { to { transform: rotate(360deg) } }
+.pulse-ring { animation: pulse-ring 1.8s ease-out infinite; }
+@keyframes pulse-ring { 0% { opacity:.55; transform:scale(1) } 100% { opacity:0; transform:scale(2.6) } }
+.progress-fill { position: relative; overflow: hidden; }
+.progress-fill::after { content:""; position:absolute; inset:0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-100%); animation: progress-sheen 2s ease-in-out infinite; }
+@keyframes progress-sheen { to { transform: translateX(100%) } }
+@media (prefers-reduced-motion: reduce) { .reveal,.pulse-dot,.shimmer,.spin-arc,.pulse-ring,.progress-fill::after { animation:none } }
