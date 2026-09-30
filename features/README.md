@@ -11,6 +11,7 @@ Résumés des études de features menées le 30/09/2026. Un fichier par feature.
 | Refonte UX et saisie en deux temps | Phase 1 + refonte visuelle (style Airbnb, icônes, mobile) faites ; phases 2 à 4 à faire | [refonte-ux-et-saisie-en-deux-temps.md](refonte-ux-et-saisie-en-deux-temps.md) |
 | Contacter l'annonceur | Implémenté (une ligne dans la fiche) | [contact-annonceur.md](contact-annonceur.md) |
 | Suivi des favoris (statuts liké / contacté / visite, note) | Réflexion seulement, au backlog | [suivi-des-favoris.md](suivi-des-favoris.md) |
+| Carte des logements (style Airbnb) | Étude faite : jouable (coordonnées présentes, précision variable selon le vendeur) ; rien de codé | [carte-des-logements.md](carte-des-logements.md) |
 
 Tout ce qui est codé l'est sur la branche `develop`, pas encore sur `main`.
 
