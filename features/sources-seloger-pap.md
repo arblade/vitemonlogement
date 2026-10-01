@@ -62,6 +62,21 @@ le texte** « Appartement / 2 pièces / 1 chambre / 44 m² » (facile à extrair
 description ni coordonnées). Particuliers uniquement. **L'acteur renvoie toujours les téléphones** (5/10) : à ne
 jamais enregistrer.
 
+## Location uniquement, jamais d'achat (vérifié)
+Les 106 annonces récupérées sont toutes des locations : loyers de 330 à 1 450 €, aucun prix de vente.
+
+| Source | Demandé à la recherche | Vérifié à la lecture (annonce écartée sinon) |
+|---|---|---|
+| Le Bon Coin (actuel) | catégorie 10 « Locations » | URL `/locations/` ou `/colocations/` (`isHousingListingUrl`) |
+| PAP | `product: "location"` (ni `vente` ni `vacances`) | champ `product === "location"` (21/22) et URL `pap.fr/annonces/` |
+| SeLoger | `distributionTypes=Rent` dans l'URL | champ `transactionType === "Rent"` (70/70) |
+
+Le même principe que pour Le Bon Coin : **double verrou**, à la requête puis à la lecture. Une annonce dont le champ
+manque ou vaut autre chose est écartée, et un test le vérifie pour chaque source.
+Cas trouvé chez PAP : 1 annonce `product: "acceslogement"`, un logement social renvoyé vers acceslogement.fr
+(sans description ni coordonnées, attribution sous conditions) : écartée par ce verrou. La location saisonnière
+(`vacances` chez PAP) est exclue de la même façon.
+
 ## Complémentarité
 Sur ces échantillons, **aucun doublon** avec Le Bon Coin (prix et surface comparés ; 31 annonces Le Bon Coin, 40
 SeLoger, 10 PAP à Lille). Échantillon petit : une déduplication (prix, surface, position) reste nécessaire.
