@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, useRefreshHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
+import { useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, useRefreshHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingCriterionResult, type HousingFeature, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,7 +10,7 @@ import { ListingGallery } from '@/components/listing-gallery';
 import { ListingDetail } from '@/components/listing-detail';
 import { ResultsMap } from '@/components/results-map';
 import { mappedListings } from '@/lib/geo';
-import { generalIcons, listingFacts } from '@/components/listing-facts';
+import { featureIcon, featureText, generalIcons, listingFacts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
@@ -37,6 +37,19 @@ const checkGroups = [
   { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
+const CARD_CHIPS = 6;
+const STATUS_TEXT = { confirmed: 'satisfait', contradicted: 'non satisfait', unknown: 'non précisé' } as const;
+
+/** Une seule rangée de pastilles, sans titre : vos critères d'abord (couleur = statut), puis les autres caractéristiques (neutres). */
+function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[]) {
+  const all = [
+    ...criteria.map(result => ({ key: `c-${result.id}`, testId: `card-criterion-${id}-${result.id}`, tone: result.status, text: result.label,
+      status: STATUS_TEXT[result.status], Icon: result.status === 'confirmed' ? Check : result.status === 'contradicted' ? Minus : CircleHelp })),
+    ...features.map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
+  ];
+  return { chips: all.slice(0, CARD_CHIPS), hidden: Math.max(0, all.length - CARD_CHIPS) };
+}
+
 function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, open, setOpen, onSelect, onFavorite, onViewed, searchId, places, routingAvailable }: {
   listing: HousingListing; checks: HousingCriterion[]; index: number; selected: boolean; compareFull: boolean;
   open: boolean; setOpen: (open: boolean) => void;
@@ -56,6 +69,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
     return () => observer.disconnect();
   }, [listing.aiSummary, expandedSummary]);
   const { generals, criteria, features } = listingFacts(listing, checks);
+  const { chips, hidden } = cardChips(listing.id, criteria, features);
   return <><article data-testid={`card-listing-${listing.id}`} className={`group relative overflow-hidden rounded-3xl border border-line transition-all duration-300 hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:shadow-[0_12px_34px_rgba(34,32,44,.08)] ${viewed ? 'bg-sage opacity-85 grayscale-[.2]' : 'bg-cream'}`}
     onClick={event => { if ((event.target as HTMLElement).closest('button, a, input, select, textarea, label, summary')) return; onViewed(); setOpen(true); }}>
     <button type="button" data-testid={`button-open-listing-${listing.id}`} onClick={() => { onViewed(); setOpen(true); }} aria-label={`Lire le détail de l’annonce : ${listing.title}`} className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-moss"/>
@@ -65,7 +79,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
       </div>
       <div className="flex flex-col p-5 md:p-6">
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <div className="min-w-0"><div className="mb-2 font-data text-xs uppercase tracking-[.08em] text-[#717171]">{String(index+1).padStart(2,'0')} · <span data-testid={`text-listing-source-${listing.id}`}>{sourceName(listing.url)}</span>{viewed ? ' · déjà consultée' : ''}</div><h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
+            <div className="min-w-0">{viewed && <span data-testid={`badge-viewed-${listing.id}`} className="mb-2 inline-block rounded-md bg-[#ebebeb] px-2 py-0.5 text-xs font-medium text-[#484848]">Déjà consultée</span>}<h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
            <div className="relative z-20 flex shrink-0 items-center justify-between gap-2 sm:items-start sm:justify-end">
              <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={onFavorite} className={`grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-[#ff385c] bg-lime-wash text-[#c13515]' : 'border-[#dddddd] bg-white text-stone hover:text-[#c13515]'}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'}/></button>
              <div className="rounded-lg bg-lime-wash px-2.5 py-2 text-center"><span className="block font-data text-[16px] font-bold leading-none">{Math.round(listing.score)}<span className="text-xs">/100</span></span><span className="mt-1 block text-xs uppercase tracking-[.05em]">pertinence</span></div>
@@ -74,24 +88,18 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-soft bg-line-soft sm:grid-cols-4" aria-label="Repères essentiels">
            {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`card-general-${listing.id}-${label}`} className="min-w-0 bg-[#f7f7f7] px-3 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.06em] text-stone">{Icon && <Icon size={13} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className={`mt-1 block break-words font-semibold ${label === 'Prix' ? 'text-[16px] tracking-[-.03em]' : 'text-[12px]'}`}>{value}</strong></div>; })}
          </div>
-         {criteria.length > 0 && <div className="mt-5" data-testid={`card-criteria-${listing.id}`}>
-           <div className="mb-2 font-data text-xs uppercase tracking-[.1em] text-moss">Vos critères · {criteria.length}</div>
-           <div className="flex flex-wrap gap-1.5">{criteria.slice(0,3).map(result => <span key={result.id} data-testid={`card-criterion-${listing.id}-${result.id}`} className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium ${result.status === 'confirmed' ? 'border-ok-line bg-ok-wash text-ok-deep' : result.status === 'contradicted' ? 'border-[#fecdca] bg-[#fef3f2] text-[#b42318]' : 'border-[#dddddd] bg-[#f7f7f7] text-[#484848]'}`}>{result.status === 'confirmed' ? <Check size={12}/> : result.status === 'contradicted' ? <Minus size={12}/> : <CircleHelp size={12}/>}<span>{result.label} · {result.status === 'confirmed' ? 'Satisfait' : result.status === 'contradicted' ? 'Non satisfait' : 'Non précisé'}</span></span>)}</div>
-           {criteria.length > 3 && <p className="mt-1.5 text-xs text-stone">+ {criteria.length - 3} autre{criteria.length - 3 > 1 ? 's' : ''} dans la fiche</p>}
-         </div>}
-         {features.length > 0 && <div className="mt-4" data-testid={`card-features-${listing.id}`}>
-           <div className="mb-2 font-data text-xs uppercase tracking-[.1em] text-moss">Autres caractéristiques</div>
-           <div className="flex flex-wrap gap-1.5">{features.slice(0,2).map((feature, i) => <span key={`${feature.label}-${i}`} className="rounded-md bg-sage px-2.5 py-1.5 text-xs text-[#484848]"><strong>{feature.label}</strong>{feature.value ? ` · ${feature.value}` : ''}</span>)}</div>
-         </div>}
+         {chips.length > 0 && <ul className="mt-4 flex flex-wrap gap-1.5" data-testid={`card-facts-${listing.id}`} aria-label="Vos critères et caractéristiques">
+           {chips.map(chip => <li key={chip.key} data-testid={chip.testId} title={chip.status ? `${chip.text} : ${chip.status}` : undefined} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs ${chip.tone === 'confirmed' ? 'border border-ok-line bg-ok-wash font-medium text-ok-deep' : chip.tone === 'contradicted' ? 'border border-[#fecdca] bg-[#fef3f2] font-medium text-[#b42318]' : chip.tone === 'unknown' ? 'border border-dashed border-[#b0b0b0] font-medium text-[#484848]' : 'bg-[#f2f2f2] text-[#484848]'}`}><chip.Icon size={13} aria-hidden="true" className="shrink-0"/>{chip.text}{chip.status && <span className="sr-only"> : {chip.status}</span>}</li>)}
+           {hidden > 0 && <li className="inline-flex items-center px-1.5 py-1.5 text-xs text-stone" data-testid={`card-facts-more-${listing.id}`}>+{hidden}</li>}
+         </ul>}
          {listing.aiSummary && <div className="mt-5 rounded-lg bg-sage px-4 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.08em] text-moss"><Sparkles size={12}/> Pourquoi ce logement ?</span><p ref={summaryRef} id={`listing-summary-${listing.id}`} data-testid={`text-card-summary-${listing.id}`} className={`mt-1.5 text-[13px] leading-[1.65] text-[#484848] ${expandedSummary ? '' : 'line-clamp-4'}`}>{listing.aiSummary}</p>{(canExpandSummary || expandedSummary) && <button type="button" data-testid={`button-expand-summary-${listing.id}`} aria-controls={`listing-summary-${listing.id}`} aria-expanded={expandedSummary} onClick={() => setExpandedSummary(value => !value)} className="relative z-20 mt-2 text-xs font-semibold text-[#c13515] underline underline-offset-4 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c13515]">{expandedSummary ? 'Réduire le résumé' : 'Lire le résumé complet'}</button>}</div>}
-         <span className="mt-4 text-xs font-semibold text-[#c13515] underline underline-offset-4">Détails, sources et preuves <ArrowRight size={12} className="inline"/></span>
-        <div className="relative z-20 mt-auto flex flex-wrap items-center gap-3 pt-6">
-           <a href={listing.url} target="_blank" rel="noopener noreferrer" onClick={onViewed} data-testid={`link-source-${listing.id}`} aria-label={`Voir l’annonce sur ${sourceName(listing.url)} (nouvel onglet)`} className="inline-flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-xs font-semibold text-lime-light transition-colors hover:bg-brand-dark">Voir sur {sourceName(listing.url)} <ArrowUpRight size={15}/></a>
-          <button type="button" data-testid={`button-compare-${listing.id}`} onClick={onSelect} disabled={compareFull && !selected} title={compareFull && !selected ? 'Retirez une annonce pour en comparer une autre' : undefined} aria-pressed={selected} className={`inline-flex h-10 items-center gap-2 rounded-lg border px-4 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${selected?'border-[#ff385c] bg-[#ffe3e8] text-[#a0290f]':'border-[#dddddd] hover:border-[#ff385c]'}`}>{selected?<Check size={14}/>:<Layers2 size={14}/>} {selected?'Ajouté au comparatif':compareFull?'Limite de 3 atteinte':'Comparer'}</button>
+         <div className="relative z-20 mt-auto grid grid-cols-[1fr_auto] gap-2 pt-6 sm:flex sm:flex-wrap sm:items-center">
+          <button type="button" data-testid={`button-fiche-${listing.id}`} onClick={() => { onViewed(); setOpen(true); }} className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-semibold text-lime-light transition-colors hover:bg-brand-dark">Fiche complète</button>
+          <a href={listing.url} target="_blank" rel="noopener noreferrer" onClick={onViewed} data-testid={`link-source-${listing.id}`} aria-label={`Voir l’annonce sur ${sourceName(listing.url)} (nouvel onglet)`} className="inline-flex h-11 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[#dddddd] bg-white px-3 text-xs font-semibold transition-colors hover:border-ink">Voir sur {sourceName(listing.url)} <ArrowUpRight size={14} className="shrink-0"/></a>
+          <button type="button" data-testid={`button-compare-${listing.id}`} onClick={onSelect} disabled={compareFull && !selected} title={compareFull && !selected ? 'Retirez une annonce pour en comparer une autre' : undefined} aria-pressed={selected} className={`inline-flex h-11 min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-3 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${selected?'border-[#ff385c] bg-[#ffe3e8] text-[#a0290f]':'border-[#dddddd] bg-white hover:border-ink'}`}>{selected?<Check size={14}/>:<Layers2 size={14}/>} {selected?'Ajouté au comparatif':compareFull?'Limite de 3 atteinte':'Comparer'}</button>
         </div>
       </div>
     </div>
-     {(features.length > 0 || criteria.length > 0) && <div className="border-t border-line-soft px-5 py-4 text-xs font-semibold text-[#c13515] md:px-6"><span className="flex items-center gap-2"><Info size={15}/> {criteria.length} critère{criteria.length > 1 ? 's' : ''} · {features.length} autre{features.length > 1 ? 's' : ''} caractéristique{features.length > 1 ? 's' : ''} dans le détail <ArrowRight size={14}/></span></div>}
   </article><div onClickCapture={onViewed}><ListingDetail listing={listing} checks={checks} searchId={searchId} places={places} routingAvailable={routingAvailable} open={open} onOpenChange={setOpen} selected={selected} compareFull={compareFull} onSelect={onSelect}/></div></>;
 }
 

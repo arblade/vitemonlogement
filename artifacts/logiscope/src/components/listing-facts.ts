@@ -1,5 +1,5 @@
 import type { HousingCriterion, HousingCriterionResult, HousingFeature, HousingListing } from '@workspace/api-client-react';
-import { DoorOpen, Euro, MapPin, Ruler, type LucideIcon } from 'lucide-react';
+import { ArrowUpDown, Bath, BedDouble, Building2, Car, Check, CookingPot, DoorOpen, Euro, Flame, Leaf, MapPin, Receipt, Ruler, Sofa, Sun, Trees, Warehouse, Wifi, Zap, type LucideIcon } from 'lucide-react';
 import { formatPrice } from '@/components/site-shell';
 
 /** Icône (trait fin) de chaque repère essentiel, partagée par la carte et la fiche détaillée. */
@@ -64,4 +64,35 @@ export function listingFacts(listing: HousingListing, checks: HousingCriterion[]
     seenFeatures.add(key);
   }
   return { generals, criteria, features };
+}
+
+const lower = (text: string) => text.charAt(0).toLocaleLowerCase('fr') + text.slice(1);
+
+/** Une caractéristique en mots simples, lisible d'un coup d'œil : « 3e étage », « Sans ascenseur », « DPE D », « 1 chambre ». */
+export function featureText(feature: Pick<HousingFeature, 'label' | 'value'>) {
+  const label = feature.label.trim(), value = (feature.value || '').trim(), key = normalize(label), v = normalize(value);
+  if (v === 'non' || v === 'aucun' || v === 'aucune') return key === 'meuble' ? 'Non meublé' : `Sans ${lower(label)}`;
+  if (!value || v === 'oui') return label;
+  if (key === 'etage') {
+    if (/^(rdc|0|rez de chaussee)$/.test(v)) return 'Rez-de-chaussée';
+    const floor = v.match(/^(\d+)(?: ?(?:e|er|eme))?(?: sur (\d+))?$/);
+    return floor ? `${floor[1] === '1' ? '1er' : `${floor[1]}e`} étage${floor[2] ? ` sur ${floor[2]}` : ''}` : `Étage ${value}`;
+  }
+  if (key === 'chambres') { const n = parseInt(value, 10); return Number.isFinite(n) ? `${n} chambre${n > 1 ? 's' : ''}` : `Chambres : ${value}`; }
+  if (key === 'salles de bain') { const n = parseInt(value, 10); return Number.isFinite(n) ? `${n} salle${n > 1 ? 's' : ''} de bain` : `Salles de bain : ${value}`; }
+  if (key === 'classe energie') return `DPE ${value.toLocaleUpperCase('fr')}`;
+  if (key === 'emissions ges') return `GES ${value.toLocaleUpperCase('fr')}`;
+  return `${label} ${/^\d/.test(value) ? '' : '· '}${value}`.replace(/\s+/g, ' ');
+}
+
+const featureIcons: [RegExp, LucideIcon][] = [
+  [/\b(ascenseur)\b/, ArrowUpDown], [/\b(etage)\b/, Building2], [/\b(chambres?)\b/, BedDouble], [/\b(salles? de bain|salle d eau|douche)\b/, Bath],
+  [/\b(classe energie|dpe)\b/, Zap], [/\b(ges|emissions)\b/, Leaf], [/\b(chauffage)\b/, Flame], [/\b(charges|honoraires|depot)\b/, Receipt],
+  [/\b(parking|stationnement|garage|box)\b/, Car], [/\b(meuble)\b/, Sofa], [/\b(balcon|terrasse|loggia|exposition)\b/, Sun], [/\b(jardin)\b/, Trees],
+  [/\b(cave|cellier|grenier)\b/, Warehouse], [/\b(cuisine)\b/, CookingPot], [/\b(fibre|internet|wifi)\b/, Wifi],
+];
+/** Icône au trait de chaque caractéristique (repère visuel, toujours accompagné du texte) ; coche discrète par défaut. */
+export function featureIcon(label: string): LucideIcon {
+  const key = normalize(label);
+  return featureIcons.find(([pattern]) => pattern.test(key))?.[1] ?? Check;
 }

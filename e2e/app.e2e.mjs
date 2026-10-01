@@ -86,10 +86,10 @@ test("galerie (mobile) : faire défiler les photos ne grise pas l'annonce, même
   await page.click("[data-testid=card-photo-prev-1]");
   assert.match(await text(page, "[data-testid=card-gallery-1]"), /photo 2 \/ 3/i);
   assert.equal(await page.locator("[role=dialog]").count(), 0, "les flèches n'ouvrent pas la fiche");
-  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
+  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/i);
   await page.reload();
   await page.waitForSelector("[data-testid=card-listing-1]");
-  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/);
+  assert.doesNotMatch(await text(page, "[data-testid=card-listing-1]"), /déjà consultée/i);
   await page.tap("[data-testid=card-gallery-1]"); // toucher le centre de la galerie (hors boutons) ouvre la fiche complète
   await page.waitForSelector("[role=dialog]");
   await page.close();
@@ -154,7 +154,7 @@ async function checkListingMap(page) {
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
 }
 
-test("sources (mobile puis desktop) : chaque carte nomme son site, et le lien y renvoie", async () => {
+test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal ouvre la fiche, « Voir sur … » renvoie au site, sans titres de rubrique", async () => {
   const wide = await newContext("desktop");
   try {
     const login = await wide.newPage();
@@ -168,10 +168,21 @@ test("sources (mobile puis desktop) : chaque carte nomme son site, et le lien y 
       const page = await context.newPage();
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid=card-listing-2]");
-      assert.match((await text(page, "[data-testid=text-listing-source-1]")).trim(), /^le bon coin$/i, name);
-      assert.match((await text(page, "[data-testid=text-listing-source-2]")).trim(), /^pap$/i, name);
+      assert.match(await text(page, "[data-testid=link-source-1]"), /Voir sur Le Bon Coin/, name);
       assert.match(await text(page, "[data-testid=link-source-2]"), /Voir sur PAP/, name);
       assert.equal(await page.getAttribute("[data-testid=link-source-2]", "href"), "https://www.pap.fr/annonces/-r442803002", name);
+      const card = await text(page, "[data-testid=card-listing-1]");
+      for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
+      // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).
+      const [fiche, site, compare] = await Promise.all(["button-fiche-1", "link-source-1", "button-compare-1"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));
+      for (const box of [fiche, site, compare]) assert.ok(box.height <= 48, `${name} : bouton sur une ligne (${JSON.stringify(box)})`);
+      assert.equal(Math.round(site.y), Math.round(compare.y), `${name} : « Voir sur » et « Comparer » côte à côte`);
+      assert.ok(name === "mobile" ? fiche.y < site.y : Math.round(fiche.y) === Math.round(site.y), `${name} : place de « Fiche complète »`);
+      if (process.env.E2E_SCREENSHOTS) await page.locator("[data-testid=card-listing-1]").screenshot({ path: `${process.env.E2E_SCREENSHOTS}/carte-${name}.png` });
+      await page.click("[data-testid=button-fiche-1]");
+      await page.waitForSelector("[data-testid=dialog-listing-1]");
+      await page.keyboard.press("Escape");
+      await page.waitForSelector("[data-testid=dialog-listing-1]", { state: "detached" });
       if (process.env.E2E_SCREENSHOTS) await page.locator("[data-testid=card-listing-2]").screenshot({ path: `${process.env.E2E_SCREENSHOTS}/sources-${name}.png` });
       await page.close();
     }

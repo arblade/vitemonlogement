@@ -67,7 +67,37 @@ describe('Page résultats : contenu', () => {
       const tile = within(card).getByTestId(`card-general-1-${label}`);
       expect(tile.querySelector('svg')).not.toBeNull();
     }
-    expect(within(card).getByTestId('card-criterion-1-wish-1')).toHaveTextContent('Non précisé');
+    expect(within(card).getByTestId('card-criterion-1-wish-1')).toHaveTextContent(/non précisé/i);
+  });
+
+  it('carte allégée : critères puis caractéristiques en une rangée de pastilles, sans titres, ni rang · site, ni lien « Détails, sources et preuves »', () => {
+    api.state.data = search({ listings: [listing(1, { features: [
+      { label: 'Ascenseur', value: 'Non', source: 'annonce', evidence: '' },
+      { label: 'Étage', value: '3', source: 'annonce', evidence: '' },
+      { label: 'Chambres', value: '1 ch.', source: 'annonce', evidence: '' },
+      { label: 'Classe énergie', value: 'd', source: 'annonce', evidence: '' },
+      { label: 'Cave', value: '', source: 'ia', evidence: 'cave' },
+      { label: 'Charges', value: '60 €', source: 'annonce', evidence: '' },
+    ] })] });
+    renderPage();
+    const card = screen.getByTestId('card-listing-1');
+    for (const gone of ['Vos critères', 'Autres caractéristiques', 'Détails, sources et preuves', '01 ·', 'dans le détail']) expect(card).not.toHaveTextContent(gone);
+    const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
+    // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les caractéristiques en mots simples ; 6 pastilles au plus.
+    expect(chips).toEqual(['chat accepté : non précisé', 'Sans ascenseur', '3e étage', '1 chambre', 'DPE D', 'Cave', '+1']);
+    expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
+  });
+
+  it('« Fiche complète » est le bouton principal et ouvre la fiche ; « Voir sur … » et « Comparer » restent à côté', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const button = screen.getByTestId('button-fiche-1');
+    expect(button).toHaveTextContent('Fiche complète');
+    expect(button.className).toContain('bg-brand');
+    expect(screen.getByTestId('link-source-1').className).not.toContain('bg-brand');
+    expect(screen.getByTestId('button-compare-1')).toBeInTheDocument();
+    await user.click(button);
+    expect(await screen.findByTestId('dialog-listing-1')).toBeInTheDocument();
   });
 
   it('vocabulaire : « Chercher d’autres annonces » (plus de « Refresh ») et « favoris » (plus de « aimées »)', async () => {
@@ -85,17 +115,16 @@ describe('Page résultats : contenu', () => {
     expect(api.refresh).toHaveBeenCalledWith({ id: 1 });
   });
 
-  it('chaque carte nomme son site d’origine (Le Bon Coin, SeLoger, PAP) et y renvoie', () => {
+  it('chaque carte renvoie à son site d’origine (Le Bon Coin, SeLoger, PAP) par son bouton', () => {
     api.state.data = search({ listings: [
       listing(1),
       listing(2, { source: 'seloger', url: 'https://www.seloger.com/annonce/location/hauts-de-france/nord-59/lille-59000/26ABC' }),
       listing(3, { source: 'pap', url: 'https://www.pap.fr/annonces/-r442803002' }),
     ] });
     renderPage();
-    expect(screen.getByTestId('text-listing-source-1')).toHaveTextContent('Le Bon Coin');
-    expect(screen.getByTestId('text-listing-source-2')).toHaveTextContent('SeLoger');
-    expect(screen.getByTestId('text-listing-source-3')).toHaveTextContent('PAP');
+    expect(screen.getByTestId('link-source-1')).toHaveTextContent('Voir sur Le Bon Coin');
     expect(screen.getByTestId('link-source-2')).toHaveTextContent('Voir sur SeLoger');
+    expect(screen.getByTestId('link-source-3')).toHaveTextContent('Voir sur PAP');
     expect(screen.getByTestId('link-source-3')).toHaveAttribute('href', 'https://www.pap.fr/annonces/-r442803002');
   });
 
@@ -163,7 +192,7 @@ describe('Page résultats : tri et consultation', () => {
     expect(cardOrder()).toEqual(['1', '2', '3']);
     await user.click(screen.getByTestId('button-open-listing-1'));
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée'));
+    await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent(/déjà consultée/i));
     expect(cardOrder()).toEqual(['1', '2', '3']);
     expect(screen.getByText(/2 annonces non consultées/)).toBeInTheDocument();
     expect(screen.getByText(/Celles déjà ouvertes sont grisées/)).toBeInTheDocument();
@@ -183,7 +212,7 @@ describe('Galerie photo d’une carte', () => {
     await user.click(screen.getByTestId('card-photo-prev-1'));
     await user.click(screen.getByTestId('card-photo-dot-1-0'));
     expect(within(card).getByTestId('card-image-1')).toHaveAttribute('src', photos[0]);
-    expect(card).not.toHaveTextContent('déjà consultée');
+    expect(card).not.toHaveTextContent(/déjà consultée/i);
     expect(card.className).not.toMatch(/opacity|grayscale/);
     expect(screen.getByText(/2 annonces non consultées/)).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem('logiscope:listing-interactions:v1') ?? '{"viewed":[]}').viewed).toEqual([]);
@@ -197,7 +226,7 @@ describe('Galerie photo d’une carte', () => {
     expect(screen.getByTestId('card-image-1')).toHaveAttribute('src', photos[1]);
     await user.click(screen.getByTestId('button-open-listing-1'));
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée'));
+    await waitFor(() => expect(screen.getByTestId('card-listing-1')).toHaveTextContent(/déjà consultée/i));
   });
 });
 
@@ -238,7 +267,7 @@ describe('Ouverture de la carte au clic', () => {
     await user.click(screen.getByTestId('button-like-1'));
     await user.click(screen.getByTestId('button-compare-1'));
     expect(dialog()).not.toBeInTheDocument();
-    expect(screen.getByTestId('card-listing-1')).not.toHaveTextContent('déjà consultée');
+    expect(screen.getByTestId('card-listing-1')).not.toHaveTextContent(/déjà consultée/i);
   });
 
   it('un clic sur « Voir sur Le Bon Coin » ouvre l’annonce d’origine, pas la fiche', async () => {
@@ -509,7 +538,7 @@ describe('Page résultats : carte des logements', () => {
     await user.keyboard('{Escape}'); // aucun clic dans la fiche : le marquage vient de l'ouverture depuis la carte
     expect(await screen.findByTestId('results-marker-1')).toHaveAttribute('data-viewed', 'true');
     expect(screen.getByTestId('results-marker-2')).toHaveAttribute('data-viewed', 'false');
-    expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée');
+    expect(screen.getByTestId('card-listing-1')).toHaveTextContent(/déjà consultée/i);
   });
 
   it('les lieux de vie localisés de la demande sont repérés sur la carte, pas ceux dont l’adresse est introuvable', async () => {
