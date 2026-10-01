@@ -101,9 +101,39 @@ OpenAI : ≈ 0,0012 $ par nouvelle annonce analysée.
 Les tests suivront les règles du projet : serveur (planificateur avec horloge simulée, rattrapage, limite adaptative,
 verrous, arrêt automatique), interface, parcours navigateur ; aucun appel payant (faux Apify, comme aujourd'hui).
 
+## Deux modes : recherche en direct, puis recherche suivie (idée du 01/10)
+Une seule recherche en base, deux états : on la lance **en direct**, et si elle plaît on la **suit** (un clic). Rien
+n'est dupliqué : activer le suivi ajoute seulement les créneaux, le curseur « dernier passage » et le prochain passage.
+
+**Recherche en direct** : les annonces **publiées sur les N derniers jours** (7 ou 10), **plafonnées** (15 en production,
+25 en développement, réglage par variable d'environnement comme `resultsPerCall`).
+- La fenêtre se filtre sur `posted_at` (vraie date de publication) : les annonces remontées en sont exclues.
+- Pour obtenir 15 annonces dans la fenêtre il faut lire ≈ 24 candidats (63 % de vraies nouveautés) : Apify ≈ 0,024 $ +
+  analyse de 15 annonces ≈ 0,018 $, soit **≈ 0,04 $ par recherche** (≈ 0,025 $ aujourd'hui pour 5 annonces).
+- **Attention, dans une ville active le plafond décide, pas la fenêtre** : à Lille ≈ 38 nouvelles annonces par jour, donc
+  « 10 jours, 15 annonces max » = les 15 plus récentes, soit environ les 10 dernières heures. Il faut le dire à
+  l'utilisateur (« 15 annonces les plus récentes, de ce matin 7 h à maintenant »), sinon il croira avoir tout vu.
+
+**Passer en suivi** : à l'activation le curseur est posé sur « maintenant » ; ce qui est affiché est marqué comme déjà vu.
+- Le suivi trouve ce qui **paraît à partir de maintenant**, pas ce qui est plus ancien que la 15e annonce du direct :
+  « direct = ce qui existe », « suivi = ce qui arrive ensuite ». À écrire tel quel dans l'interface.
+- Créneaux par défaut **8 h et 18 h** (modifiables, de 1 à 2 par jour).
+- Plafond par passage : 25 annonces analysées (au-delà : « recherche très large, affinez »), lecture limitée à 100.
+
+**Interface proposée**
+- Vocabulaire : « **recherche suivie** » plutôt que « recherche longue » (parle à l'utilisateur, pas au développeur).
+- Sur les résultats, sous la barre d'outils, une carte « **Suivre cette recherche** » : « Recevez les nouvelles annonces
+  chaque jour à 8 h et 18 h », deux pastilles d'heure préremplies, bouton rose « Suivre ». Une fois actif, la carte devient
+  une ligne discrète « Suivie · prochain passage 18 h · Modifier · Arrêter ».
+- Dans « Mes recherches » : deux groupes, **Suivies** en haut (badge rose « 3 nouvelles », heure du prochain passage) puis
+  **Recherches ponctuelles** (l'historique actuel).
+- Au passage suivant, la page s'ouvre sur une section « **Nouvelles depuis votre dernière visite** », puis le reste.
+- Au plafond de recherches suivies (2), le bouton propose de remplacer l'une d'elles.
+- « Étendre » prendrait alors un sens naturel : **remonter plus loin dans le temps** (les 15 suivantes plus anciennes).
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).
-3. Les annonces « remontées » (anciennes réapparues en tête) : à ignorer (proposé) ou à signaler ?
+3. Les annonces « remontées » (anciennes réapparues en tête) : à ignorer (proposé : le direct filtre sur la date de publication, le suivi ne garde que les adresses jamais vues) ou à signaler ?
 4. Un seul créneau par défaut à 8 h, le second (18 h ?) en option ?
 5. Garder SeLoger et PAP désactivés pour le suivi (oui, par économie) ?
