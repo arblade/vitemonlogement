@@ -2,10 +2,29 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import type { HousingCriterion, HousingListing, HousingPlace } from '@workspace/api-client-react';
 import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles, X } from 'lucide-react';
 import { ListingGallery } from '@/components/listing-gallery';
-import { generalIcons, listingFacts } from '@/components/listing-facts';
+import { useState } from 'react';
+import type { HousingFeature } from '@workspace/api-client-react';
+import { featureIcon, featureText, generalIcons, isAbsent, listingFacts, sortFeatures } from '@/components/listing-facts';
 import { ListingMap } from '@/components/listing-map';
 import { sourceName } from '@/lib/sources';
 
+const FEATURES_SHOWN = 10;
+const FEATURES_ALL = 12; // jusqu'à 12, tout est montré : pas de bouton pour un ou deux éléments cachés
+
+/** Caractéristiques à la façon Airbnb : icône au trait + mots simples, sans fond ; ce qui manque, barré, à la fin. */
+function FeatureList({ id, features }: { id: number; features: HousingFeature[] }) {
+  const [all, setAll] = useState(false);
+  const ordered = sortFeatures(features);
+  const folded = ordered.length > FEATURES_ALL;
+  const shown = all || !folded ? ordered : ordered.slice(0, FEATURES_SHOWN);
+  return <>
+    <ul data-testid={`features-${id}`} className="mt-5 grid grid-cols-1 gap-x-8 sm:grid-cols-2">{shown.map((feature, index) => { const Icon = featureIcon(feature.label); const absent = isAbsent(feature); return <li key={`${feature.label}-${index}`} className="flex min-w-0 items-center gap-4 py-2.5 text-[15px] leading-snug">
+      <Icon size={22} strokeWidth={1.6} aria-hidden="true" className={`shrink-0 ${absent ? 'text-[#b0b0b0]' : 'text-ink'}`}/>
+      <span className={absent ? 'text-stone line-through' : ''}>{absent ? feature.label : featureText(feature)}</span>{absent && <span className="sr-only"> : absent</span>}
+    </li>; })}</ul>
+    {folded && <button type="button" data-testid={`button-all-features-${id}`} onClick={() => setAll(value => !value)} aria-expanded={all} className="mt-5 inline-flex min-h-11 items-center rounded-lg border border-ink px-5 text-[14px] font-semibold transition-colors hover:bg-sage">{all ? 'Afficher moins' : `Afficher les ${ordered.length} caractéristiques`}</button>}
+  </>;
+}
 
 export function ListingDetail({ listing, checks = [], open, onOpenChange, selected, compareFull, onSelect, searchId, places, routingAvailable }: {
   listing: HousingListing;
@@ -68,26 +87,17 @@ export function ListingDetail({ listing, checks = [], open, onOpenChange, select
                 <section aria-labelledby={`checks-${listing.id}`}>
                   <div className="mb-2 font-data text-xs uppercase tracking-[.12em] text-moss">02 / Vos critères</div>
                   <div className="flex items-center gap-2"><Layers2 size={18} className="text-[#717171]"/><h2 id={`checks-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Votre demande, point par point.</h2></div>
-                  {checkedResults.length ? <div className="mt-5 space-y-2">
-                    {checkedResults.map(result => <div key={result.id} data-testid={`criterion-result-${listing.id}-${result.id}`} className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border px-4 py-3 ${result.status === 'confirmed' ? 'border-ok-line bg-ok-wash' : result.status === 'contradicted' ? 'border-[#fecdca] bg-[#fef3f2]' : 'border-[#dddddd] bg-[#ffffff]'}`}>
-                      <div className="min-w-0">
-                        <strong className="block text-[14px] leading-snug">{result.label}</strong>
-                        <span data-testid={`source-criterion-${listing.id}-${result.id}`} className="text-xs text-stone">{sourceCopy[result.source]}</span>
-                      </div>
-                      <span data-testid={`status-criterion-${listing.id}-${result.id}`} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 font-data text-xs font-semibold uppercase tracking-[.05em] ${result.status === 'confirmed' ? 'bg-ok-wash text-ok-deep' : result.status === 'contradicted' ? 'bg-[#fecdca] text-[#b42318]' : 'bg-[#ebebeb] text-[#484848]'}`}>
-                        {result.status === 'confirmed' ? <Check size={12}/> : result.status === 'contradicted' ? <Minus size={12}/> : <CircleHelp size={12}/>}
-                        {statusCopy[result.status]}
-                      </span>
-                    </div>)}
-                  </div> : <div className="mt-5 rounded-xl border border-dashed border-line bg-[#ffffff] p-5 text-xs leading-relaxed text-stone">Aucun critère individuel n’a été transmis pour cette recherche.</div>}
+                  {checkedResults.length ? <ul className="mt-5 flex flex-wrap gap-2" aria-label="Vos critères">
+                    {checkedResults.map(result => { const StatusIcon = result.status === 'confirmed' ? Check : result.status === 'contradicted' ? Minus : CircleHelp; return <li key={result.id} data-testid={`criterion-result-${listing.id}-${result.id}`} title={`${result.label} : ${statusCopy[result.status].toLocaleLowerCase('fr')}`} className={`inline-flex max-w-full items-center gap-2 rounded-full px-3.5 py-2 text-[14px] ${result.status === 'confirmed' ? 'border border-ok-line bg-ok-wash text-ok-deep' : result.status === 'contradicted' ? 'border border-[#fecdca] bg-[#fef3f2] text-[#b42318]' : 'border border-dashed border-[#b0b0b0] text-[#484848]'}`}>
+                      <StatusIcon size={15} aria-hidden="true" className="shrink-0"/>
+                      <span className="min-w-0"><strong className="font-semibold">{result.label}</strong><span data-testid={`status-criterion-${listing.id}-${result.id}`} className="sr-only"> : {statusCopy[result.status]}</span><span className="opacity-75"> · <span data-testid={`source-criterion-${listing.id}-${result.id}`}>{sourceCopy[result.source]}</span></span></span>
+                    </li>; })}
+                  </ul> : <div className="mt-5 rounded-xl border border-dashed border-line bg-[#ffffff] p-5 text-xs leading-relaxed text-stone">Aucun critère individuel n’a été transmis pour cette recherche.</div>}
                 </section>
                 <section aria-labelledby={`features-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">
                   <div className="mb-2 font-data text-xs uppercase tracking-[.12em] text-moss">03 / En complément</div>
                   <div className="flex items-center gap-2"><Info size={17} className="text-[#717171]"/><h2 id={`features-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">Caractéristiques</h2></div>
-                  {features.length ? <ul data-testid={`features-${listing.id}`} className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">{features.map((feature, index) => <li key={`${feature.label}-${index}`} className="flex min-w-0 items-center gap-3 rounded-xl bg-mist px-4 py-3">
-                    <span className="grid size-6 shrink-0 place-items-center rounded-full bg-[#ffffff] text-ink"><Check size={13} aria-hidden="true"/></span>
-                    <span className="min-w-0 text-[14px] leading-snug"><strong className="font-semibold">{feature.label}</strong>{feature.value ? <span className="text-stone"> · {feature.value}</span> : null}</span>
-                  </li>)}</ul> : <p className="mt-4 text-sm text-stone">Aucune caractéristique documentée pour cette annonce.</p>}
+                  {features.length ? <FeatureList id={listing.id} features={features}/> : <p className="mt-4 text-sm text-stone">Aucune caractéristique documentée pour cette annonce.</p>}
                 </section>
                 <section aria-labelledby={`description-${listing.id}`} className="mt-10 border-t border-line-soft pt-9">
                   <h2 id={`description-${listing.id}`} className="text-[22px] font-semibold tracking-[-.03em]">L’annonce, dans ses mots.</h2>

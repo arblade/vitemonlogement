@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Check, Zap } from 'lucide-react';
-import { featureIcon, featureText } from '@/components/listing-facts';
+import { featureIcon, featureText, sortFeatures } from '@/components/listing-facts';
 
 const text = (label: string, value = '') => featureText({ label, value });
 
@@ -22,12 +22,23 @@ describe('Caractéristiques en mots simples', () => {
     expect(text('Ascenseur', 'Oui')).toBe('Ascenseur');
     expect(text('Cave')).toBe('Cave');
   });
-  it('valeurs libres gardées, chiffres sans séparateur', () => {
+  it('valeurs libres à la suite du libellé', () => {
     expect(text('Charges', '60 €')).toBe('Charges 60 €');
-    expect(text('Chauffage', 'gaz individuel')).toBe('Chauffage · gaz individuel');
+    expect(text('Chauffage', 'gaz individuel')).toBe('Chauffage gaz individuel');
+    expect(text('Cuisine', 'équipée')).toBe('Cuisine équipée');
   });
   it('une icône par thème, une coche par défaut', () => {
     expect(featureIcon('Classe énergie')).toBe(Zap);
     expect(featureIcon('Piscine')).toBe(Check);
+  });
+});
+
+describe('Ordre des caractéristiques', () => {
+  it('pièces et étage, équipements, énergie, charges, puis ce qui manque', () => {
+    const labels = sortFeatures([
+      { label: 'Charges', value: '60 €' }, { label: 'Ascenseur', value: 'Non' }, { label: 'Classe énergie', value: 'D' },
+      { label: 'Cave', value: '' }, { label: 'Étage', value: '3' }, { label: 'Chambres', value: '1 ch.' }, { label: 'Chauffage', value: 'gaz' },
+    ]).map(feature => feature.label);
+    expect(labels).toEqual(['Chambres', 'Étage', 'Cave', 'Chauffage', 'Classe énergie', 'Charges', 'Ascenseur']);
   });
 });

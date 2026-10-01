@@ -83,8 +83,9 @@ describe('Page résultats : contenu', () => {
     const card = screen.getByTestId('card-listing-1');
     for (const gone of ['Vos critères', 'Autres caractéristiques', 'Détails, sources et preuves', '01 ·', 'dans le détail']) expect(card).not.toHaveTextContent(gone);
     const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
-    // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les caractéristiques en mots simples ; 6 pastilles au plus.
-    expect(chips).toEqual(['chat accepté : non précisé', 'Sans ascenseur', '3e étage', '1 chambre', 'DPE D', 'Cave', '+1']);
+    // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les caractéristiques en mots simples,
+    // dans l’ordre de lecture (pièces, étage, équipements, énergie, charges, absent) ; 6 pastilles au plus.
+    expect(chips).toEqual(['chat accepté : non précisé', '1 chambre', '3e étage', 'Cave', 'DPE D', 'Charges 60 €', '+1']);
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
@@ -390,17 +391,47 @@ describe('Page résultats : fiche détaillée', () => {
     expect(within(dialog).queryByText(/Une information absente/)).not.toBeInTheDocument();
   });
 
-  it('caractéristiques : simple liste « libellé · valeur », sans source ni extrait', async () => {
+  it('caractéristiques à la Airbnb : icône + mots simples, sans source ni extrait ; ce qui manque, barré, en dernier', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [listing(1, { features: [
+      { label: 'Ascenseur', value: 'Non', source: 'annonce', evidence: '' },
       { label: 'Balcon', value: '', source: 'ia', evidence: 'joli balcon plein sud donnant sur cour' },
       { label: 'Étage', value: '3', source: 'annonce', evidence: 'floor_number: 3' },
     ] })] });
     renderPage();
     await user.click(screen.getByTestId('button-open-listing-1'));
     const features = within(await screen.findByTestId('dialog-listing-1')).getByTestId('features-1');
-    expect(within(features).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Balcon', 'Étage · 3']);
+    const items = within(features).getAllByRole('listitem');
+    expect(items.map(item => item.textContent)).toEqual(['3e étage', 'Balcon', 'Ascenseur : absent']);
+    expect(items.every(item => item.querySelector('svg'))).toBe(true);
+    expect(items[2].querySelector('.line-through')).toHaveTextContent('Ascenseur');
     expect(features).not.toHaveTextContent(/plein sud|floor_number|Lu dans la description|Indiqué dans l’annonce|Extrait/);
+  });
+
+  it('caractéristiques : au-delà de 12, les 10 premières puis « Afficher les N caractéristiques »', async () => {
+    const user = userEvent.setup();
+    const many = Array.from({ length: 13 }, (_, i) => ({ label: `Atout ${i + 1}`, value: '', source: 'ia' as const, evidence: 'x' }));
+    api.state.data = search({ listings: [listing(1, { features: many })] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const dialog = await screen.findByTestId('dialog-listing-1');
+    expect(within(within(dialog).getByTestId('features-1')).getAllByRole('listitem')).toHaveLength(10);
+    await user.click(within(dialog).getByTestId('button-all-features-1'));
+    expect(within(within(dialog).getByTestId('features-1')).getAllByRole('listitem')).toHaveLength(13);
+  });
+
+  it('critères de la fiche en badges, comme sur la carte : couleur selon le statut, source à côté', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { criterionResults: [
+      { id: 'wish-1', label: 'chat accepté', status: 'contradicted', source: 'description', value: '', evidence: 'animaux non acceptés' },
+    ] })] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const badge = within(await screen.findByTestId('dialog-listing-1')).getByTestId('criterion-result-1-wish-1');
+    expect(badge.tagName).toBe('LI');
+    expect(badge.className).toContain('rounded-full');
+    expect(badge.className).toContain('text-[#b42318]');
+    expect(badge).toHaveTextContent('chat accepté : Critère non satisfait · Lu dans la description');
   });
 });
 

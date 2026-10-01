@@ -108,7 +108,7 @@ test("fiche détaillée (mobile) : bouton « Voir l'annonce » visible en haut, 
   const box = await page.locator(top).boundingBox();
   assert.ok(box && box.y >= 0 && box.y < 200, `bouton toujours en haut après défilement (${JSON.stringify(box)})`);
   assert.equal(await page.getByText("Contacter le vendeur").count(), 0);
-  assert.deepEqual(await page.locator("[data-testid=features-1] li").allInnerTexts(), ["Meublé", "Étage · 3e sur 5", "Balcon · plein sud", "Cave", "Chauffage · gaz individuel"]);
+  assert.deepEqual(await page.locator("[data-testid=features-1] li").allInnerTexts(), ["3e étage sur 5", "Meublé", "Balcon plein sud", "Cave", "Chauffage gaz individuel"]);
   assert.doesNotMatch(await text(page, "[data-testid=features-1]"), /floor_number|donnant sur cour|Lu dans la description/);
   assert.equal(await page.locator("[data-testid=criterion-result-1-wish-1]").count(), 1);
   assert.doesNotMatch(await text(page, "[data-testid=dialog-listing-1]"), /Une information absente/);
@@ -181,6 +181,12 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       if (process.env.E2E_SCREENSHOTS) await page.locator("[data-testid=card-listing-1]").screenshot({ path: `${process.env.E2E_SCREENSHOTS}/carte-${name}.png` });
       await page.click("[data-testid=button-fiche-1]");
       await page.waitForSelector("[data-testid=dialog-listing-1]");
+      // Fiche : critères en badges, caractéristiques en liste à icônes (mots simples, sans fond).
+      assert.match(await page.getAttribute("[data-testid=criterion-result-1-wish-1]", "class"), /rounded-full/, name);
+      const features = await page.$$eval("[data-testid=features-1] li", items => items.map(item => ({ text: item.textContent, icon: !!item.querySelector("svg") })));
+      assert.deepEqual(features.map(item => item.text), ["3e étage sur 5", "Meublé", "Balcon plein sud", "Cave", "Chauffage gaz individuel"], name);
+      assert.ok(features.every(item => item.icon), `${name} : une icône par caractéristique`);
+      if (process.env.E2E_SCREENSHOTS) { await page.locator("[data-testid=features-1]").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/fiche-caracteristiques-${name}.png` }); }
       await page.keyboard.press("Escape");
       await page.waitForSelector("[data-testid=dialog-listing-1]", { state: "detached" });
       if (process.env.E2E_SCREENSHOTS) await page.locator("[data-testid=card-listing-2]").screenshot({ path: `${process.env.E2E_SCREENSHOTS}/sources-${name}.png` });

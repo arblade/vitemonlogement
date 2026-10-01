@@ -10,7 +10,7 @@ import { ListingGallery } from '@/components/listing-gallery';
 import { ListingDetail } from '@/components/listing-detail';
 import { ResultsMap } from '@/components/results-map';
 import { mappedListings } from '@/lib/geo';
-import { featureIcon, featureText, generalIcons, listingFacts } from '@/components/listing-facts';
+import { featureIcon, featureText, generalIcons, listingFacts, sortFeatures } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
@@ -45,7 +45,7 @@ function cardChips(id: number, criteria: HousingCriterionResult[], features: Hou
   const all = [
     ...criteria.map(result => ({ key: `c-${result.id}`, testId: `card-criterion-${id}-${result.id}`, tone: result.status, text: result.label,
       status: STATUS_TEXT[result.status], Icon: result.status === 'confirmed' ? Check : result.status === 'contradicted' ? Minus : CircleHelp })),
-    ...features.map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
+    ...sortFeatures(features).map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
   ];
   return { chips: all.slice(0, CARD_CHIPS), hidden: Math.max(0, all.length - CARD_CHIPS) };
 }

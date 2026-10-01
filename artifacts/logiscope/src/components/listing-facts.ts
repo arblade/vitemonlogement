@@ -66,6 +66,9 @@ export function listingFacts(listing: HousingListing, checks: HousingCriterion[]
   return { generals, criteria, features };
 }
 
+/** « Non », « Aucun » : la caractéristique est absente du logement (affichée barrée dans la fiche). */
+export const isAbsent = (feature: Pick<HousingFeature, 'value'>) => ['non', 'aucun', 'aucune'].includes(normalize(feature.value || ''));
+
 const lower = (text: string) => text.charAt(0).toLocaleLowerCase('fr') + text.slice(1);
 
 /** Une caractéristique en mots simples, lisible d'un coup d'œil : « 3e étage », « Sans ascenseur », « DPE D », « 1 chambre ». */
@@ -82,7 +85,7 @@ export function featureText(feature: Pick<HousingFeature, 'label' | 'value'>) {
   if (key === 'salles de bain') { const n = parseInt(value, 10); return Number.isFinite(n) ? `${n} salle${n > 1 ? 's' : ''} de bain` : `Salles de bain : ${value}`; }
   if (key === 'classe energie') return `DPE ${value.toLocaleUpperCase('fr')}`;
   if (key === 'emissions ges') return `GES ${value.toLocaleUpperCase('fr')}`;
-  return `${label} ${/^\d/.test(value) ? '' : '· '}${value}`.replace(/\s+/g, ' ');
+  return `${label} ${value}`.replace(/\s+/g, ' ');
 }
 
 const featureIcons: [RegExp, LucideIcon][] = [
@@ -95,4 +98,14 @@ const featureIcons: [RegExp, LucideIcon][] = [
 export function featureIcon(label: string): LucideIcon {
   const key = normalize(label);
   return featureIcons.find(([pattern]) => pattern.test(key))?.[1] ?? Check;
+}
+
+const featureRanks: [RegExp, number][] = [
+  [/\b(chambres?)\b/, 0], [/\b(salles? de bain|salle d eau)\b/, 1], [/\b(etage)\b/, 2], [/\b(ascenseur)\b/, 3],
+  [/\b(chauffage)\b/, 5], [/\b(classe energie|dpe)\b/, 6], [/\b(ges|emissions)\b/, 7], [/\b(charges|honoraires|depot)\b/, 8],
+];
+/** Ordre de lecture : pièces et étage, équipements, chauffage et énergie, charges ; ce qui manque en dernier. */
+export function sortFeatures<T extends Pick<HousingFeature, 'label' | 'value'>>(features: T[]): T[] {
+  const rank = (feature: T) => (isAbsent(feature) ? 100 : 0) + (featureRanks.find(([pattern]) => pattern.test(normalize(feature.label)))?.[1] ?? 4);
+  return features.map((feature, index) => ({ feature, index })).sort((a, b) => rank(a.feature) - rank(b.feature) || a.index - b.index).map(({ feature }) => feature);
 }
