@@ -139,6 +139,20 @@ describe('Encart « Où se trouve le logement »', () => {
     expect(screen.getByTestId('map-precision-1')).toHaveTextContent(/Rue indiquée/);
   });
 
+  it('adresse lue dans la description (agence) : l’encart le dit, cite la phrase, et invite à vérifier ; point précis, trajets possibles', async () => {
+    mockFetch([]);
+    renderMap({ listing: precise({ geoSource: 'description', geoEvidence: 'Situé dans Bordeaux centre au 21 quai des Salinières' }) });
+    const text = screen.getByTestId('map-precision-1');
+    expect(text).toHaveTextContent('Adresse lue dans la description de l’annonce (« Situé dans Bordeaux centre au 21 quai des Salinières ») : l’annonce ne l’indique pas comme position, vérifiez-la avec l’agence.');
+    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-radius', '0');
+  });
+
+  it('rue lue dans la description : point dans la rue, pas au numéro ; sans citation, pas de guillemets vides', () => {
+    mockFetch([]);
+    renderMap({ listing: precise({ geoPrecision: 'street', geoSource: 'description', geoEvidence: null }) });
+    expect(screen.getByTestId('map-precision-1')).toHaveTextContent(/^Rue lue dans la description de l’annonce : le point est placé dans la rue, pas au numéro\.$/);
+  });
+
   it('sans clé de trajet : aucun appel, aucune durée, seulement la distance à vol d’oiseau', async () => {
     const calls = mockFetch([]);
     renderMap({ routingAvailable: false, places: [work, lost] });

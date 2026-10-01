@@ -1,4 +1,24 @@
-# Étude : placer sur la carte les annonces d'agences sans adresse (01/10/2026)
+# Placer sur la carte les annonces d'agences sans adresse (étude et mise en œuvre, 01/10/2026)
+
+## Mis en œuvre (01/10/2026)
+- **Lecture** : l'analyse IA existante lit aussi la voie du logement (`address` : voie, numéro, citation), dans le même
+  appel ; `validAddress` (`ai.ts`) ne la garde que si la citation est mot pour mot dans l'annonce, contient la voie
+  (et le numéro), et si la voie commence par un type de voie (rue, quai, place…). `ANALYSIS_VERSION` 3 : les annonces
+  déjà en cache sont relues une fois.
+- **Géocodage** : `geocodeListingAddress` (`lib/geocode.ts`, IGN gratuit) avec les règles du § 3 : même commune,
+  code postal de l'annonce et score ≥ 0,7 ; repli sans filtre à score ≥ 0,9 dans le même code postal ; sinon rien.
+- **Seulement si la position du site n'est pas précise** (quartier, commune) : une adresse ou une rue donnée par
+  l'annonce n'est jamais remplacée. Au rafraîchissement, une position déjà retrouvée est gardée.
+- **Base** : colonnes `geo_source` (« description ») et `geo_evidence` (la phrase citée), migration 0006.
+- **Affichage** : la fiche dit « Adresse lue dans la description de l'annonce (« … ») : l'annonce ne l'indique pas
+  comme position, vérifiez-la avec l'agence » (ou « Rue lue… ») ; la carte des résultats précise « dont N d'après
+  l'adresse citée dans la description ». Ces logements ont aussi les trajets.
+- **Vérifié en réel** : « appartement à Bordeaux, 1 000 € max » → 1 annonce d'agence placée par son texte (rue de la
+  Rousselle) ; « T2 à Lyon, 1 100 € max » → 2 (Quai Saint-Vincent, rue Ornano) ; positions correctes.
+- **Coût** : quelques dizaines de tokens par annonce dans l'appel d'analyse existant ; géocodage gratuit.
+- Piste ADEME (§ 5) **non mise en œuvre**.
+
+# Étude
 
 Question : beaucoup d'annonces n'ont ni adresse exacte ni rue sur Le Bon Coin (donc absentes de la carte des
 résultats). Peut-on retrouver une position à partir de la **description** (rue, quartier, repère), et quelles API en

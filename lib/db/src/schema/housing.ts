@@ -54,6 +54,10 @@ export const housingListings = pgTable("housing_listings", {
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
   geoPrecision: text("geo_precision"),
+  // « description » : position retrouvée dans le texte de l'annonce (adresse citée puis géocodée), absente du champ
+  // de position ; `geo_evidence` est la phrase exacte qui la cite. NULL : position donnée par l'annonce elle-même.
+  geoSource: text("geo_source"),
+  geoEvidence: text("geo_evidence"),
 }, table => [unique("housing_listings_search_id_url_unique").on(table.searchId, table.url)]);
 
 // Code de lieu SeLoger (ex. AD08FR23619 pour Lille), résolu une fois par commune (code INSEE) puis gardé.

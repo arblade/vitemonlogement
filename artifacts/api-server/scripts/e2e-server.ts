@@ -77,7 +77,8 @@ const listing = (n: number) => ({
   ],
   // Annonce 1 : adresse exacte ; annonce 3 : rue ; annonce 2 : commune seulement (ni point ni place sur la carte des résultats).
   ...(n === 1 ? { ...home, geoPrecision: "streetNumber" as const }
-    : n === 3 ? { lat: 50.6435, lng: 3.0545, geoPrecision: "street" as const }
+    // Annonce d'agence : la rue est lue dans sa description (la position du site n'était qu'un quartier).
+    : n === 3 ? { lat: 50.6435, lng: 3.0545, geoPrecision: "street" as const, geoSource: "description" as const, geoEvidence: "situé rue Lavoisier, en plein cœur du quartier Vauban" }
     : { lat: 50.63, lng: 3.06, geoPrecision: "city" as const }),
 });
 await completeSearch(id, [listing(1), listing(2), listing(3)], "focused");

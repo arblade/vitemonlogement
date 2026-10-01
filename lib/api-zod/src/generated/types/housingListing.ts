@@ -9,6 +9,7 @@ import type { HousingCriterionResult } from './housingCriterionResult';
 import type { HousingFeature } from './housingFeature';
 import type { HousingListingBatch } from './housingListingBatch';
 import type { HousingListingGeoPrecision } from './housingListingGeoPrecision';
+import type { HousingListingGeoSource } from './housingListingGeoSource';
 import type { HousingListingSource } from './housingListingSource';
 
 export interface HousingListing {
@@ -42,4 +43,14 @@ export interface HousingListing {
   lng?: number | null;
   /** @nullable */
   geoPrecision?: HousingListingGeoPrecision;
+  /**
+     * description = position found in the listing text (cited address, geocoded), not given by the site
+     * @nullable
+     */
+  geoSource?: HousingListingGeoSource;
+  /**
+     * Exact sentence of the listing that cites the address (when geoSource is description)
+     * @nullable
+     */
+  geoEvidence?: string | null;
 }

@@ -23,6 +23,7 @@ export function ResultsMap({ listings, places = [], viewedIds, open, onOpenChang
   const items = useMemo(() => mappedListings(listings), [listings]);
   const located = useMemo(() => locatedPlaces(places), [places]);
   const hidden = listings.length - items.length;
+  const fromText = items.filter(item => item.listing.geoSource === 'description').length;
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#222222]/75 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"/>
@@ -32,7 +33,7 @@ export function ResultsMap({ listings, places = [], viewedIds, open, onOpenChang
           <div className="min-w-0">
             <DialogPrimitive.Title className="flex items-center gap-2 text-[20px] font-semibold tracking-[-.02em]"><MapPin size={18} className="text-brand" aria-hidden="true"/>Carte des logements</DialogPrimitive.Title>
             <p id="results-map-note" data-testid="results-map-note" className="mt-1 text-xs leading-relaxed text-stone">
-              {items.length} logement{items.length > 1 ? 's' : ''} sur la carte : touchez un prix pour ouvrir sa fiche.
+              {items.length} logement{items.length > 1 ? 's' : ''} sur la carte{fromText > 0 && ` (dont ${fromText} d’après l’adresse citée dans la description)`} : touchez un prix pour ouvrir sa fiche.
               {hidden > 0 && ` ${hidden} autre${hidden > 1 ? 's' : ''} n’${hidden > 1 ? 'ont' : 'a'} qu’un quartier ou une commune pour toute position : ${hidden > 1 ? 'ils ne sont' : 'il n’est'} pas placé${hidden > 1 ? 's' : ''} ici, mais ${hidden > 1 ? 'figurent' : 'figure'} dans la liste.`}
             </p>
           </div>

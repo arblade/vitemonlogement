@@ -306,6 +306,17 @@ export const HousingListingGeoPrecision = {
   city: 'city',
 } as const;
 
+/**
+ * description = position found in the listing text (cited address, geocoded), not given by the site
+ * @nullable
+ */
+export type HousingListingGeoSource = typeof HousingListingGeoSource[keyof typeof HousingListingGeoSource] | null;
+
+
+export const HousingListingGeoSource = {
+  description: 'description',
+} as const;
+
 export interface HousingListing {
   id: number;
   /** Site the listing comes from */
@@ -337,6 +348,16 @@ export interface HousingListing {
   lng?: number | null;
   /** @nullable */
   geoPrecision?: HousingListingGeoPrecision;
+  /**
+     * description = position found in the listing text (cited address, geocoded), not given by the site
+     * @nullable
+     */
+  geoSource?: HousingListingGeoSource;
+  /**
+     * Exact sentence of the listing that cites the address (when geoSource is description)
+     * @nullable
+     */
+  geoEvidence?: string | null;
 }
 
 export type HousingSearchDetail = HousingSearchSummary & {

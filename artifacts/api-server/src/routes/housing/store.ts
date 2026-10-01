@@ -87,6 +87,12 @@ export type Listing = {
   lat: number | null;
   lng: number | null;
   geoPrecision: GeoPrecision | null;
+  /** « description » : position retrouvée dans le texte (adresse citée, géocodée) ; sinon donnée par l'annonce. */
+  geoSource?: "description" | null;
+  /** Phrase exacte de l'annonce qui cite l'adresse, quand geoSource vaut « description ». */
+  geoEvidence?: string | null;
+  /** Code postal donné par le site (sert au géocodage ; non enregistré). */
+  postcode?: string | null;
 };
 
 export type SearchRow = typeof housingSearches.$inferSelect;
@@ -199,6 +205,7 @@ export async function getSearch(id: number) {
       criterionResults: JSON.parse(listing.criterionResults) as CriterionResult[],
       features: JSON.parse(listing.features) as Feature[],
       lat: listing.lat, lng: listing.lng, geoPrecision: listing.geoPrecision as GeoPrecision | null,
+      geoSource: listing.geoSource === "description" ? "description" as const : null, geoEvidence: listing.geoEvidence,
     }));
   return { ...await summary(row), listings, routingAvailable: routingAvailable() };
 }
@@ -214,6 +221,7 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
         images: JSON.stringify(item.images), aiSummary: item.aiSummary,
         summaryEvidence: JSON.stringify(item.summaryEvidence), criterionResults: JSON.stringify(item.criterionResults),
         lat: item.lat ?? null, lng: item.lng ?? null, geoPrecision: item.geoPrecision ?? null,
+        geoSource: item.geoSource ?? null, geoEvidence: item.geoEvidence ?? null,
       };
       await tx.insert(t).values(values).onConflictDoUpdate({
         target: [t.searchId, t.url],
@@ -228,6 +236,9 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
           lat: sql`COALESCE(excluded.lat, ${t.lat})`,
           lng: sql`COALESCE(excluded.lng, ${t.lng})`,
           geoPrecision: sql`COALESCE(excluded.geo_precision, ${t.geoPrecision})`,
+          // L'origine suit la position retenue : celle de la nouvelle lecture si elle en a une, sinon l'ancienne.
+          geoSource: sql`CASE WHEN excluded.lat IS NULL THEN ${t.geoSource} ELSE excluded.geo_source END`,
+          geoEvidence: sql`CASE WHEN excluded.lat IS NULL THEN ${t.geoEvidence} ELSE excluded.geo_evidence END`,
         },
       });
     }

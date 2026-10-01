@@ -212,6 +212,7 @@ export function normalizePap(raw: unknown, batch: SearchBatch): { listing: Norma
       aiSummary: null, summaryEvidence: [], features,
       // PAP ne dit pas si le point est l'adresse exacte : affiché comme une zone.
       lat: position?.lat ?? null, lng: position?.lng ?? null, geoPrecision: position ? "district" : null,
+      postcode: place.match(/\((\d{5})\)/)?.[1] ?? null,
     },
     facts: {},
   };
@@ -255,6 +256,7 @@ export function normalizeSeloger(raw: unknown, batch: SearchBatch): { listing: N
         ...positive("Jardin", data.hasGarden), ...positive("Cave", data.hasCellar),
       ],
       lat: position?.lat ?? null, lng: position?.lng ?? null, geoPrecision,
+      postcode: text(data.zipcode).match(/^\d{5}$/)?.[0] ?? null,
     },
     // Même vocabulaire que les attributs Le Bon Coin, pour les critères « hybrides » (parking, meublé, ascenseur).
     facts: {

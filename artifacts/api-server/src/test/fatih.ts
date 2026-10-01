@@ -1,7 +1,7 @@
 /** Annonce au format de l'acteur Le Bon Coin `fatihtahta` (record « property_listing »), pour les faux serveurs Apify. */
 export function fatihRecord(ad: {
   url: string; title: string; description: string; price: number; area?: number; rooms?: number;
-  realEstateType?: "1" | "2" | "4" | "5"; city?: string; lat?: number; lng?: number; type?: string; dealType?: string; images?: string[];
+  realEstateType?: "1" | "2" | "4" | "5"; city?: string; zipcode?: string; lat?: number; lng?: number; type?: string; dealType?: string; images?: string[];
 }) {
   const labels = { "1": "Maison", "2": "Appartement", "4": "Parking", "5": "Autre" } as const;
   const type = ad.realEstateType ?? "2";
@@ -13,7 +13,7 @@ export function fatihRecord(ad: {
     media: JSON.stringify({ images: { count: ad.images?.length ?? 0, urls: ad.images ?? [] } }),
     source_data: JSON.stringify({
       attributes: [{ key: "real_estate_type", value: type, value_label: labels[type] }, ...(ad.rooms != null ? [{ key: "rooms", value: String(ad.rooms) }] : [])],
-      location: { city: ad.city ?? "Lille", lat: ad.lat ?? null, lng: ad.lng ?? null, type: ad.type ?? "city" },
+      location: { city: ad.city ?? "Lille", zipcode: ad.zipcode ?? null, lat: ad.lat ?? null, lng: ad.lng ?? null, type: ad.type ?? "city" },
     }),
   };
 }

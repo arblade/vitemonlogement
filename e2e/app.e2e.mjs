@@ -207,7 +207,7 @@ test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la 
       assert.equal(await page.locator("[data-testid=results-marker-2]").count(), 0, `${name} : la commune seule n'est pas un point`);
       assert.match(await text(page, "[data-testid=results-marker-1]"), /600|610|620|630/, name);
       assert.match(await text(page, "[data-testid=results-place-place-1]"), /Travail/, `${name} : le lieu de travail est repéré`);
-      assert.match(await text(page, "[data-testid=results-map-note]"), /2 logements sur la carte.*1 autre n’a qu’un quartier ou une commune/s, name);
+      assert.match(await text(page, "[data-testid=results-map-note]"), /2 logements sur la carte \(dont 1 d’après l’adresse citée dans la description\).*1 autre n’a qu’un quartier ou une commune/s, name);
       const viewport = page.viewportSize();
       const dialogBox = await page.locator("[data-testid=dialog-results-map]").boundingBox();
       const canvasBox = await page.locator("[data-testid=results-map-canvas]").boundingBox();
@@ -227,6 +227,7 @@ test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la 
       await page.waitForSelector("[data-testid=dialog-listing-3]");
       await page.waitForFunction(() => document.querySelector("[data-testid=dialog-results-map]") === null);
       assert.match(await text(page, "[data-testid=dialog-listing-3]"), /Studio lumineux proche métro 3/, name);
+      assert.match(await text(page, "[data-testid=map-precision-3]"), /Rue lue dans la description de l’annonce \(« situé rue Lavoisier, en plein cœur du quartier Vauban »\)/, `${name} : origine de la position dite dans la fiche`);
       await page.waitForSelector("[data-testid=dialog-listing-3] [data-testid=listing-map-canvas]");
       await page.click("[data-testid=button-close-listing-3]");
       await page.waitForSelector("[data-testid=dialog-results-map]");

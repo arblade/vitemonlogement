@@ -1,4 +1,6 @@
-import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
+import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, isPrecise, setAnalyzing, setFailure, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
+import { geocodeListingAddress } from "../../lib/geocode";
+import type { ListingAddress } from "../../lib/analysis-cache";
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
 import { first, getImages, number, object, text } from "./parse";
@@ -156,7 +158,8 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const images = getImages(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
   const image = images[0] ?? null;
   const features = otherApiFeatures(data, criteria);
-  const listing = { source: "leboncoin" as const, batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data) };
+  const postcode = text(first(object(locationData), ["zipcode", "zip_code", "postal_code"])).match(/^\d{5}$/)?.[0] ?? null;
+  const listing = { source: "leboncoin" as const, batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data), postcode };
   const criterionResults = evaluateStructured(criteria, listing, data);
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
@@ -176,6 +179,26 @@ export async function startSearch(criteria: Criteria) {
   // PAP et SeLoger en parallèle.
   const sourceRuns = await startExtraSources(criteria, chargeCap, timeout);
   return { runId, request, sourceRuns };
+}
+
+type Position = Pick<Listing, "lat" | "lng" | "geoPrecision" | "geoSource" | "geoEvidence">;
+
+/**
+ * Position enregistrée. Celle donnée par l'annonce si elle est précise (adresse ou rue). Sinon (agences : quartier ou
+ * commune), l'adresse que la description cite, géocodée par l'IGN ; à défaut, celle déjà retrouvée lors d'une
+ * recherche précédente ; à défaut, la zone donnée par l'annonce.
+ */
+async function positionOf(item: Omit<Listing, "id">, address: ListingAddress | null, previous: Listing | undefined): Promise<Position> {
+  const given: Position = { lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision, geoSource: null, geoEvidence: null };
+  if (isPrecise(item)) return given;
+  if (address && item.location) {
+    const found = await geocodeListingAddress(address, item.location, item.postcode ?? null);
+    if (found) return { lat: found.lat, lng: found.lng, geoPrecision: found.precision, geoSource: "description", geoEvidence: address.evidence };
+  }
+  if (previous?.geoSource === "description" && isPrecise(previous)) {
+    return { lat: previous.lat, lng: previous.lng, geoPrecision: previous.geoPrecision, geoSource: "description", geoEvidence: previous.geoEvidence ?? null };
+  }
+  return given;
 }
 
 const PENDING = new Set(["READY", "RUNNING", "TIMING-OUT", "ABORTING"]);
@@ -273,6 +296,7 @@ export async function syncSearch(id: number, criteria: Criteria) {
             const additions = observations?.features ?? item.features;
             const features = [...(previous?.features ?? []), ...additions.filter(feature =>
               !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
+            const position = await positionOf(item, observations?.address ?? null, previous);
             saved.push({
               source: item.source, batch: item.batch, title: item.title, url: item.url, description: item.description,
               price: observations?.price ?? item.price, area: observations?.area ?? item.area,
@@ -281,7 +305,7 @@ export async function syncSearch(id: number, criteria: Criteria) {
               aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
               features,
               criterionResults,
-              lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision,
+              ...position,
             });
           }
         }

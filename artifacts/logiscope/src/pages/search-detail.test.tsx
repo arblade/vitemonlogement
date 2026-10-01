@@ -447,6 +447,14 @@ describe('Page résultats : carte des logements', () => {
     expect(note).toHaveTextContent('3 autres n’ont qu’un quartier ou une commune');
   });
 
+  it('la remarque dit combien de logements sont placés d’après l’adresse citée dans leur description', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [placed[0], { ...placed[1], geoSource: 'description', geoEvidence: 'rue Lavoisier' }, placed[2]] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    expect(screen.getByTestId('results-map-note')).toHaveTextContent('2 logements sur la carte (dont 1 d’après l’adresse citée dans la description) : touchez un prix');
+  });
+
   it('un seul logement manquant : accords au singulier ; aucun manquant : pas de remarque', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [placed[0], placed[2]] });

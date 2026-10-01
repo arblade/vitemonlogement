@@ -345,6 +345,13 @@ components:
         geoPrecision:
           type: ["string", "null"]
           enum: [streetNumber, street, district, city, null]
+        geoSource:
+          description: "description = position found in the listing text (cited address, geocoded), not given by the site"
+          type: ["string", "null"]
+          enum: [description, null]
+        geoEvidence:
+          description: Exact sentence of the listing that cites the address (when geoSource is description)
+          type: ["string", "null"]
     HousingSearchDetail:
       allOf:
         - $ref: "#/components/schemas/HousingSearchSummary"

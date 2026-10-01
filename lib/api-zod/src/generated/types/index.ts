@@ -19,6 +19,7 @@ export * from './housingFeatureSource';
 export * from './housingListing';
 export * from './housingListingBatch';
 export * from './housingListingGeoPrecision';
+export * from './housingListingGeoSource';
 export * from './housingListingSource';
 export * from './housingPlace';
 export * from './housingPlaceKind';

@@ -57,6 +57,17 @@ const PRECISION_TEXT = {
   city: 'Commune seulement : le logement se trouve quelque part dans le cercle, parfois plus loin.',
 } as const;
 
+/** D'où vient la position : de l'annonce, ou d'une adresse que sa description cite (l'agence ne l'a pas donnée comme position). */
+export function precisionText(listing: Pick<HousingListing, 'geoPrecision' | 'geoSource' | 'geoEvidence'>) {
+  if (listing.geoSource === 'description') {
+    const quote = listing.geoEvidence ? ` (« ${listing.geoEvidence} »)` : '';
+    return listing.geoPrecision === 'streetNumber'
+      ? `Adresse lue dans la description de l’annonce${quote} : l’annonce ne l’indique pas comme position, vérifiez-la avec l’agence.`
+      : `Rue lue dans la description de l’annonce${quote} : le point est placé dans la rue, pas au numéro.`;
+  }
+  return PRECISION_TEXT[listing.geoPrecision as keyof typeof PRECISION_TEXT];
+}
+
 /**
  * Encart « Localisation » de la fiche. Adresse exacte ou rue : un point, et les trajets vers vos lieux (si le serveur a
  * une clé d'itinéraire). Quartier ou commune : un cercle et vos lieux, sans trajet ni distance (ils seraient faux).
@@ -81,7 +92,7 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
     <div className="mb-4 flex items-start justify-between gap-3">
       <div>
         <h2 id={`map-${listing.id}`} className="flex items-center gap-2 text-[20px] font-semibold tracking-[-.02em]"><MapPin size={18} className="text-brand" aria-hidden="true"/>Où se trouve le logement</h2>
-        <p data-testid={`map-precision-${listing.id}`} className="mt-1 text-xs text-stone">{PRECISION_TEXT[listing.geoPrecision as keyof typeof PRECISION_TEXT]}</p>
+        <p data-testid={`map-precision-${listing.id}`} className="mt-1 text-xs text-stone">{precisionText(listing)}</p>
       </div>
     </div>
     <div className="isolate h-[260px] overflow-hidden rounded-2xl border border-line bg-sage md:h-[340px]">

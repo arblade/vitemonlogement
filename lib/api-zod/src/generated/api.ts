@@ -209,7 +209,9 @@ export const CreateHousingSearchResponse = zod.object({
 })),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
+  "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -303,7 +305,9 @@ export const GetHousingSearchResponse = zod.object({
 })),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
+  "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -400,7 +404,9 @@ export const AnalyzeHousingSearchResponse = zod.object({
 })),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
+  "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -497,7 +503,9 @@ export const RefreshHousingSearchResponse = zod.object({
 })),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish()
+  "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
+  "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
