@@ -16,9 +16,11 @@ test("fatihtahta et clearpath, 6 mêmes annonces réelles : titre, loyer, surfac
   for (const reference of clearpath) {
     const record = fatih.find(item => item.url === reference.url);
     assert.ok(record, String(reference.url));
-    const mine = normalize(record, criteria)!;
-    const theirs = normalize(reference, criteria)!;
-    const core = (l: typeof mine) => ({
+    const mine = normalize(record, criteria);
+    const theirs = normalize(reference, criteria);
+    if (String(reference.subject).startsWith("Chambre")) { assert.equal(mine, null); assert.equal(theirs, null, "chambre seule : écartée par les deux acteurs"); continue; }
+    assert.ok(mine && theirs, String(reference.url));
+    const core = (l: NonNullable<typeof mine>) => ({
       title: l.title, price: l.price, area: l.area, rooms: l.rooms, location: l.location, lat: l.lat, lng: l.lng, geoPrecision: l.geoPrecision,
       images: l.images, description: l.description.replace(/\s+/g, " ").trim(), criteria: l.criterionResults.map(check => `${check.label}=${check.status}`),
       energy: l.features.filter(f => /énergie|GES/.test(f.label)).map(f => `${f.label}=${f.value}`),
@@ -29,8 +31,10 @@ test("fatihtahta et clearpath, 6 mêmes annonces réelles : titre, loyer, surfac
 });
 
 test("fatihtahta, 10 vraies annonces : toutes lues, en location, photos en grande taille", () => {
-  const listings = fatih.map(record => normalize(record, { ...criteria, wishes: [] }));
-  assert.ok(listings.every(listing => listing !== null));
+  const all = fatih.map(record => normalize(record, { ...criteria, wishes: [] }));
+  assert.equal(all.filter(listing => listing === null).length, 1, "seule la chambre seule est écartée");
+  assert.equal(String(fatih[all.findIndex(listing => listing === null)].title).startsWith("Chambre"), true);
+  const listings = all.filter(listing => listing !== null);
   assert.ok(listings.every(listing => listing!.images.every(image => image.includes("rule=ad-large"))));
   assert.ok(listings.every(listing => listing!.price! > 0 && listing!.lat != null));
 });

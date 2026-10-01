@@ -33,3 +33,25 @@ export function isSeekerAd({ adType, title, description }: { adType?: unknown; t
   if (OFFERS.test(`${title} ${head}`)) return false; // « à louer », « je loue » : c'est une offre, quoi que dise la suite
   return seeksHousing(title) || seeksHousing(head);
 }
+
+/**
+ * Colocation ou chambre seule : ce n'est pas un logement entier. Repéré sans IA par le titre (« Chambre meublée à louer »,
+ * « Colocation 4 chambres ») ou le texte (« Chambres dans un appartement… Colocation 4 chambres », « 2 colocataires »).
+ * Un logement entier où la colocation est seulement permise (« colocation acceptée », « idéal pour colocation »,
+ * « pas de colocation ») n'est pas écarté.
+ */
+const COLOC_OK = new RegExp(
+  `(?<![${L}])(?:pas|non|sans|ni|interdite?|refus\\w*)\\s+(?:de\\s+|d['’])?coloc\\w*` +
+  `|coloc\\w*\\s+(?:est\\s+|sont\\s+)?(?:non\\s+|pas\\s+)?(?:autoris|accept|possible|permis|bienvenue|envisageable|refus|interdit|exclu|déconseill|ok(?![${L}]))\\w*` +
+  `|(?:idéal\\w*|parfait\\w*|adapté\\w*|conven\\w*|propice\\w*)\\s+(?:à |pour |aux )?(?:une |la |de la |les |des )?(?:coloc\\w*|colocataires)`,
+  "gi",
+);
+const COLOC = new RegExp(`(?<![${L}])coloc(?:ation|ations|ataires?)?(?![${L}])`, "i");
+const ROOM_TITLE = new RegExp(`^\\s*(?:location\\s+(?:de\\s+)?)?(?:\\d+\\s+)?chambres?(?![${L}])|(?<![${L}])chambre\\s+(?:chez|dans|en)\\s+`, "i");
+const ROOM_IN_FLAT = new RegExp(`(?<![${L}])chambres?\\s+(?:meublées?\\s+)?(?:dans|au sein d['’]?)\\s+(?:un|une|le|la|l['’])\\s*(?:grand\\s+|petit\\s+)?(?:appartement|maison|logement|colocation|villa)`, "i");
+
+export function isColocationAd({ title, description }: { title: string; description: string }): boolean {
+  if (ROOM_TITLE.test(title)) return true;
+  const text = `${title} \n${description}`.replace(COLOC_OK, " ");
+  return COLOC.test(text) || ROOM_IN_FLAT.test(text);
+}

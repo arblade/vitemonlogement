@@ -14,7 +14,8 @@ const ad = (n: number, title: string, extra: Partial<Parameters<typeof fatihReco
 });
 const dataset = [
   ad(1, "Parking 10 m² Lille", { realEstateType: "4", rooms: undefined, price: 51 }),
-  ad(2, "Chambre avec SDB privée - Coliving - Lille Centre"),
+  // Ambiguë pour le filtre gratuit (ni « chambre » ni « colocation » dans le titre) : seule l'analyse IA l'écarte.
+  ad(2, "Studio privatif en résidence Coliving - Lille Centre"),
   ad(3, "Appartement T2 Gambetta"),
   // Vente glissée dans les résultats : écartée par deal_type, même avec une URL de location.
   ad(4, "Appartement T2 à vendre Lille", { dealType: "sale" }),
@@ -54,7 +55,7 @@ before(async () => {
             id: item.id, checks: [],
             ...(item.wantGeneral ? {
               summary: "Logement.", summaryEvidence: [item.title], features: [],
-              ...(item.title.includes("Coliving") ? { offer: "room", offerEvidence: "Chambre avec SDB privée - Coliving" }
+              ...(item.title.includes("Coliving") ? { offer: "room", offerEvidence: "Studio privatif en résidence Coliving" }
                 // Citation inventée : absente du texte, elle ne suffit pas à écarter l'annonce.
                 : item.title.includes("Wazemmes") ? { offer: "room", offerEvidence: "chambre dans un appartement partagé" }
                 : { offer: "entire", offerEvidence: "" }),
@@ -118,15 +119,16 @@ test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demand
   assert.equal(analyzeCalls, 2);
 });
 
-test("59 vraies annonces Le Bon Coin (Lille, Rennes, Quimper) : exactement les 11 parkings écartés à la lecture, rien d'autre", async () => {
+test("59 vraies annonces Le Bon Coin (Lille, Rennes, Quimper) : les 11 parkings et l'unique chambre en coliving écartés à la lecture, rien d'autre", async () => {
   const { readFileSync } = await import("node:fs");
   const { normalize } = await import("./apify");
   const sample = JSON.parse(readFileSync(new URL("../../test/leboncoin-types.json", import.meta.url), "utf8")) as { subject: string; real_estate_type: string }[];
   const criteria = { location: "Lille", intent: "rent" as const, keywords: "", radius: 5 };
   const dropped = sample.filter(item => !normalize(item, criteria));
   assert.equal(sample.length, 59);
-  assert.equal(dropped.length, 11);
-  assert.ok(dropped.every(item => item.real_estate_type === "Parking"), dropped.map(item => item.subject).join(", "));
+  assert.equal(dropped.length, 12);
+  assert.equal(dropped.filter(item => item.real_estate_type === "Parking").length, 11);
+  assert.deepEqual(dropped.filter(item => item.real_estate_type !== "Parking").map(item => item.subject), ["Chambre avec SDB privée - Coliving - Lille Centre"]);
 });
 
 test("validOffer : « chambre » ou « non habitable » seulement avec une citation présente dans l'annonce ; roomRange", async () => {

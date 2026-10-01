@@ -8,7 +8,7 @@ import { apify, apifyText } from "./apify-client";
 import { checksFor, evaluateStructured } from "./criteria";
 import type { ActorRequest, SearchBatch } from "./housing-search";
 import { getImages, number, object, text } from "./parse";
-import { isSeekerAd } from "./offer";
+import { isColocationAd, isSeekerAd } from "./offer";
 import type { Criteria, Feature, GeoPrecision, Listing } from "./store";
 
 /**
@@ -271,7 +271,7 @@ export function normalizeSeloger(raw: unknown, batch: SearchBatch): { listing: N
 /** Annonce d'une source secondaire → Listing, avec les critères vérifiables sans IA ; null si à écarter. */
 export function normalizeExtra(source: ExtraSource, raw: unknown, criteria: Criteria, batch: SearchBatch, score: (item: Normalized) => number): Omit<Listing, "id"> | null {
   const read = source === "pap" ? normalizePap(raw, batch) : normalizeSeloger(raw, batch);
-  if (!read || isSeekerAd({ title: read.listing.title, description: read.listing.description })) return null;
+  if (!read || isSeekerAd({ title: read.listing.title, description: read.listing.description }) || isColocationAd(read.listing)) return null;
   const requested = new Set(checksFor(criteria).map(check => check.apiField));
   const fieldOf: Record<string, string> = { "Meublé": "furnished", "Ascenseur": "elevator", "Stationnement": "parking" };
   const listing = { ...read.listing, features: read.listing.features.filter(feature => !requested.has(fieldOf[feature.label] as never)) };

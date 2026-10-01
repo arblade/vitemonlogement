@@ -8,7 +8,7 @@ import { apify } from "./apify-client";
 import { interleave, normalizeExtra, startExtraSources, type SourceRun } from "./sources";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
 import { actorRequest, isHousingListingUrl, type SearchBatch } from "./housing-search";
-import { isSeekerAd } from "./offer";
+import { isColocationAd, isSeekerAd } from "./offer";
 
 // Limites par appel Apify, identiques en développement et en production (protège le budget Apify).
 // Modifiables par variables d'environnement : APIFY_RESULT_LIMIT (annonces conservées, défaut 5),
@@ -153,6 +153,8 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const description = text(first(data, ["description", "body", "text", "content"])).slice(0, 10000);
   // Une demande (« Recherche appartement T2 ») publiée dans Locations n'est pas un logement à louer.
   if (isSeekerAd({ adType: data.ad_type, title, description })) return null;
+  // Colocation ou chambre seule : pas un logement entier (voir offer.ts ; l'IA tranche ensuite les cas ambigus).
+  if (isColocationAd({ title, description })) return null;
   const attrs = object(first(data, ["attributes", "details", "criteria"]));
   const price = number(first(data, ["price_euros", "price", "price_value", "priceValue"]));
   const area = number(first(data, ["square", "surface", "area", "livingArea", "squareMeters"])) ?? number(first(attrs, ["surface", "area", "livingArea"]));

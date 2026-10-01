@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { fatihRecord } from "../../test/fatih";
 import { fromFatihRecord, normalize } from "./apify";
-import { isSeekerAd } from "./offer";
+import { isColocationAd, isSeekerAd } from "./offer";
 import type { Criteria } from "./store";
 
 const criteria = { location: "Lille", intent: "rent", wishes: [], checks: [], places: [] } as unknown as Criteria;
@@ -73,7 +73,55 @@ test("annonces réelles : aucune offre n'est écartée à tort (Le Bon Coin, deu
     for (const record of sample(name)) {
       const read = normalize(record, criteria);
       const title = String(record.title ?? record.subject);
-      assert.ok(read, `${name} : « ${title} » doit rester`);
+      if (title.startsWith("Chambre meublée à louer")) assert.equal(read, null, "la chambre seule est écartée (colocation / chambre)");
+      else assert.ok(read, `${name} : « ${title} » doit rester`);
     }
   }
+});
+
+const coloc = (title: string, description = "Logement lumineux, proche métro.") => isColocationAd({ title, description });
+
+test("colocation : titres de colocation ou de chambre seule écartés", () => {
+  for (const title of [
+    "Colocation 4 chambres Lille", "Chambre meublée à louer, avec WC et Douche", "Chambre en colocation, cherche étudiant(e)", "T3 en colocation",
+    "Coloc étudiante Vauban", "Chambre chez l'habitant", "Chambres à louer - résidence étudiante", "2 chambres disponibles en colocation", "Location chambre meublée Lille",
+  ]) assert.equal(coloc(title), true, title);
+});
+
+test("colocation : repérée dans le texte quand le titre ne dit rien (annonces PAP : titre = ville)", () => {
+  assert.equal(coloc("Loos (59120)", "Chambres dans un appartement de 80m2 - Colocation 4 chambres - Rue du Maréchal Foch à Loos"), true);
+  assert.equal(coloc("Loos", "Quatre chambres sont disponibles dans une colocation meublée de 4 chambres."), true);
+  assert.equal(coloc("Roubaix", "Colocation dans maison d'environ 120 m², entièrement équipée."), true);
+  assert.equal(coloc("Lille", "Cuisine et salon partagés avec 2 colocataires, ambiance conviviale."), true);
+  assert.equal(coloc("Lille", "Belle chambre dans un appartement de 90 m², libre de suite."), true);
+});
+
+test("colocation : un logement entier n'est jamais écarté, même si la colocation y est permise ou le mot « chambre » présent", () => {
+  for (const [title, description] of [
+    ["Appartement 2 chambres", "Séjour, cuisine équipée, 2 chambres, salle de bain."],
+    ["T2 Lille Fives", "Appartement meublé avec 1 chambre en mezzanine et cuisine équipée ouverte."],
+    ["T3 Vauban", "Colocation acceptée. Loyer 900 €, charges comprises."],
+    ["T3 Vauban", "Colocation autorisée, bail solidaire possible."],
+    ["T4 Lille", "Idéal pour une colocation : 3 chambres, 2 salles d'eau."],
+    ["T4 Lille", "Appartement parfait pour colocation, proche des écoles."],
+    ["Studio Lille", "Pas de colocation. Fumeurs non acceptés."],
+    ["Studio Lille", "Colocation non autorisée."],
+    ["Appartement 1 pièce", "Parties communes de l'immeuble entretenues, local vélos."],
+    ["Appartement t2", "Cet appartement comprend 1 chambre, une cuisine équipée et un séjour."],
+  ]) assert.equal(coloc(title, description), false, `${title} | ${description}`);
+});
+
+test("colocations : annonces réelles — les chambres et colocations sont écartées, les logements entiers restent", () => {
+  const expected: Record<string, number> = { "leboncoin-fatih-sample.json": 1, "leboncoin-clearpath-sample.json": 1, "seloger-sample.json": 4, "pap-sample.json": 2 };
+  for (const [name, count] of Object.entries(expected)) {
+    const dropped = sample(name).filter(record => isColocationAd({ title: String(record.title ?? record.subject ?? ""), description: String(record.description ?? record.body ?? "") }));
+    assert.equal(dropped.length, count, `${name} : ${dropped.map(record => record.title ?? record.subject).join(" ; ")}`);
+  }
+});
+
+test("colocation : écartée aussi à l'entrée du pipeline (Le Bon Coin, SeLoger, PAP), sans appeler l'IA", () => {
+  const ad = { url: "https://www.leboncoin.fr/ad/locations/9002", title: "Chambre meublée à louer", description: "Je loue cette chambre de 12 m².", price: 400, area: 12, rooms: 1 };
+  assert.equal(normalize(fatihRecord(ad), criteria), null, "chambre Le Bon Coin");
+  assert.equal(normalize(fatihRecord({ ...ad, title: "T2 Lille", description: "Colocation 3 chambres dans un grand appartement." }), criteria), null, "colocation dans la description");
+  assert.ok(normalize(fatihRecord({ ...ad, title: "T2 Lille", description: "T2 lumineux de 40 m². Colocation acceptée." }), criteria), "logement entier, colocation permise : gardé");
 });
