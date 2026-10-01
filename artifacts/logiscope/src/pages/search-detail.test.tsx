@@ -487,6 +487,60 @@ describe('Page résultats : fiche détaillée', () => {
   });
 });
 
+describe('Page résultats : chargement progressif', () => {
+  const many = (n: number) => search({ count: n, listings: Array.from({ length: n }, (_, i) => listing(i + 1, { score: 99 - i })) });
+  const cards = () => screen.getAllByTestId(/^card-listing-\d+$/).length;
+
+  it('5 annonces d’abord ; en bas, l’indicateur rose puis les 5 suivantes, jusqu’à la dernière', async () => {
+    const user = userEvent.setup();
+    api.state.data = many(12);
+    renderPage();
+    expect(cards()).toBe(5);
+    expect(screen.getByTestId('text-listing-count')).toHaveTextContent('12 annonces');
+    await user.click(screen.getByTestId('button-load-more'));
+    expect(screen.getByTestId('results-loader')).toHaveTextContent('Chargement des annonces suivantes');
+    expect(screen.getByTestId('results-loader').querySelector('.spin-arc')?.className).toContain('border-t-brand');
+    await waitFor(() => expect(cards()).toBe(10));
+    expect(screen.getByTestId('button-load-more')).toHaveTextContent('Afficher 2 annonces de plus');
+    await user.click(screen.getByTestId('button-load-more'));
+    await waitFor(() => expect(cards()).toBe(12));
+    expect(screen.queryByTestId('results-load-more')).not.toBeInTheDocument();
+  });
+
+  it('le bas de liste qui devient visible déclenche le chargement, sans clic', async () => {
+    let trigger: (visible: boolean) => void = () => {};
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) { trigger = visible => callback([{ isIntersecting: visible }]); }
+      observe() {} disconnect() {}
+    });
+    try {
+      api.state.data = many(8);
+      renderPage();
+      expect(cards()).toBe(5);
+      trigger(true);
+      await waitFor(() => expect(cards()).toBe(8));
+    } finally { vi.unstubAllGlobals(); }
+  });
+
+  it('peu d’annonces : ni indicateur ni bouton', () => {
+    api.state.data = many(4);
+    renderPage();
+    expect(cards()).toBe(4);
+    expect(screen.queryByTestId('results-load-more')).not.toBeInTheDocument();
+  });
+
+  it('une annonce pas encore affichée choisie sur la carte apparaît dans la liste et sa fiche s’ouvre', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ count: 12, listings: Array.from({ length: 12 }, (_, i) => listing(i + 1, { score: 99 - i, lat: 50.63 + i / 1000, lng: 3.06, geoPrecision: 'streetNumber' })) });
+    renderPage();
+    expect(screen.queryByTestId('card-listing-12')).not.toBeInTheDocument();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    await user.click(await screen.findByTestId('results-marker-12'));
+    expect(await screen.findByTestId('dialog-listing-12')).toBeInTheDocument();
+    expect(screen.getByTestId('card-listing-12')).toBeInTheDocument();
+  });
+});
+
 describe('Page résultats : autres états', () => {
   it('recherche en cours : progression, pas de liste finale', () => {
     api.state.data = search({ status: 'running', stage: 'searching', listings: [], count: 0 });

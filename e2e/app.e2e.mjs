@@ -235,6 +235,42 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
   }
 });
 
+test("chargement progressif (mobile puis desktop) : 5 annonces, puis en faisant défiler l'indicateur rose et les 5 suivantes", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      // 12 annonces pour ce test seulement : on complète la vraie réponse de l'API avec des copies de la première.
+      await page.route(/\/api\/housing\/searches\/1$/, async route => {
+        const data = await (await route.fetch()).json();
+        const extra = Array.from({ length: 9 }, (_, i) => ({ ...data.listings[0], id: 100 + i, title: `Studio copie ${i + 1}`, url: `https://www.leboncoin.fr/ad/locations/80${i}`, score: 10 - i }));
+        await route.fulfill({ json: { ...data, count: 12, listings: [...data.listings, ...extra] } });
+      });
+      await page.goto(`${base}/searches/1`);
+      await page.waitForSelector("[data-testid^=card-listing-]");
+      const cards = () => page.locator("[data-testid^=card-listing-]").count();
+      assert.equal(await cards(), 5, name);
+      await page.locator("[data-testid=results-load-more]").scrollIntoViewIfNeeded();
+      await page.waitForSelector("[data-testid=results-loader]");
+      assert.match(await text(page, "[data-testid=results-loader]"), /Chargement des annonces suivantes/, name);
+      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 10);
+      await page.locator("[data-testid=results-load-more]").scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 12);
+      assert.equal(await page.locator("[data-testid=results-load-more]").count(), 0, `${name} : plus rien à charger`);
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
 test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la rue sont placés, un clic ouvre la fiche et la fermeture ramène à la carte", async () => {
   const wide = await newContext("desktop");
   try {

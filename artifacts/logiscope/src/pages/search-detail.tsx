@@ -37,6 +37,33 @@ const checkGroups = [
   { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
+const PAGE_SIZE = 5; // annonces affichées d'un coup ; les suivantes arrivent en faisant défiler
+
+/** Bas de liste : dès qu'il devient visible, un indicateur rose tourne puis les 5 annonces suivantes s'affichent.
+ * Le bouton reste là pour le clavier et les navigateurs sans IntersectionObserver. */
+function LoadMore({ remaining, onLoad }: { remaining: number; onLoad: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const load = useRef(() => {});
+  load.current = () => {
+    if (loading) return;
+    setLoading(true);
+    window.setTimeout(() => { onLoad(); setLoading(false); }, 450); // le temps de voir l'indicateur, sans attendre
+  };
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) load.current(); }, { rootMargin: '120px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [remaining]);
+  return <div ref={ref} data-testid="results-load-more" className="flex flex-col items-center gap-3 py-6">
+    {loading
+      ? <span role="status" data-testid="results-loader" className="flex flex-col items-center gap-2 text-xs text-stone"><span aria-hidden="true" className="spin-arc size-8 rounded-full border-[3px] border-[#ffe3e8] border-t-brand"/>Chargement des annonces suivantes…</span>
+      : <button type="button" data-testid="button-load-more" onClick={() => load.current()} className="inline-flex h-10 items-center rounded-lg border border-[#dddddd] bg-white px-4 text-xs font-semibold transition-colors hover:border-ink">Afficher {Math.min(PAGE_SIZE, remaining)} annonce{Math.min(PAGE_SIZE, remaining) > 1 ? 's' : ''} de plus</button>}
+  </div>;
+}
+
 const CARD_CHIPS = 6;
 const STATUS_TEXT = { confirmed: 'satisfait', contradicted: 'non satisfait', unknown: 'non précisé' } as const;
 
@@ -119,6 +146,7 @@ export default function SearchDetail() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState(false);
+  const [shown, setShown] = useState(PAGE_SIZE);
   const [fromMap, setFromMap] = useState(false);
   const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
   const interactions = useListingInteractions();
@@ -142,6 +170,9 @@ export default function SearchDetail() {
   const pickOnMap = (listingId: number) => {
     const picked = listings.find(item => item.id === listingId);
     if (!picked) return;
+    // Annonce pas encore affichée dans la liste (plus bas) : on l'affiche, sinon sa fiche ne peut pas s'ouvrir.
+    const at = listings.indexOf(picked);
+    setShown(count => Math.max(count, Math.ceil((at + 1) / PAGE_SIZE) * PAGE_SIZE));
     if (!markListingViewed(picked.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.');
     setMapOpen(false);
     setFromMap(true);
@@ -153,12 +184,13 @@ export default function SearchDetail() {
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
     <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
     <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
-    <div className="space-y-5">{listings.map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} open={openId === listing.id} setOpen={value => setFiche(listing.id, value)} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
+    <div className="space-y-5">{listings.slice(0, shown).map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} open={openId === listing.id} setOpen={value => setFiche(listing.id, value)} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
       liked={Boolean(interactions.favorites[listingKey(listing.url)])} viewed={viewedUrls.has(listingKey(listing.url))}
       onSelect={()=>toggle(listing.id)}
       onViewed={()=>{ if (!markListingViewed(listing.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }}
       onFavorite={()=>{ void favoriteActions.toggle(listing, id).then(ok => setInteractionError(ok ? '' : 'Impossible d’enregistrer vos favoris pour le moment. Réessayez.')); }}
     />)}</div>
+    {shown < listings.length && <LoadMore remaining={listings.length - shown} onLoad={() => setShown(count => count + PAGE_SIZE)}/>}
   </section>;
   const onRelaunch = async (prompt: string) => {
     if (create.isPending) return;
