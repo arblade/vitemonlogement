@@ -59,3 +59,14 @@ Effort estimé : ≈ ½ journée (fiche + tests front et e2e), en réutilisant `
 Sources : pages d'annonce Airbnb (« Ce que propose ce logement », liste complète des équipements),
 [analyse du design system Airbnb](https://getdesign.md/design-md/airbnb/preview.html),
 [exemples Baymard : listes Airbnb](https://baymard.com/ecommerce-design-examples/37-product-list-category/11330-airbnb).
+
+### Maquette v2 (après retour du 01/10) — `maquettes/maquette-fiche-v2-mobile.png`, `-desktop.png`
+- **Plus de gros titres** (« Vos critères », « Ce que propose ce logement ») ni de « 2 sur 3 satisfaits ».
+- **Critères en badges**, comme sur la carte, en plus grand avec la preuve dessous : vert satisfait, rouge non
+  satisfait, gris en pointillés non précisé.
+- **3 points forts à la Airbnb** : grande icône sur fond coloré, titre, citation de l'annonce en italique (les
+  caractéristiques lues dans la description par l'IA, hors critères déjà montrés).
+- **Le reste dans un panneau** : icônes dans des pastilles de couleur douce (jaune, rose, bleu, violet), 1 colonne
+  mobile, 2 desktop ; ce qui manque, barré en gris, à la fin.
+- **DPE et GES** sur l'échelle officielle A→G en couleurs, la lettre du logement agrandie. Seule exception à la
+  règle « vert réservé aux critères » : c'est le code couleur que tout le monde reconnaît.
