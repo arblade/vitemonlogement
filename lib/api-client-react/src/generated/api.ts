@@ -20,13 +20,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AnalysisRequest,
   HealthStatus,
   HousingCriteria,
   HousingPrompt,
   HousingSearchDetail,
   HousingSearchInput,
   HousingSearchSummary,
-  ListingRoutes
+  ListingRoutes,
+  WatchInput,
+  WatchStatus
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -448,16 +451,31 @@ export const getAnalyzeHousingSearchUrl = (id: number,) => {
 }
 
 /**
- * @summary Enrich a completed search with AI text-based observations
+ * @summary Ask the AI analysis of listings now displayed (and the next ones), done in the background
  */
-export const analyzeHousingSearch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchDetail> => {
+export const analyzeHousingSearch = async (id: number,
+    analysisRequest: AnalysisRequest, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchDetail> => {
 
-  return customFetch<HousingSearchDetail>(getAnalyzeHousingSearchUrl(id),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<HousingSearchDetail>(getAnalyzeHousingSearchUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(analysisRequest)
   }
 );}
 
@@ -482,9 +500,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeHousingSearch>>, AnalyzeHousingSearchMutationVariables> = (props) => {
-          const {id} = props ?? {};
+          const {id,data} = props ?? {};
 
-          return  analyzeHousingSearch(id,requestOptions)
+          return  analyzeHousingSearch(id,data,requestOptions)
         }
 
 
@@ -495,12 +513,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AnalyzeHousingSearchMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeHousingSearch>>>
-
+    export type AnalyzeHousingSearchMutationBody = BodyType<AnalysisRequest>
     export type AnalyzeHousingSearchMutationError = ErrorType<unknown>
-    export type AnalyzeHousingSearchMutationVariables = {id: number}
+    export type AnalyzeHousingSearchMutationVariables = {id: number;data: BodyType<AnalysisRequest>}
 
     /**
- * @summary Enrich a completed search with AI text-based observations
+ * @summary Ask the AI analysis of listings now displayed (and the next ones), done in the background
  */
 export const useAnalyzeHousingSearch = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeHousingSearch>>, TError,AnalyzeHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -522,7 +540,7 @@ export const getRefreshHousingSearchUrl = (id: number,) => {
 }
 
 /**
- * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ * @summary Read the next, older page of ads (« Étendre »), merged without duplicates
  */
 export const refreshHousingSearch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchDetail> => {
 
@@ -574,7 +592,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type RefreshHousingSearchMutationVariables = {id: number}
 
     /**
- * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ * @summary Read the next, older page of ads (« Étendre »), merged without duplicates
  */
 export const useRefreshHousingSearch = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refreshHousingSearch>>, TError,RefreshHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -586,6 +604,320 @@ export const useRefreshHousingSearch = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getRefreshHousingSearchMutationOptions(options));
     }
+
+export const getWatchHousingSearchUrl = (id: number,) => {
+
+
+
+
+  return `/api/housing/searches/${id}/watch`
+}
+
+/**
+ * @summary Follow this search (one per account, replaces the previous one) at the given Paris times
+ */
+export const watchHousingSearch = async (id: number,
+    watchInput: WatchInput, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchSummary> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<HousingSearchSummary>(getWatchHousingSearchUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(watchInput)
+  }
+);}
+
+
+
+
+
+export const getWatchHousingSearchMutationKey = () => ['watchHousingSearch'] as const;
+
+export const getWatchHousingSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof watchHousingSearch>>, TError,WatchHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof watchHousingSearch>>, TError,WatchHousingSearchMutationVariables, TContext> => {
+
+const mutationKey = getWatchHousingSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof watchHousingSearch>>, WatchHousingSearchMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  watchHousingSearch(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WatchHousingSearchMutationResult = NonNullable<Awaited<ReturnType<typeof watchHousingSearch>>>
+    export type WatchHousingSearchMutationBody = BodyType<WatchInput>
+    export type WatchHousingSearchMutationError = ErrorType<unknown>
+    export type WatchHousingSearchMutationVariables = {id: number;data: BodyType<WatchInput>}
+
+    /**
+ * @summary Follow this search (one per account, replaces the previous one) at the given Paris times
+ */
+export const useWatchHousingSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof watchHousingSearch>>, TError,WatchHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof watchHousingSearch>>,
+        TError,
+        WatchHousingSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getWatchHousingSearchMutationOptions(options));
+    }
+
+export const getUnwatchHousingSearchUrl = (id: number,) => {
+
+
+
+
+  return `/api/housing/searches/${id}/watch`
+}
+
+/**
+ * @summary Stop following this search
+ */
+export const unwatchHousingSearch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<HousingSearchSummary> => {
+
+  return customFetch<HousingSearchSummary>(getUnwatchHousingSearchUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnwatchHousingSearchMutationKey = () => ['unwatchHousingSearch'] as const;
+
+export const getUnwatchHousingSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unwatchHousingSearch>>, TError,UnwatchHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unwatchHousingSearch>>, TError,UnwatchHousingSearchMutationVariables, TContext> => {
+
+const mutationKey = getUnwatchHousingSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unwatchHousingSearch>>, UnwatchHousingSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  unwatchHousingSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnwatchHousingSearchMutationResult = NonNullable<Awaited<ReturnType<typeof unwatchHousingSearch>>>
+
+    export type UnwatchHousingSearchMutationError = ErrorType<unknown>
+    export type UnwatchHousingSearchMutationVariables = {id: number}
+
+    /**
+ * @summary Stop following this search
+ */
+export const useUnwatchHousingSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unwatchHousingSearch>>, TError,UnwatchHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unwatchHousingSearch>>,
+        TError,
+        UnwatchHousingSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUnwatchHousingSearchMutationOptions(options));
+    }
+
+export const getVisitHousingSearchUrl = (id: number,) => {
+
+
+
+
+  return `/api/housing/searches/${id}/visit`
+}
+
+/**
+ * @summary The owner opened the search; its new listings now count as seen
+ */
+export const visitHousingSearch = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getVisitHousingSearchUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getVisitHousingSearchMutationKey = () => ['visitHousingSearch'] as const;
+
+export const getVisitHousingSearchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof visitHousingSearch>>, TError,VisitHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof visitHousingSearch>>, TError,VisitHousingSearchMutationVariables, TContext> => {
+
+const mutationKey = getVisitHousingSearchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof visitHousingSearch>>, VisitHousingSearchMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  visitHousingSearch(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VisitHousingSearchMutationResult = NonNullable<Awaited<ReturnType<typeof visitHousingSearch>>>
+
+    export type VisitHousingSearchMutationError = ErrorType<unknown>
+    export type VisitHousingSearchMutationVariables = {id: number}
+
+    /**
+ * @summary The owner opened the search; its new listings now count as seen
+ */
+export const useVisitHousingSearch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof visitHousingSearch>>, TError,VisitHousingSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof visitHousingSearch>>,
+        TError,
+        VisitHousingSearchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getVisitHousingSearchMutationOptions(options));
+    }
+
+export const getGetWatchedSearchUrl = () => {
+
+
+
+
+  return `/api/housing/watch`
+}
+
+/**
+ * @summary The followed search of the account (badges of the site)
+ */
+export const getWatchedSearch = async ( options?: Parameters<typeof customFetch>[1]): Promise<WatchStatus> => {
+
+  return customFetch<WatchStatus>(getGetWatchedSearchUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWatchedSearchQueryKey = () => {
+    return [
+    `/api/housing/watch`
+    ] as const;
+    }
+
+
+export const getGetWatchedSearchQueryOptions = <TData = Awaited<ReturnType<typeof getWatchedSearch>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWatchedSearch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWatchedSearchQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWatchedSearch>>> = ({ signal }) => getWatchedSearch({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWatchedSearch>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWatchedSearchQueryResult = NonNullable<Awaited<ReturnType<typeof getWatchedSearch>>>
+export type GetWatchedSearchQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary The followed search of the account (badges of the site)
+ */
+
+export function useGetWatchedSearch<TData = Awaited<ReturnType<typeof getWatchedSearch>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWatchedSearch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWatchedSearchQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetListingRoutesUrl = (id: number,
     listingId: number,) => {

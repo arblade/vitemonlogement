@@ -3,6 +3,7 @@ import { useListHousingSearches, getListHousingSearchesQueryKey } from '@workspa
 import { ArrowRight, Check, ChevronRight, Search, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorNotice, formatDate } from '@/components/site-shell';
+import { WatchedSearchCard } from '@/components/watched-search';
 
 export default function Searches() {
   const history = useListHousingSearches({
@@ -11,6 +12,9 @@ export default function Searches() {
       refetchInterval: query => query.state.data?.some(item => item.status === 'running') ? 4000 : false,
     },
   });
+
+  const watched = history.data?.find(item => item.watch) ?? null;
+  const oneOff = history.data?.filter(item => item !== watched) ?? [];
 
   return <main className="min-h-[75dvh] text-ink">
     <section className="border-b border-line bg-sage">
@@ -31,9 +35,10 @@ export default function Searches() {
     </section>
 
     <section aria-label="Historique des recherches" className="mx-auto max-w-[1440px] px-5 pb-20 pt-10 md:px-10 md:pb-28 md:pt-14 lg:px-16">
+      {watched && <div className="mb-10" aria-label="Recherche suivie"><WatchedSearchCard search={watched}/></div>}
       <div className="mb-6 flex items-center justify-between gap-4 border-b border-line pb-4">
-        <span className="font-data text-xs uppercase tracking-[.16em] text-stone">Historique</span>
-        {!history.isLoading && !history.isError && !!history.data?.length && <span data-testid="text-search-count" className="font-data text-xs uppercase tracking-[.12em] text-stone">{history.data.length} recherche{history.data.length > 1 ? 's' : ''}</span>}
+        <span className="font-data text-xs uppercase tracking-[.16em] text-stone">{watched ? 'Recherches ponctuelles' : 'Historique'}</span>
+        {!history.isLoading && !history.isError && oneOff.length > 0 && <span data-testid="text-search-count" className="font-data text-xs uppercase tracking-[.12em] text-stone">{oneOff.length} recherche{oneOff.length > 1 ? 's' : ''}</span>}
       </div>
 
       {history.isLoading ? <div data-testid="status-searches-loading" role="status" aria-label="Chargement de vos recherches" className="space-y-2">
@@ -45,7 +50,7 @@ export default function Searches() {
         <p className="mt-2 max-w-md text-sm leading-relaxed text-[#717171]">Décrivez le logement que vous cherchez. Vos recherches et leurs résultats apparaîtront ici.</p>
         <Link href="/" data-testid="link-first-search" className="group mt-6 inline-flex items-center gap-2 text-sm font-bold underline underline-offset-4">Lancer ma première recherche <ArrowRight size={15} aria-hidden="true" className="transition-transform group-hover:translate-x-1"/></Link>
       </div> : <div className="divide-y divide-line border-b border-line">
-        {history.data.map(item => <Link key={item.id} href={`/searches/${item.id}`} data-testid={`link-search-${item.id}`} aria-label={`Voir la recherche ${item.criteria?.location || item.prompt}`} className="group grid gap-3 py-6 transition-colors hover:bg-mist focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff385c] md:grid-cols-[125px_minmax(0,1fr)_160px_24px] md:items-center md:gap-7 md:px-4">
+        {oneOff.map(item => <Link key={item.id} href={`/searches/${item.id}`} data-testid={`link-search-${item.id}`} aria-label={`Voir la recherche ${item.criteria?.location || item.prompt}`} className="group grid gap-3 py-6 transition-colors hover:bg-mist focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ff385c] md:grid-cols-[125px_minmax(0,1fr)_160px_24px] md:items-center md:gap-7 md:px-4">
           <span className="font-data text-xs text-[#717171]">{formatDate(item.createdAt)}</span>
           <span className="min-w-0">
             <strong data-testid={`text-search-title-${item.id}`} className="block truncate text-[17px] font-semibold tracking-tight">{item.criteria?.location || item.prompt}</strong>

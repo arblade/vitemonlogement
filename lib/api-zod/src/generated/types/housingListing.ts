@@ -53,4 +53,21 @@ export interface HousingListing {
      * @nullable
      */
   geoEvidence?: string | null;
+  /**
+     * Publication on the site (ISO)
+     * @nullable
+     */
+  postedAt?: string | null;
+  /**
+     * Last update on the site, moves when the ad is bumped (ISO)
+     * @nullable
+     */
+  refreshedAt?: string | null;
+  /**
+     * First read for this search (ISO)
+     * @nullable
+     */
+  firstSeenAt?: string | null;
+  /** false while the AI analysis is still to be done (done when the listing is displayed) */
+  analyzed: boolean;
 }

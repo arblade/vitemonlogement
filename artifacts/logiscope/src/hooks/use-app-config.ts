@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
-type AppConfig = { resultsPerCall: number };
+type AppConfig = { liveDays: number };
 
-// Limite de résultats par appel, telle que configurée sur le serveur (APIFY_RESULT_LIMIT).
+// Réglages du serveur utiles à l'affichage : la recherche en direct couvre `liveDays` jours (LIVE_SEARCH_DAYS).
 export function useAppConfig() {
   return useQuery({
     queryKey: ['app-config'],

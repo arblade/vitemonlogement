@@ -162,6 +162,21 @@ export interface HousingSearchInput {
   prompt: string;
 }
 
+export interface AnalysisRequest {
+  /** @maxItems 50 */
+  listingIds: number[];
+}
+
+export interface WatchInput {
+  /**
+     * Paris times, « HH:MM »
+     * @minItems 1
+     * @maxItems 2
+     * @items.pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$
+     */
+  times: string[];
+}
+
 export type HousingSearchSummaryStatus = typeof HousingSearchSummaryStatus[keyof typeof HousingSearchSummaryStatus];
 
 
@@ -214,6 +229,31 @@ export interface HousingSearchRequest {
   input: string;
 }
 
+/**
+ * Background work on a completed search
+ * @nullable
+ */
+export type HousingSearchSummaryTask = typeof HousingSearchSummaryTask[keyof typeof HousingSearchSummaryTask] | null;
+
+
+export const HousingSearchSummaryTask = {
+  watch: 'watch',
+  extend: 'extend',
+  analyze: 'analyze',
+} as const;
+
+/**
+ * Followed search (« active »), paused for lack of visits (« paused »), or not followed
+ * @nullable
+ */
+export type HousingSearchSummaryWatch = typeof HousingSearchSummaryWatch[keyof typeof HousingSearchSummaryWatch] | null;
+
+
+export const HousingSearchSummaryWatch = {
+  active: 'active',
+  paused: 'paused',
+} as const;
+
 export interface HousingSearchSummary {
   id: number;
   prompt: string;
@@ -229,6 +269,27 @@ export interface HousingSearchSummary {
   analyzed: boolean;
   /** @nullable */
   error?: string | null;
+  /**
+     * Background work on a completed search
+     * @nullable
+     */
+  task: HousingSearchSummaryTask;
+  /**
+     * Followed search (« active »), paused for lack of visits (« paused »), or not followed
+     * @nullable
+     */
+  watch: HousingSearchSummaryWatch;
+  watchTimes: string[];
+  /** @nullable */
+  nextWatchAt?: string | null;
+  /** @nullable */
+  lastVisitedAt?: string | null;
+  /** Listings of the followed search found since the last visit */
+  unseenCount: number;
+}
+
+export interface WatchStatus {
+  search: HousingSearchSummary | null;
 }
 
 export type HousingFeatureSource = typeof HousingFeatureSource[keyof typeof HousingFeatureSource];
@@ -358,6 +419,23 @@ export interface HousingListing {
      * @nullable
      */
   geoEvidence?: string | null;
+  /**
+     * Publication on the site (ISO)
+     * @nullable
+     */
+  postedAt?: string | null;
+  /**
+     * Last update on the site, moves when the ad is bumped (ISO)
+     * @nullable
+     */
+  refreshedAt?: string | null;
+  /**
+     * First read for this search (ISO)
+     * @nullable
+     */
+  firstSeenAt?: string | null;
+  /** false while the AI analysis is still to be done (done when the listing is displayed) */
+  analyzed: boolean;
 }
 
 export type HousingSearchDetail = HousingSearchSummary & {

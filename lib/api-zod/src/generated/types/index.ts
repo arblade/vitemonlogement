@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './analysisRequest';
 export * from './healthStatus';
 export * from './housingCriteria';
 export * from './housingCriteriaIntent';
@@ -34,8 +35,12 @@ export * from './housingSearchSummary';
 export * from './housingSearchSummaryPhase';
 export * from './housingSearchSummaryStage';
 export * from './housingSearchSummaryStatus';
+export * from './housingSearchSummaryTask';
+export * from './housingSearchSummaryWatch';
 export * from './listingRoute';
 export * from './listingRoutes';
 export * from './routeSegment';
 export * from './routeSegmentLine';
 export * from './travelMode';
+export * from './watchInput';
+export * from './watchStatus';

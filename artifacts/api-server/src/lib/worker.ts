@@ -5,6 +5,7 @@ import { advanceSearch } from "../routes/housing/pipeline";
 import { logger } from "./logger";
 import { db } from "./database";
 import { claimNextSearch, releaseSearch } from "./queue";
+import { scheduleDueWatches } from "../routes/housing/store";
 import { intEnv } from "./env";
 
 export type WorkerOptions = {
@@ -45,6 +46,7 @@ export function createWorker(options: WorkerOptions = {}) {
   }
 
   async function tick() {
+    await scheduleDueWatches().catch(error => logger.error({ err: error }, "Unable to schedule watched searches"));
     const running: Promise<void>[] = [];
     for (let i = 0; i < concurrency; i++) {
       const id = await claimNextSearch(owner, leaseMs);

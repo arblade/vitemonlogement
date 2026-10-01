@@ -3,7 +3,7 @@ import type { HousingCriterion, HousingListing, HousingSearchDetail } from '@wor
 export const listing = (id: number, overrides: Partial<HousingListing> = {}): HousingListing => ({
   id, source: 'leboncoin', batch: 'focused', title: `Studio lumineux ${id}`, url: `https://www.leboncoin.fr/ad/locations/${id}`, description: 'd',
   price: 590 + id * 10, area: 25, rooms: 1, location: 'Lille', image: null, images: [], aiSummary: 'Studio calme proche métro.',
-  summaryEvidence: [], score: 80 - id, features: [],
+  summaryEvidence: [], score: 80 - id, features: [], analyzed: true, postedAt: null, refreshedAt: null, firstSeenAt: null,
   criterionResults: [
     { id: 'price', label: 'Budget ≤ 700 €', status: 'confirmed', source: 'api', value: '590 €', evidence: '' },
     { id: 'wish-1', label: 'chat accepté', status: 'unknown', source: 'description', value: '', evidence: '' },
@@ -19,6 +19,7 @@ export const checks: HousingCriterion[] = [
 export const search = (overrides: Partial<HousingSearchDetail> = {}): HousingSearchDetail => ({
   id: 1, prompt: 'Un studio à Lille, 700 € max, chat accepté', status: 'completed', stage: 'ready', phase: 'focused',
   createdAt: '2026-09-30T10:00:00Z', count: 3, error: null, focusedMatches: 3, analyzed: true,
+  task: null, watch: null, watchTimes: [], nextWatchAt: null, lastVisitedAt: null, unseenCount: 0,
   searchRequests: [{ batch: 'focused', path: '/v2/acts/x/runs', input: '{"searchQuery":"chat"}' }],
   criteria: { location: 'Lille', intent: 'rent', maxPrice: 700, radius: 5, keywords: '', wishes: ['chat accepté'], checks },
   listings: [listing(1), listing(2), listing(3)],

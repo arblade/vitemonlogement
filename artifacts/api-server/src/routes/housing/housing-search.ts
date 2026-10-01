@@ -65,11 +65,16 @@ export function leboncoinSearchUrl(criteria: Criteria, term: string | null): str
  * chercher un lieu par son nom. */
 export const LEBONCOIN_ACTORS = { url: "fatihtahta~leboncoin-fr-scraper", byName: "clearpath~leboncoin-api" } as const;
 
-export function housingActorInput(criteria: Criteria, adLimit = 10): { actor: string; input: Record<string, unknown> } {
+/**
+ * `page` : page de résultats Le Bon Coin (35 annonces, des plus récemment mises à jour aux plus anciennes). L'acteur
+ * repart toujours du haut de la page demandée : c'est la seule façon de lire plus loin sans repayer le début.
+ * Le secours `clearpath` (ville non reconnue) ne sait pas lire une page précise : une seule lecture.
+ */
+export function housingActorInput(criteria: Criteria, adLimit = 10, page = 1): { actor: string; input: Record<string, unknown> } {
   // Même sans URL, la recherche reste limitée aux locations, au lieu, au rayon et au budget.
   const term = focusedSearchTerm(criteria);
   const searchUrl = leboncoinSearchUrl(criteria, term);
-  if (searchUrl) return { actor: LEBONCOIN_ACTORS.url, input: { startUrls: [searchUrl], limit: adLimit } };
+  if (searchUrl) return { actor: LEBONCOIN_ACTORS.url, input: { startUrls: [page > 1 ? `${searchUrl}&page=${page}` : searchUrl], limit: adLimit } };
   return {
     actor: LEBONCOIN_ACTORS.byName,
     input: {
@@ -88,8 +93,11 @@ export function housingActorInput(criteria: Criteria, adLimit = 10): { actor: st
   };
 }
 
-export function actorRequest(criteria: Criteria, candidateLimit: number, chargeCap: string, timeout: number): ActorRequest {
-  const { actor, input } = housingActorInput(criteria, candidateLimit);
+/** Une page de résultats peut-elle être demandée (acteur à URL) ? */
+export const canReadPages = (criteria: Criteria) => housingActorInput(criteria).actor === LEBONCOIN_ACTORS.url;
+
+export function actorRequest(criteria: Criteria, candidateLimit: number, chargeCap: string, timeout: number, page = 1): ActorRequest {
+  const { actor, input } = housingActorInput(criteria, candidateLimit, page);
   return {
     batch: "focused",
     path: `/v2/acts/${actor}/runs?maxItems=${candidateLimit}&maxTotalChargeUsd=${chargeCap}&timeout=${timeout}`,

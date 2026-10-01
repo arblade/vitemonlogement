@@ -90,12 +90,12 @@ async function runToCompletion(id: number) {
     await db().update(housingSearches).set({ nextCheckAt: 0 }).where(eq(housingSearches.id, id));
     await worker.tick();
     const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
-    if (row.status !== "running") return row;
+    if (row.status !== "running" && !row.task) return row; // terminée, et plus aucune tâche en cours
   }
   throw new Error("La recherche ne se termine pas");
 }
 
-test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demandés, ni parking ni chambre parmi les 5 retenus", async () => {
+test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demandés, ni parking ni chambre parmi les annonces gardées", async () => {
   const { createSearch, getSearch } = await import("./store");
   const id = await createSearch("Je cherche un T1 ou un T2 à Lille, 700 € max");
   assert.equal((await runToCompletion(id)).status, "completed");
@@ -111,11 +111,12 @@ test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demand
   assert.equal(params.get("price"), "min-700");
   assert.match(String(params.get("locations")), /^Lille_59000__50\.\d+_3\.\d+_5000$/);
 
-  // Parkings (libellé ou code) écartés à la lecture, T3 écarté par le maximum de pièces, chambre écartée par l'analyse :
-  // les 5 places sont remplies par les annonces suivantes (2e appel d'analyse).
+  // Parkings (libellé ou code) et vente écartés à la lecture, T3 écarté par le maximum de pièces, résidence coliving
+  // écartée par l'analyse (gardée en base, masquée) : 7 annonces analysées d'emblée, en 2 lots de 5 au plus.
   assert.deepEqual(search?.listings.map(listing => listing.title), [
-    "Appartement T2 Gambetta", "Studio lumineux Wazemmes", "T2 Vieux-Lille", "Studio meublé Vauban", "Studio Moulins",
+    "Appartement T2 Gambetta", "Studio lumineux Wazemmes", "T2 Vieux-Lille", "Studio meublé Vauban", "Studio Moulins", "T2 Bois Blanc",
   ]);
+  assert.ok(search?.listings.every(listing => listing.analyzed), "moins de 10 annonces : toutes analysées d'emblée");
   assert.equal(analyzeCalls, 2);
 });
 

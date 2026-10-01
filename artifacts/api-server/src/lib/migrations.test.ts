@@ -34,6 +34,11 @@ test("la migration de base adopte une base existante et conserve ses données", 
   assert.deepEqual((searches as unknown as { rows: unknown[] }).rows, [{ prompt: "ancienne recherche", lock_owner: null, lock_until: null, next_check_at: 0, attempts: 0 }]);
   const listings = await handle.db.execute(sql`SELECT count(*)::int AS n FROM housing_listings`);
   assert.equal((listings as unknown as { rows: { n: number }[] }).rows[0].n, 1);
+  // Recherche suivie (0007) : les annonces existantes restent analysées, jamais « nouvelles » ; aucune recherche suivie.
+  const kept = await handle.db.execute(sql`SELECT analyzed, first_seen_at::int AS first_seen_at, hidden FROM housing_listings`);
+  assert.deepEqual((kept as unknown as { rows: unknown[] }).rows, [{ analyzed: 1, first_seen_at: 0, hidden: null }]);
+  const followed = await handle.db.execute(sql`SELECT watched, task, pages_read FROM housing_searches`);
+  assert.deepEqual((followed as unknown as { rows: unknown[] }).rows, [{ watched: 0, task: null, pages_read: 0 }]);
   const tables = await handle.db.execute(sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY 1`);
   assert.ok((tables as unknown as { rows: { table_name: string }[] }).rows.some(row => row.table_name === "listing_analyses"));
   await handle.close();

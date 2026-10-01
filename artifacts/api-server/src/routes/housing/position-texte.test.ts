@@ -138,7 +138,7 @@ async function runToCompletion(id: number) {
     await db().update(housingSearches).set({ nextCheckAt: 0 }).where(eq(housingSearches.id, id));
     await worker.tick();
     const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
-    if (row.status !== "running") return row;
+    if (row.status !== "running" && !row.task) return row; // terminée, et plus aucune tâche en cours
   }
   throw new Error("La recherche ne se termine pas");
 }
@@ -178,10 +178,10 @@ test("bout en bout : l'annonce d'agence placée au quartier reçoit l'adresse de
   assert.ok(ignQueries.every(params => !(params.get("q") ?? "").includes("Sainte-Catherine") && !(params.get("q") ?? "").includes("Fondaudège")),
     "ni la position précise ni l'adresse refusée ne sont géocodées");
 
-  // Rafraîchissement : l'annonce déjà placée n'est pas réanalysée et garde sa position lue dans le texte, même IGN en panne.
+  // « Étendre » (page suivante) : l'annonce déjà placée n'est pas réanalysée et garde sa position lue dans le texte, même IGN en panne.
   ignAnswers = () => [];
-  const { beginRefresh } = await import("./store");
-  assert.ok(await beginRefresh(id));
+  const { requestExtend } = await import("./store");
+  assert.ok(await requestExtend(id));
   assert.equal((await runToCompletion(id)).status, "completed");
   const again = (await getSearch(id))!.listings.find(listing => listing.title === "Appartement T2 Salinières")!;
   assert.deepEqual([again.lat, again.lng, again.geoPrecision, again.geoSource, again.geoEvidence], [44.8361, -0.5683, "streetNumber", "description", "Situé dans Bordeaux centre au 21 quai des Salinières"]);

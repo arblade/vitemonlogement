@@ -7,11 +7,12 @@ import { memoryLocation } from 'wouter/memory-location';
 import Home from '@/pages/home';
 import { search } from '@/test/fixtures';
 
-const api = vi.hoisted(() => ({ mutateAsync: vi.fn(), history: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() } }));
+const api = vi.hoisted(() => ({ watched: null as unknown, mutateAsync: vi.fn(), history: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() } }));
 vi.mock('@workspace/api-client-react', async importOriginal => ({
   ...(await importOriginal<typeof import('@workspace/api-client-react')>()),
   useCreateHousingSearch: () => ({ mutateAsync: api.mutateAsync, isPending: false }),
   useListHousingSearches: () => api.history,
+  useGetWatchedSearch: () => ({ data: { search: api.watched } }),
 }));
 
 function renderHome() {
@@ -21,7 +22,7 @@ function renderHome() {
 }
 const field = () => screen.getByLabelText('Décrivez votre recherche');
 
-beforeEach(() => { api.mutateAsync.mockReset(); api.history.data = []; api.history.isLoading = false; api.history.isError = false; });
+beforeEach(() => { api.watched = null; api.mutateAsync.mockReset(); api.history.data = []; api.history.isLoading = false; api.history.isError = false; });
 
 describe('Accueil', () => {
   it('explique le concept : promesse, trois étapes et trois exemples', () => {
@@ -95,5 +96,17 @@ describe('Accueil', () => {
     renderHome();
     await user.click(screen.getByTestId('button-retry'));
     expect(api.history.refetch).toHaveBeenCalled();
+  });
+
+  it('une recherche suivie : carte en haut de l’accueil, avec ses nouvelles annonces et un lien direct', () => {
+    api.watched = { ...search({ id: 12 }), watch: 'active', watchTimes: ['08:00', '18:00'], unseenCount: 4 };
+    renderHome();
+    expect(screen.getByTestId('card-watched-search')).toHaveAttribute('href', '/searches/12');
+    expect(screen.getByTestId('text-watched-unseen')).toHaveTextContent('4 nouvelles');
+  });
+
+  it('sans recherche suivie : pas de carte', () => {
+    renderHome();
+    expect(screen.queryByTestId('card-watched-search')).not.toBeInTheDocument();
   });
 });

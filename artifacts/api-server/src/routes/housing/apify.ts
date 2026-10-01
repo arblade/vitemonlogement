@@ -1,27 +1,16 @@
-import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, isPrecise, setAnalyzing, setFailure, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
+import { isPrecise, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
 import { geocodeListingAddress } from "../../lib/geocode";
 import type { ListingAddress } from "../../lib/analysis-cache";
-import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
 import { first, getImages, number, object, text } from "./parse";
+import { leboncoinDate } from "../../lib/paris-time";
 import { apify } from "./apify-client";
-import { interleave, normalizeExtra, startExtraSources, type SourceRun } from "./sources";
-import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
-import { actorRequest, isHousingListingUrl, type SearchBatch } from "./housing-search";
+import type { SourceRun } from "./sources";
+import { apiValue, checksFor, evaluateStructured } from "./criteria";
+import { isHousingListingUrl, type SearchBatch } from "./housing-search";
 import { isColocationAd, isSeekerAd } from "./offer";
 
-// Limites par appel Apify, identiques en développement et en production (protège le budget Apify).
-// Modifiables par variables d'environnement : APIFY_RESULT_LIMIT (annonces conservées, défaut 5),
-// APIFY_CANDIDATE_LIMIT (annonces Le Bon Coin examinées, défaut 10). SeLoger et PAP : voir sources.ts.
-function intEnv(name: string, fallback: number) {
-  const value = Number.parseInt(process.env[name] ?? "", 10);
-  return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-export const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
-const CANDIDATE_LIMIT = Math.max(intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
-
-
-function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
+export function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
   let score = 60;
   if (criteria.minPrice != null && item.price != null) score += item.price >= criteria.minPrice ? 8 : -18;
   if (criteria.maxPrice != null && item.price != null) score += item.price <= criteria.maxPrice ? 12 : -24;
@@ -130,6 +119,8 @@ export function fromFatihRecord(record: Record<string, unknown>): Record<string,
   return {
     ...labels,
     ad_type: record.listing_type, // « offer » ou « demand » (au premier niveau de l'annonce, pas dans listing)
+    // Dates à l'heure de Paris (voir lib/paris-time.ts) : publication et dernière mise à jour.
+    first_publication_date: parsed(record.listing).posted_at, index_date: parsed(record.listing).updated_at,
     url: record.url, subject: record.title, body: record.description,
     price_euros: object(record.pricing).amount_eur,
     square: property.surface_m2, rooms: property.rooms,
@@ -165,26 +156,11 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const image = images[0] ?? null;
   const features = otherApiFeatures(data, criteria);
   const postcode = text(first(object(locationData), ["zipcode", "zip_code", "postal_code"])).match(/^\d{5}$/)?.[0] ?? null;
-  const listing = { source: "leboncoin" as const, batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data), postcode };
+  const postedAt = leboncoinDate(first(data, ["first_publication_date", "posted_at"]));
+  const refreshedAt = leboncoinDate(first(data, ["index_date", "updated_at"])) ?? postedAt;
+  const listing = { source: "leboncoin" as const, batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data), postcode, postedAt, refreshedAt };
   const criterionResults = evaluateStructured(criteria, listing, data);
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
-}
-
-export async function startSearch(criteria: Criteria) {
-  // Inspect CANDIDATE_LIMIT (10) Le Bon Coin candidates, retain RESULT_LIMIT (5) across all sources.
-  const chargeCap = process.env.APIFY_MAX_CHARGE_USD || "0.10";
-  const timeout = intEnv("APIFY_TIMEOUT_SECONDS", 120);
-  const request = actorRequest(criteria, CANDIDATE_LIMIT, chargeCap, timeout);
-  const response = object(await apify(request.path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: request.input,
-  }));
-  const runId = text(object(response.data).id);
-  if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
-  // PAP et SeLoger en parallèle.
-  const sourceRuns = await startExtraSources(criteria, chargeCap, timeout);
-  return { runId, request, sourceRuns };
 }
 
 type Position = Pick<Listing, "lat" | "lng" | "geoPrecision" | "geoSource" | "geoEvidence">;
@@ -194,7 +170,7 @@ type Position = Pick<Listing, "lat" | "lng" | "geoPrecision" | "geoSource" | "ge
  * commune), l'adresse que la description cite, géocodée par l'IGN ; à défaut, celle déjà retrouvée lors d'une
  * recherche précédente ; à défaut, la zone donnée par l'annonce.
  */
-async function positionOf(item: Omit<Listing, "id">, address: ListingAddress | null, previous: Listing | undefined): Promise<Position> {
+export async function positionOf(item: Omit<Listing, "id">, address: ListingAddress | null, previous: Listing | undefined): Promise<Position> {
   const given: Position = { lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision, geoSource: null, geoEvidence: null };
   if (isPrecise(item)) return given;
   if (address && item.location) {
@@ -213,7 +189,7 @@ const PENDING = new Set(["READY", "RUNNING", "TIMING-OUT", "ABORTING"]);
  * Annonces des sources secondaires : « pending » tant qu'un de leurs runs tourne encore. Un run en échec, ou
  * illisible, est ignoré (journalisé) : il ne fait jamais échouer la recherche, Le Bon Coin suffit.
  */
-async function extraSourceItems(raw: string | null): Promise<"pending" | { source: SourceRun["source"]; items: unknown[] }[]> {
+export async function extraSourceItems(raw: string | null, limit: number): Promise<"pending" | { source: SourceRun["source"]; items: unknown[] }[]> {
   const runs = raw ? JSON.parse(raw) as SourceRun[] : [];
   const states = await Promise.all(runs.map(async ({ source, runId }) => {
     try {
@@ -232,7 +208,7 @@ async function extraSourceItems(raw: string | null): Promise<"pending" | { sourc
       return null;
     }
     try {
-      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${CANDIDATE_LIMIT}`);
+      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${limit}`);
       return Array.isArray(items) ? { source, items } : null;
     } catch (error) {
       logger.warn({ err: error, source, runId }, "Listing source results unreadable");
@@ -242,92 +218,16 @@ async function extraSourceItems(raw: string | null): Promise<"pending" | { sourc
   return results.filter(result => result !== null);
 }
 
-/** Contrôle une fois le run Apify d'une recherche ; à appeler sous bail (voir worker.ts). */
-export async function syncSearch(id: number, criteria: Criteria) {
-  const row = await getSearchRow(id);
-  if (!row || row.status !== "running" || !row.runId) return;
-  const phase: SearchBatch = "focused";
-  try {
-    const result = object(await apify(`/v2/actor-runs/${encodeURIComponent(row.runId)}`));
-    const run = object(result.data);
-    const status = text(run.status);
-    if (status === "SUCCEEDED") {
-      const extra = await extraSourceItems(row.sourceRuns);
-      if (extra === "pending") return; // une autre source tourne encore : le worker repasse au prochain contrôle
-      const datasetId = text(run.defaultDatasetId);
-      if (!datasetId) throw new Error("L'exécution Apify n'a pas de jeu de résultats.");
-      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${CANDIDATE_LIMIT}`);
-      if (!Array.isArray(items)) throw new Error("Le format des résultats Apify est inattendu.");
-      const existing = await getSearch(id);
-      const oldUrls = new Set(existing?.listings.map(item => item.url) ?? []);
-      const seen = new Set<string>();
-      const keep = (item: Omit<Listing, "id"> | null): item is Omit<Listing, "id"> => {
-        if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria)) return false;
-        seen.add(item.url);
-        return true;
-      };
-      const listings = interleave([
-        items.map(item => normalize(item, criteria, phase)).filter(keep),
-        ...extra.map(({ source, items: sourceItems }) =>
-          sourceItems.map(item => normalizeExtra(source, item, criteria, phase, listing => scoreListing(listing, criteria))).filter(keep)),
-      ]);
-      await setAnalyzing(id);
-      try {
-        // Prefer new ads to ones already saved during a refresh or the focused
-        // pass; each pass keeps its own limit and the listing URLs are unique.
-        const ordered = [...listings].sort((a, b) => Number(oldUrls.has(a.url)) - Number(oldUrls.has(b.url)));
-        const saved: Omit<Listing, "id">[] = [];
-        const setAside: { url: string; offer: string; evidence: string }[] = [];
-        let nextId = 0;
-        // Une annonce écartée (chambre, parking…) libère sa place : on analyse les suivantes jusqu'à RESULT_LIMIT.
-        for (let offset = 0; offset < ordered.length && saved.length < RESULT_LIMIT;) {
-          const selected = ordered.slice(offset, offset + RESULT_LIMIT - saved.length);
-          offset += selected.length;
-          const candidates = selected.filter(item =>
-            !oldUrls.has(item.url) || !existing?.listings.find(previous => previous.url === item.url)?.criterionResults.length)
-            .map(item => ({ ...item, id: -(++nextId) }));
-          // The LLM receives at most five ads in each bounded request.
-          const enriched = candidates.length ? await analyze(candidates, criteria) : [];
-          for (const item of selected) {
-            const enrichedItem = candidates.find(candidate => candidate.url === item.url);
-            const observations = enriched.find(result => result.id === enrichedItem?.id);
-            if (observations?.offer && (observations.offer.kind === "room" || observations.offer.kind === "non_dwelling")) {
-              setAside.push({ url: item.url, offer: observations.offer.kind, evidence: observations.offer.evidence });
-              continue;
-            }
-            const previous = existing?.listings.find(result => result.url === item.url);
-            const criterionResults = observations?.criterionResults ?? item.criterionResults.map(check =>
-              check.source === "api" ? check : previous?.criterionResults.find(old => old.id === check.id) ?? check);
-            if (criterionResults.some(check => ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")) continue;
-            const additions = observations?.features ?? item.features;
-            const features = [...(previous?.features ?? []), ...additions.filter(feature =>
-              !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
-            const position = await positionOf(item, observations?.address ?? null, previous);
-            saved.push({
-              source: item.source, batch: item.batch, title: item.title, url: item.url, description: item.description,
-              price: observations?.price ?? item.price, area: observations?.area ?? item.area,
-              rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
-              image: item.image, images: item.images, score: observations?.score ?? item.score,
-              aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
-              features,
-              criterionResults,
-              ...position,
-            });
-          }
-        }
-        if (setAside.length) logger.info({ searchId: id, setAside }, "Listings set aside: not an entire dwelling");
-        await completeSearch(id, saved, phase, RESULT_LIMIT);
-      } catch (error) {
-        // Pas d'échec définitif ici : le worker réessaie (l'analyse déjà payée est en cache) puis abandonne.
-        throw error;
-      }
-    } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
-      logger.error({ searchId: id, status, statusMessage: text(run.statusMessage) }, "Apify run did not succeed");
-      await setFailure(id, FAILURE_MESSAGE, Boolean(row.analyzed));
-    }
-  } catch (error) {
-    logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");
-    // Échec transitoire (Apify, IA) : le worker compte les tentatives et réessaie ou abandonne.
-    throw error;
+/**
+ * Date de dernière mise à jour d'une annonce lue, même écartée ensuite (parking, colocation…) : elle dit jusqu'où on est
+ * descendu dans la liste Le Bon Coin, triée de la plus récemment mise à jour à la plus ancienne.
+ */
+export function itemRefreshedAt(raw: unknown): number | null {
+  const source = object(raw);
+  if (source.record_type === "property_listing") {
+    const listing = parsed(source.listing);
+    return leboncoinDate(listing.updated_at) ?? leboncoinDate(listing.posted_at);
   }
+  const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
+  return leboncoinDate(first(data, ["index_date", "updated_at"])) ?? leboncoinDate(first(data, ["first_publication_date", "posted_at"]));
 }

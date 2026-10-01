@@ -148,6 +148,42 @@ nombre d'annonces pas encore vues) ; passages à **8 h et 18 h** ; première rec
 - Dates Le Bon Coin : heure de Paris étiquetée « Z » (décalage de 2 h l'été, mesuré) : à corriger avant toute comparaison.
 - Première recherche : 30 annonces les plus récentes publiées dans les 10 derniers jours = une seule page.
 
+## Implémenté (01/10, sur `develop`)
+**Recherche en direct** : Le Bon Coin lu page par page (35 annonces), de la plus récemment mise à jour à la plus
+ancienne ; page suivante tant que les **4 derniers jours** ne sont pas atteints, **3 pages au plus** (105 annonces).
+Toutes les annonces lues sont gardées ; l'IA analyse les **10 premières** d'emblée, les autres **au fil du défilement**
+(5 affichées + 5 d'avance, une demande par annonce ; « Lecture de l'annonce par l'IA… » en attendant). Tri par défaut :
+les plus récentes ; chaque carte dit « Publiée il y a 3 h » ou « Remontée hier · publiée le 14 sept. ».
+**Étendre** : la page suivante, plus ancienne (une lecture de 35 au plus).
+
+**Recherche suivie** (une par compte, en activer une autre remplace la précédente) : « Créer une alerte » sur la page
+résultats, 8 h et 18 h proposés (de 5 h à 23 h, un ou deux créneaux, heure de Paris, changements d'heure compris).
+Le worker lance le passage à l'heure dite ; première page à la taille du débit observé (10 à 35), relue en entier puis
+page suivante seulement si les nouveautés dépassent ; **arrêt à la date du passage précédent**, jamais sur « une annonce
+déjà vue » (les remontées). Passage manqué (redémarrage) : un seul rattrapage. **Pause automatique** après 7 jours sans
+visite (« Reprendre » en un clic). Prévenu **dans le site** : pastille rose sur « Mes recherches » (menu bureau et
+bouton Menu sur mobile), nombre dans le titre de l'onglet (« (3) Vite mon logement »), carte en haut de l'accueil et de
+« Mes recherches », « N nouvelles annonces depuis votre dernière visite » et étiquette « Nouvelle » sur les cartes ;
+ouvrir la recherche remet le compteur à zéro.
+
+**Données** (migration `0007_recherche_suivie`, vérifiée sur PGlite et un vrai Postgres, base existante comprise) :
+dates de publication et de mise à jour, première lecture, état d'analyse, annonces masquées après analyse (chambre,
+local non habitable, prix contredit) ; sur la recherche : tâche en cours, curseur, pages lues, créneaux, prochain
+passage, débit, dernière visite. Dates Le Bon Coin : heure de Paris étiquetée « Z », corrigée (`lib/paris-time.ts`).
+
+**Réglages** (variables d'environnement, valeurs par défaut) : `LIVE_SEARCH_DAYS` 4, `READ_MAX_PAGES` 3,
+`FIRST_ANALYSIS` 10, `WATCH_IDLE_DAYS` 7. `APIFY_RESULT_LIMIT` et `APIFY_CANDIDATE_LIMIT` ne servent plus.
+
+**Coût** : première recherche ≈ 0,035 $ par page lue (1 à 3) + ≈ 0,012 $ pour les 10 premières analyses, puis
+≈ 0,006 $ par tranche de 5 annonces réellement regardées ; passage suivi : ≈ 0,01 à 0,035 $ de lecture + l'analyse des
+nouvelles regardées. Une seule recherche suivie par compte borne la dépense.
+
+**Tests** : serveur `suivi.test.ts` (faux Le Bon Coin daté servi par pages : 4 jours, 3 pages max, petite ville,
+curseur et remontées, relecture, pause, rattrapage, une par compte, analyse demandée, Étendre), `suivi-api.test.ts`
+(routes, autre compte en 404), `paris-time.test.ts` ; interface (pastilles, titre d'onglet, alerte, nouveautés, visite,
+analyse au défilement, dates, Étendre) ; navigateur mobile puis ordinateur (créer l'alerte, pastille, titre, arrêter).
+Captures : `maquettes/suivi-*.png`.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).

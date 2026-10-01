@@ -541,6 +541,99 @@ describe('Page résultats : chargement progressif', () => {
   });
 });
 
+describe('Page résultats : recherche suivie et lecture progressive', () => {
+  const watchRoutes = (other: object | null = null): FetchRoute[] => [
+    ...favoriteRoutes(),
+    { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: other } }) },
+    { method: 'PUT', match: /\/api\/housing\/searches\/1\/watch$/, respond: () => ({ body: { ...search(), watch: 'active', watchTimes: ['08:00', '18:00'] } }) },
+    { method: 'DELETE', match: /\/api\/housing\/searches\/1\/watch$/, respond: () => ({ body: { ...search(), watch: null } }) },
+    { method: 'POST', match: /\/api\/housing\/searches\/1\/visit$/, respond: () => ({ status: 204 }) },
+    { method: 'POST', match: /\/api\/housing\/searches\/1\/analyze$/, respond: () => ({ status: 202, body: search() }) },
+  ];
+
+  it('« Créer une alerte » : 8 h et 18 h proposés, envoyés au serveur ; un seul horaire possible', async () => {
+    const user = userEvent.setup();
+    const calls = mockFetch(watchRoutes());
+    renderPage();
+    const panel = screen.getByTestId('card-watch');
+    expect(panel).toHaveTextContent('Créer une alerte');
+    expect(screen.getByTestId('input-watch-time-0')).toHaveValue('08:00');
+    expect(screen.getByTestId('input-watch-time-1')).toHaveValue('18:00');
+    expect(within(screen.getByTestId('input-watch-time-0')).getByRole('option', { name: '8 h 30' })).toBeInTheDocument();
+    await user.click(screen.getByTestId('button-watch'));
+    await waitFor(() => expect(calls.find(call => call.method === 'PUT')?.body).toEqual({ times: ['08:00', '18:00'] }));
+    await user.selectOptions(screen.getByTestId('input-watch-time-1'), '');
+    await user.selectOptions(screen.getByTestId('input-watch-time-0'), '07:30');
+    await user.click(screen.getByTestId('button-watch'));
+    await waitFor(() => expect(calls.filter(call => call.method === 'PUT').at(-1)?.body).toEqual({ times: ['07:30'] }));
+  });
+
+  it('une autre recherche est déjà suivie : le bouton dit qu’elle sera remplacée', async () => {
+    mockFetch(watchRoutes({ ...search({ id: 9 }), criteria: { ...search().criteria, location: 'Lyon' }, watch: 'active', watchTimes: ['08:00'] }));
+    renderPage();
+    expect(await screen.findByTestId('text-watch-replace')).toHaveTextContent('« Lyon » sera remplacée');
+    expect(screen.getByTestId('button-watch')).toHaveTextContent('Remplacer mon alerte');
+  });
+
+  it('recherche suivie : ligne discrète (heures, prochain passage, Arrêter) ; la visite est notée ; les nouvelles sont marquées', async () => {
+    const user = userEvent.setup();
+    const calls = mockFetch(watchRoutes());
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], nextWatchAt: new Date(Date.now() + 3_600_000).toISOString(), lastVisitedAt: '2026-10-01T06:00:00Z',
+      listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' }), listing(2, { firstSeenAt: '2026-10-01T05:00:00Z' }), listing(3, { firstSeenAt: '2026-10-01T06:10:00Z' })] });
+    renderPage();
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche suivie · chaque jour à 8 h et 18 h · prochain passage');
+    expect(screen.getByTestId('text-new-count')).toHaveTextContent('2 nouvelles annonces depuis votre dernière visite');
+    expect(screen.getByTestId('badge-new-1')).toHaveTextContent('Nouvelle');
+    expect(screen.queryByTestId('badge-new-2')).not.toBeInTheDocument();
+    await waitFor(() => expect(calls.some(call => call.method === 'POST' && call.url.endsWith('/visit'))).toBe(true));
+    await user.click(screen.getByTestId('button-unwatch'));
+    await waitFor(() => expect(calls.some(call => call.method === 'DELETE')).toBe(true));
+  });
+
+  it('recherche ponctuelle : pas de « Nouvelle », pas de visite notée', async () => {
+    const calls = mockFetch(watchRoutes());
+    api.state.data = search({ listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' })] });
+    renderPage();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(screen.queryByTestId('badge-new-1')).not.toBeInTheDocument();
+    expect(calls.some(call => call.url.endsWith('/visit'))).toBe(false);
+  });
+
+  it('analyse au défilement : les annonces affichées et les 5 suivantes pas encore lues par l’IA sont demandées, une seule fois', async () => {
+    const calls = mockFetch(watchRoutes());
+    api.state.data = search({ count: 14, listings: Array.from({ length: 14 }, (_, i) => listing(i + 1, { score: 99 - i, analyzed: i < 3, aiSummary: i < 3 ? 'Lu.' : null })) });
+    renderPage();
+    expect(screen.getByTestId('card-analyzing-4')).toHaveTextContent('Lecture de l’annonce par l’IA');
+    expect(screen.queryByTestId('card-analyzing-1')).not.toBeInTheDocument();
+    await waitFor(() => expect(calls.filter(call => call.url.endsWith('/analyze'))).toHaveLength(1));
+    expect(calls.find(call => call.url.endsWith('/analyze'))?.body).toEqual({ listingIds: [4, 5, 6, 7, 8, 9, 10] });
+  });
+
+  it('dates : « Publiée il y a… », et une annonce remontée le dit ; tri par défaut : les plus récentes', () => {
+    mockFetch(watchRoutes());
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    api.state.data = search({ listings: [
+      listing(1, { score: 99, postedAt: hoursAgo(5), refreshedAt: hoursAgo(5) }),
+      listing(2, { score: 10, postedAt: hoursAgo(24 * 9), refreshedAt: hoursAgo(1) }),
+      listing(3, { score: 50, postedAt: hoursAgo(3), refreshedAt: hoursAgo(3) }),
+    ] });
+    renderPage();
+    expect(screen.getByTestId('select-sort')).toHaveValue('recent');
+    expect(cardOrder()).toEqual(['2', '3', '1']);
+    expect(screen.getByTestId('text-listing-date-1')).toHaveTextContent('Publiée il y a 5 h');
+    expect(screen.getByTestId('text-listing-date-2')).toHaveTextContent(/^Remontée il y a 1 h · publiée le /);
+    expect(screen.getByTestId('text-live-window')).toHaveTextContent('Annonces mises à jour ces 4 derniers jours');
+  });
+
+  it('« Étendre » en cours : indicateur en bas de liste, bouton désactivé', () => {
+    mockFetch(watchRoutes());
+    api.state.data = search({ task: 'extend' });
+    renderPage();
+    expect(screen.getByTestId('results-extending')).toHaveTextContent('Recherche d’annonces plus anciennes');
+    expect(screen.getByTestId('button-refresh')).toBeDisabled();
+  });
+});
+
 describe('Page résultats : autres états', () => {
   it('recherche en cours : progression, pas de liste finale', () => {
     api.state.data = search({ status: 'running', stage: 'searching', listings: [], count: 0 });

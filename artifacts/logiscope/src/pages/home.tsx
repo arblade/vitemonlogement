@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { ErrorNotice, formatDate } from '@/components/site-shell';
+import { WatchedSearchCard } from '@/components/watched-search';
+import { useWatchedSearch } from '@/lib/watch';
 
 const suggestions = [
   { icon: Cat, text: 'Un studio à Lille, 650 € maximum, chat accepté' },
@@ -35,6 +37,7 @@ export default function Home() {
   const promptForm = useForm<PromptForm>({ defaultValues: { prompt: '' } });
   const [localError, setLocalError] = useState('');
   const create = useCreateHousingSearch();
+  const { search: watched } = useWatchedSearch();
   const history = useListHousingSearches({ query: { queryKey: getListHousingSearchesQueryKey(), refetchInterval: query => query.state.data?.some(item => item.status === 'running') ? 4000 : false } });
 
   const onCreate = async ({ prompt }: PromptForm) => {
@@ -50,6 +53,7 @@ export default function Home() {
 
   return <main>
     <section className="mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:pt-24">
+      {watched && <div className="mb-9 md:-mt-10"><WatchedSearchCard search={watched}/></div>}
       <h1 className="text-balance text-[clamp(1.9rem,4.6vw,3rem)] font-semibold leading-[1.1] tracking-[-.03em]">Trouvez votre prochain chez-vous</h1>
       <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone">Racontez-nous le logement idéal. On lit les annonces à votre place et on vous montre lesquelles correspondent vraiment.</p>
       <Form {...promptForm}>

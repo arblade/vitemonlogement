@@ -88,16 +88,22 @@ paths:
     post:
       operationId: analyzeHousingSearch
       tags: [housing]
-      summary: Enrich a completed search with AI text-based observations
+      summary: Ask the AI analysis of listings now displayed (and the next ones), done in the background
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisRequest"
       responses:
-        "200":
-          description: Updated search and listings
+        "202":
+          description: Analysis requested
           content:
             application/json:
               schema:
@@ -106,7 +112,7 @@ paths:
     post:
       operationId: refreshHousingSearch
       tags: [housing]
-      summary: Fetch up to five new ads and merge with persisted results without duplicates
+      summary: Read the next, older page of ads (« Étendre »), merged without duplicates
       parameters:
         - in: path
           name: id
@@ -115,11 +121,78 @@ paths:
             type: integer
       responses:
         "202":
-          description: Refresh started
+          description: Reading started
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/HousingSearchDetail"
+  /housing/searches/{id}/watch:
+    put:
+      operationId: watchHousingSearch
+      tags: [housing]
+      summary: Follow this search (one per account, replaces the previous one) at the given Paris times
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchInput"
+      responses:
+        "200":
+          description: Search followed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchSummary"
+    delete:
+      operationId: unwatchHousingSearch
+      tags: [housing]
+      summary: Stop following this search
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Search no longer followed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousingSearchSummary"
+  /housing/searches/{id}/visit:
+    post:
+      operationId: visitHousingSearch
+      tags: [housing]
+      summary: The owner opened the search; its new listings now count as seen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Visit recorded
+  /housing/watch:
+    get:
+      operationId: getWatchedSearch
+      tags: [housing]
+      summary: The followed search of the account (badges of the site)
+      responses:
+        "200":
+          description: Followed search, if any
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchStatus"
   /housing/searches/{id}/listings/{listingId}/routes:
     get:
       operationId: getListingRoutes
@@ -260,9 +333,35 @@ components:
       required: [prompt]
       properties:
         prompt: { type: string, minLength: 10, maxLength: 1000 }
+    AnalysisRequest:
+      type: object
+      required: [listingIds]
+      properties:
+        listingIds:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+    WatchInput:
+      type: object
+      required: [times]
+      properties:
+        times:
+          description: Paris times, « HH:MM »
+          type: array
+          minItems: 1
+          maxItems: 2
+          items: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+    WatchStatus:
+      type: object
+      required: [search]
+      properties:
+        search:
+          oneOf:
+            - $ref: "#/components/schemas/HousingSearchSummary"
+            - type: "null"
     HousingSearchSummary:
       type: object
-      required: [id, prompt, criteria, status, count, createdAt, analyzed]
+      required: [id, prompt, criteria, status, count, createdAt, analyzed, task, watch, watchTimes, unseenCount]
       properties:
         id: { type: integer }
         prompt: { type: string }
@@ -280,6 +379,22 @@ components:
         createdAt: { type: string }
         analyzed: { type: boolean }
         error: { type: ["string", "null"] }
+        task:
+          description: Background work on a completed search
+          type: ["string", "null"]
+          enum: [watch, extend, analyze, null]
+        watch:
+          description: Followed search (« active »), paused for lack of visits (« paused »), or not followed
+          type: ["string", "null"]
+          enum: [active, paused, null]
+        watchTimes:
+          type: array
+          items: { type: string }
+        nextWatchAt: { type: ["string", "null"] }
+        lastVisitedAt: { type: ["string", "null"] }
+        unseenCount:
+          description: Listings of the followed search found since the last visit
+          type: integer
     HousingSearchRequest:
       type: object
       required: [batch, path, input]
@@ -308,7 +423,7 @@ components:
         evidence: { type: string }
     HousingListing:
       type: object
-      required: [id, source, batch, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
+      required: [id, source, batch, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence, analyzed]
       properties:
         id: { type: integer }
         source:
@@ -352,6 +467,18 @@ components:
         geoEvidence:
           description: Exact sentence of the listing that cites the address (when geoSource is description)
           type: ["string", "null"]
+        postedAt:
+          description: Publication on the site (ISO)
+          type: ["string", "null"]
+        refreshedAt:
+          description: Last update on the site, moves when the ad is bumped (ISO)
+          type: ["string", "null"]
+        firstSeenAt:
+          description: First read for this search (ISO)
+          type: ["string", "null"]
+        analyzed:
+          description: false while the AI analysis is still to be done (done when the listing is displayed)
+          type: boolean
     HousingSearchDetail:
       allOf:
         - $ref: "#/components/schemas/HousingSearchSummary"

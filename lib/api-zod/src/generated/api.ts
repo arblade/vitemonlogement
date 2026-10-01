@@ -111,7 +111,13 @@ export const ListHousingSearchesResponseItem = zod.object({
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
-  "error": zod.string().nullish()
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 export const ListHousingSearchesResponse = zod.array(ListHousingSearchesResponseItem)
 
@@ -175,7 +181,13 @@ export const CreateHousingSearchResponse = zod.object({
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
-  "error": zod.string().nullish()
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
@@ -211,7 +223,11 @@ export const CreateHousingSearchResponse = zod.object({
   "lng": zod.number().nullish(),
   "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
   "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
-  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)'),
+  "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
+  "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
+  "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -271,7 +287,13 @@ export const GetHousingSearchResponse = zod.object({
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
-  "error": zod.string().nullish()
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
@@ -307,17 +329,29 @@ export const GetHousingSearchResponse = zod.object({
   "lng": zod.number().nullish(),
   "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
   "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
-  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)'),
+  "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
+  "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
+  "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
 
 
 /**
- * @summary Enrich a completed search with AI text-based observations
+ * @summary Ask the AI analysis of listings now displayed (and the next ones), done in the background
  */
 export const AnalyzeHousingSearchParams = zod.object({
   "id": zod.coerce.number().int()
+})
+
+export const analyzeHousingSearchBodyListingIdsMax = 50;
+
+
+
+export const AnalyzeHousingSearchBody = zod.object({
+  "listingIds": zod.array(zod.number().int()).max(analyzeHousingSearchBodyListingIdsMax)
 })
 
 export const analyzeHousingSearchResponseOneCriteriaRadiusMin = 0;
@@ -370,7 +404,13 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
-  "error": zod.string().nullish()
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
@@ -406,14 +446,18 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "lng": zod.number().nullish(),
   "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
   "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
-  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)'),
+  "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
+  "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
+  "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
 
 
 /**
- * @summary Fetch up to five new ads and merge with persisted results without duplicates
+ * @summary Read the next, older page of ads (« Étendre »), merged without duplicates
  */
 export const RefreshHousingSearchParams = zod.object({
   "id": zod.coerce.number().int()
@@ -469,7 +513,13 @@ export const RefreshHousingSearchResponse = zod.object({
   "count": zod.number().int(),
   "createdAt": zod.string(),
   "analyzed": zod.boolean(),
-  "error": zod.string().nullish()
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
@@ -505,10 +555,232 @@ export const RefreshHousingSearchResponse = zod.object({
   "lng": zod.number().nullish(),
   "geoPrecision": zod.union([zod.literal('streetNumber'),zod.literal('street'),zod.literal('district'),zod.literal('city'),zod.literal(null)]).nullish(),
   "geoSource": zod.union([zod.literal('description'),zod.literal(null)]).nullish().describe('description = position found in the listing text (cited address, geocoded), not given by the site'),
-  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)')
+  "geoEvidence": zod.string().nullish().describe('Exact sentence of the listing that cites the address (when geoSource is description)'),
+  "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
+  "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
+  "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
+
+
+/**
+ * @summary Follow this search (one per account, replaces the previous one) at the given Paris times
+ */
+export const WatchHousingSearchParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const watchHousingSearchBodyTimesItemRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const watchHousingSearchBodyTimesMax = 2;
+
+
+
+export const WatchHousingSearchBody = zod.object({
+  "times": zod.array(zod.string().regex(watchHousingSearchBodyTimesItemRegExp)).min(1).max(watchHousingSearchBodyTimesMax).describe('Paris times, « HH:MM »')
+})
+
+export const watchHousingSearchResponseCriteriaRadiusMin = 0;
+export const watchHousingSearchResponseCriteriaRadiusMax = 200;
+
+
+
+export const WatchHousingSearchResponse = zod.object({
+  "id": zod.number().int(),
+  "prompt": zod.string(),
+  "criteria": zod.object({
+  "location": zod.string(),
+  "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
+  "maxPrice": zod.number().int().nullish(),
+  "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
+  "minRooms": zod.number().int().nullish(),
+  "maxRooms": zod.number().int().nullish(),
+  "radius": zod.number().int().min(watchHousingSearchResponseCriteriaRadiusMin).max(watchHousingSearchResponseCriteriaRadiusMax).optional(),
+  "keywords": zod.string(),
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
+})).optional()
+}),
+  "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
+  "count": zod.number().int(),
+  "createdAt": zod.string(),
+  "analyzed": zod.boolean(),
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
+})
+
+
+/**
+ * @summary Stop following this search
+ */
+export const UnwatchHousingSearchParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const unwatchHousingSearchResponseCriteriaRadiusMin = 0;
+export const unwatchHousingSearchResponseCriteriaRadiusMax = 200;
+
+
+
+export const UnwatchHousingSearchResponse = zod.object({
+  "id": zod.number().int(),
+  "prompt": zod.string(),
+  "criteria": zod.object({
+  "location": zod.string(),
+  "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
+  "maxPrice": zod.number().int().nullish(),
+  "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
+  "minRooms": zod.number().int().nullish(),
+  "maxRooms": zod.number().int().nullish(),
+  "radius": zod.number().int().min(unwatchHousingSearchResponseCriteriaRadiusMin).max(unwatchHousingSearchResponseCriteriaRadiusMax).optional(),
+  "keywords": zod.string(),
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
+})).optional()
+}),
+  "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
+  "count": zod.number().int(),
+  "createdAt": zod.string(),
+  "analyzed": zod.boolean(),
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
+})
+
+
+/**
+ * @summary The owner opened the search; its new listings now count as seen
+ */
+export const VisitHousingSearchParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const VisitHousingSearchResponse = zod.void()
+
+
+/**
+ * @summary The followed search of the account (badges of the site)
+ */
+export const getWatchedSearchResponseSearchOneCriteriaRadiusMin = 0;
+export const getWatchedSearchResponseSearchOneCriteriaRadiusMax = 200;
+
+
+
+export const GetWatchedSearchResponse = zod.object({
+  "search": zod.union([zod.object({
+  "id": zod.number().int(),
+  "prompt": zod.string(),
+  "criteria": zod.object({
+  "location": zod.string(),
+  "intent": zod.enum(['rent', 'buy']),
+  "minPrice": zod.number().int().nullish(),
+  "maxPrice": zod.number().int().nullish(),
+  "minArea": zod.number().int().nullish(),
+  "maxArea": zod.number().int().nullish(),
+  "minRooms": zod.number().int().nullish(),
+  "maxRooms": zod.number().int().nullish(),
+  "radius": zod.number().int().min(getWatchedSearchResponseSearchOneCriteriaRadiusMin).max(getWatchedSearchResponseSearchOneCriteriaRadiusMax).optional(),
+  "keywords": zod.string(),
+  "wishes": zod.array(zod.string()).optional(),
+  "checks": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "availability": zod.enum(['api', 'hybrid', 'description']),
+  "apiField": zod.string().nullish()
+})).optional(),
+  "places": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "kind": zod.enum(['work', 'school', 'other']),
+  "address": zod.string(),
+  "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish(),
+  "resolved": zod.string().nullish()
+})).optional()
+}),
+  "status": zod.enum(['running', 'completed', 'failed']),
+  "stage": zod.enum(['interpreting', 'searching', 'analyzing', 'ready', 'failed']).optional(),
+  "phase": zod.enum(['focused', 'broad']).optional(),
+  "searchRequests": zod.array(zod.object({
+  "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
+  "path": zod.string(),
+  "input": zod.string()
+})).optional(),
+  "focusedMatches": zod.number().int().nullish(),
+  "count": zod.number().int(),
+  "createdAt": zod.string(),
+  "analyzed": zod.boolean(),
+  "error": zod.string().nullish(),
+  "task": zod.union([zod.literal('watch'),zod.literal('extend'),zod.literal('analyze'),zod.literal(null)]).nullable().describe('Background work on a completed search'),
+  "watch": zod.union([zod.literal('active'),zod.literal('paused'),zod.literal(null)]).nullable().describe('Followed search (« active »), paused for lack of visits (« paused »), or not followed'),
+  "watchTimes": zod.array(zod.string()),
+  "nextWatchAt": zod.string().nullish(),
+  "lastVisitedAt": zod.string().nullish(),
+  "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
+}),zod.null()])
+})
 
 
 /**

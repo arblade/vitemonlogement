@@ -10,6 +10,8 @@ import type { HousingSearchRequest } from './housingSearchRequest';
 import type { HousingSearchSummaryPhase } from './housingSearchSummaryPhase';
 import type { HousingSearchSummaryStage } from './housingSearchSummaryStage';
 import type { HousingSearchSummaryStatus } from './housingSearchSummaryStatus';
+import type { HousingSearchSummaryTask } from './housingSearchSummaryTask';
+import type { HousingSearchSummaryWatch } from './housingSearchSummaryWatch';
 
 export interface HousingSearchSummary {
   id: number;
@@ -26,4 +28,21 @@ export interface HousingSearchSummary {
   analyzed: boolean;
   /** @nullable */
   error?: string | null;
+  /**
+     * Background work on a completed search
+     * @nullable
+     */
+  task: HousingSearchSummaryTask;
+  /**
+     * Followed search (« active »), paused for lack of visits (« paused »), or not followed
+     * @nullable
+     */
+  watch: HousingSearchSummaryWatch;
+  watchTimes: string[];
+  /** @nullable */
+  nextWatchAt?: string | null;
+  /** @nullable */
+  lastVisitedAt?: string | null;
+  /** Listings of the followed search found since the last visit */
+  unseenCount: number;
 }

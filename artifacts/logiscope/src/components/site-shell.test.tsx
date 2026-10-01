@@ -6,7 +6,7 @@ import { Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
 import { AuthGate } from '@/components/auth-gate';
 import { SiteShell } from '@/components/site-shell';
-import { mockFetch, type Route } from '@/test/fixtures';
+import { mockFetch, search, type Route } from '@/test/fixtures';
 
 const me: Route = { match: /\/api\/auth\/me$/, respond: () => ({ body: { authenticated: true, email: 'moi@example.com' } }) };
 const favorites = (n: number): Route => ({
@@ -62,5 +62,24 @@ describe('SiteShell', () => {
     await screen.findByText('Contenu');
     await user.click(screen.getByTestId('button-logout'));
     expect(await screen.findByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
+  });
+
+  it('pastille rose : annonces non vues de la recherche suivie, dans le menu (bureau et mobile) et le titre de l’onglet', async () => {
+    const watched: Route = { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: { ...search({ id: 4 }), watch: 'active', watchTimes: ['08:00', '18:00'], unseenCount: 3 } } }) };
+    mockFetch([me, favorites(0), watched]);
+    renderShell();
+    expect(await screen.findByTestId('badge-unseen')).toHaveTextContent('3');
+    expect(screen.getByTestId('badge-unseen-menu')).toHaveTextContent('3');
+    expect(screen.getByTestId('badge-unseen')).toHaveAccessibleName('3 nouvelles annonces non vues');
+    expect(document.title).toBe('(3) Vite mon logement');
+  });
+
+  it('aucune recherche suivie, ou rien de nouveau : ni pastille ni nombre dans l’onglet', async () => {
+    mockFetch([me, favorites(0), { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: null } }) }]);
+    renderShell();
+    await screen.findByText('Contenu');
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(screen.queryByTestId('badge-unseen')).not.toBeInTheDocument();
+    expect(document.title).toBe('Vite mon logement');
   });
 });

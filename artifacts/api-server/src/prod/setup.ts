@@ -9,5 +9,6 @@ for (const name of ["APIFY_TOKEN", "OPENAI_API_KEY"]) {
 delete process.env.APIFY_BASE_URL;
 delete process.env.OPENAI_BASE_URL;
 delete process.env.DATABASE_URL;
-process.env.APIFY_MAX_CHARGE_USD ??= "0.05"; // un run de 10 annonces coûte ~0,015 €
-process.env.APIFY_RESULT_LIMIT = "5";
+process.env.APIFY_MAX_CHARGE_USD ??= "0.05"; // une page de 35 annonces coûte ~0,035 $
+process.env.READ_MAX_PAGES = "1"; // une seule page lue
+process.env.FIRST_ANALYSIS = "5"; // 5 annonces analysées par l'IA

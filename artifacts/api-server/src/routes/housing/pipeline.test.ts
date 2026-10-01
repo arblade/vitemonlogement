@@ -81,7 +81,7 @@ async function runToCompletion(id: number) {
     await db().update(housingSearches).set({ nextCheckAt: 0 }).where(eq(housingSearches.id, id)); // saute l'attente entre deux contrôles
     await worker.tick();
     const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
-    if (row.status !== "running") return row;
+    if (row.status !== "running" && !row.task) return row; // terminée, et plus aucune tâche en cours
   }
   throw new Error("La recherche ne se termine pas");
 }

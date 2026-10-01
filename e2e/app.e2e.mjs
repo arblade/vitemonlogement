@@ -271,6 +271,49 @@ test("chargement progressif (mobile puis desktop) : 5 annonces, puis en faisant 
   }
 });
 
+test("recherche suivie (mobile puis desktop) : créer l'alerte à 8 h et 18 h, pastille et titre d'onglet, puis l'arrêter", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      await page.goto(`${base}/searches/1`);
+      await page.waitForSelector("[data-testid=card-watch]");
+      assert.match(await text(page, "[data-testid=card-watch]"), /Créer une alerte/, name);
+      await page.click("[data-testid=button-watch]");
+      await page.waitForSelector("[data-testid=text-watch-status]");
+      assert.match(await text(page, "[data-testid=text-watch-status]"), /Recherche suivie · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
+      // La pastille vient du serveur ; on simule ici 2 annonces trouvées par un passage (le passage lui-même : tests serveur).
+      await page.route(/\/api\/housing\/watch$/, async route => {
+        const data = await (await route.fetch()).json();
+        await route.fulfill({ json: { search: { ...data.search, unseenCount: 2 } } });
+      });
+      await page.goto(`${base}/`);
+      await page.waitForSelector("[data-testid=card-watched-search]");
+      assert.match(await text(page, "[data-testid=text-watched-unseen]"), /2 nouvelles/, name);
+      await page.waitForSelector(name === "mobile" ? "[data-testid=badge-unseen-menu]" : "[data-testid=badge-unseen]");
+      assert.equal(await page.title(), "(2) Vite mon logement", name);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-accueil-${name}.png` });
+      await page.unroute(/\/api\/housing\/watch$/);
+      await page.goto(`${base}/searches/1`);
+      await page.click("[data-testid=button-unwatch]");
+      await page.waitForSelector("[data-testid=button-watch]");
+      await page.goto(`${base}/`);
+      await page.waitForSelector("[data-testid=button-start-search]");
+      assert.equal(await page.locator("[data-testid=card-watched-search]").count(), 0, `${name} : plus de recherche suivie`);
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
 test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la rue sont placés, un clic ouvre la fiche et la fermeture ramène à la carte", async () => {
   const wide = await newContext("desktop");
   try {

@@ -4,21 +4,23 @@ import {
   CreateHousingSearchBody, CreateHousingSearchResponse,
   ListHousingSearchesResponse, GetHousingSearchParams,
   GetHousingSearchResponse, AnalyzeHousingSearchParams,
-  AnalyzeHousingSearchResponse, RefreshHousingSearchParams,
+  AnalyzeHousingSearchResponse, AnalyzeHousingSearchBody, RefreshHousingSearchParams,
   RefreshHousingSearchResponse, GetListingRoutesParams, GetListingRoutesResponse,
+  WatchHousingSearchParams, WatchHousingSearchBody, WatchHousingSearchResponse, UnwatchHousingSearchParams, UnwatchHousingSearchResponse,
+  VisitHousingSearchParams, GetWatchedSearchResponse,
 } from "@workspace/api-zod";
-import { randomUUID } from "node:crypto";
-import { interpret, analyze } from "./ai";
-import { beginRefresh, createSearch, getOwnedSearchRow, getSearch, isPrecise, listSearches, saveAnalysis } from "./store";
+import { interpret } from "./ai";
+import {
+  createSearch, getOwnedSearchRow, getPublicSearch, getSearch, isPrecise, listSearches, markVisited, requestAnalysis, requestExtend,
+  startWatching, stopWatching, watchedSearch,
+} from "./store";
+import { nextParisTime } from "../../lib/paris-time";
 import { commuteOptions, RoutingQuotaError, routingAvailable } from "../../lib/travel";
 import { logger } from "../../lib/logger";
 import { costlyRateLimit } from "../../lib/quota";
-import { claimSearch, releaseSearch } from "../../lib/queue";
 import { wakeWorker } from "../../lib/worker-registry";
 
 const router: IRouter = Router();
-const instanceId = `api-${randomUUID()}`;
-const ANALYZE_LEASE_MS = 5 * 60_000;
 
 // Les routes coûteuses (IA, Apify) passent par costlyRateLimit : plafond global, par cookie et par IP.
 router.post("/housing/interpret", costlyRateLimit, async (req, res): Promise<void> => {
@@ -35,7 +37,7 @@ router.post("/housing/searches", costlyRateLimit, async (req, res): Promise<void
   const input = CreateHousingSearchBody.safeParse(req.body);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
   const id = await createSearch(input.data.prompt.trim(), req.userId!);
-  res.status(201).json(CreateHousingSearchResponse.parse(await getSearch(id)));
+  res.status(201).json(CreateHousingSearchResponse.parse(await getPublicSearch(id)));
   wakeWorker(); // le worker serveur prend le relais ; le navigateur ne fait que suivre l'avancement
 });
 
@@ -45,50 +47,73 @@ router.get("/housing/searches/:id", async (req, res): Promise<void> => {
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const row = await getOwnedSearchRow(params.data.id, req.userId!);
   if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
-  res.json(GetHousingSearchResponse.parse(await getSearch(row.id)));
+  res.json(GetHousingSearchResponse.parse(await getPublicSearch(row.id)));
 });
 
+// « Étendre » : la page suivante, plus ancienne (35 annonces au plus, une lecture Apify).
 router.post("/housing/searches/:id/refresh", costlyRateLimit, async (req, res): Promise<void> => {
   const params = RefreshHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const row = await getOwnedSearchRow(params.data.id, req.userId!);
   if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
   if (row.status !== "completed") {
-    res.status(409).json({ error: "Attendez la fin de la recherche avant de rafraîchir." });
+    res.status(409).json({ error: "Attendez la fin de la recherche avant d’en chercher d’autres." });
     return;
   }
-  if (!await beginRefresh(row.id)) {
-    res.status(409).json({ error: "Un rafraîchissement est déjà en cours." });
+  if (!await requestExtend(row.id)) {
+    res.status(409).json({ error: "Une lecture est déjà en cours." });
     return;
   }
-  res.status(202).json(RefreshHousingSearchResponse.parse(await getSearch(row.id)));
+  res.status(202).json(RefreshHousingSearchResponse.parse(await getPublicSearch(row.id)));
   wakeWorker();
 });
 
-router.post("/housing/searches/:id/analyze", costlyRateLimit, async (req, res): Promise<void> => {
+// Annonces affichées en faisant défiler : leur analyse IA est faite en arrière-plan. Pas de costlyRateLimit : la
+// dépense est bornée par les annonces déjà lues (une annonce n'est analysée qu'une fois, cache partagé).
+router.post("/housing/searches/:id/analyze", async (req, res): Promise<void> => {
   const params = AnalyzeHousingSearchParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
-  if (!await getOwnedSearchRow(params.data.id, req.userId!)) { res.status(404).json({ error: "Recherche introuvable." }); return; }
-  const search = await getSearch(params.data.id);
-  if (!search) { res.status(404).json({ error: "Recherche introuvable." }); return; }
-  if (search.status !== "completed") {
-    res.status(409).json({ error: "Attendez la fin de la recherche avant l'analyse." });
-    return;
-  }
-  if (!search.analyzed) {
-    // Verrou en base (bail) : valable même avec plusieurs instances.
-    if (!await claimSearch(search.id, instanceId, ANALYZE_LEASE_MS)) {
-      res.status(409).json({ error: "Une analyse est déjà en cours pour cette recherche." });
-      return;
-    }
-    try {
-      const enriched = await analyze(search.listings, search.criteria);
-      await saveAnalysis(search.id, enriched);
-    } finally {
-      await releaseSearch(search.id, instanceId);
-    }
-  }
-  res.json(AnalyzeHousingSearchResponse.parse(await getSearch(search.id)));
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
+  if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
+  const body = AnalyzeHousingSearchBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "Requête invalide." }); return; }
+  if (await requestAnalysis(row.id, body.data.listingIds)) wakeWorker();
+  res.status(202).json(AnalyzeHousingSearchResponse.parse(await getPublicSearch(row.id)));
+});
+
+// Recherche suivie : une seule par compte, aux heures choisies (heure de Paris).
+router.put("/housing/searches/:id/watch", async (req, res): Promise<void> => {
+  const params = WatchHousingSearchParams.safeParse(req.params);
+  const body = WatchHousingSearchBody.safeParse(req.body);
+  if (!params.success || !body.success) { res.status(400).json({ error: "Choisissez une ou deux heures de passage." }); return; }
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
+  if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
+  if (row.status === "failed") { res.status(409).json({ error: "Cette recherche n’a pas abouti : relancez-la avant de la suivre." }); return; }
+  const times = [...new Set(body.data.times)].sort();
+  await startWatching(row.id, req.userId!, times, nextParisTime(times, Date.now())!);
+  res.json(WatchHousingSearchResponse.parse((await getSearch(row.id))!));
+});
+
+router.delete("/housing/searches/:id/watch", async (req, res): Promise<void> => {
+  const params = UnwatchHousingSearchParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
+  if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
+  await stopWatching(row.id, req.userId!);
+  res.json(UnwatchHousingSearchResponse.parse((await getSearch(row.id))!));
+});
+
+router.post("/housing/searches/:id/visit", async (req, res): Promise<void> => {
+  const params = VisitHousingSearchParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
+  const row = await getOwnedSearchRow(params.data.id, req.userId!);
+  if (!row) { res.status(404).json({ error: "Recherche introuvable." }); return; }
+  await markVisited(row.id, req.userId!);
+  res.status(204).end();
+});
+
+router.get("/housing/watch", async (req, res) => {
+  res.json(GetWatchedSearchResponse.parse({ search: await watchedSearch(req.userId!) }));
 });
 
 // Trajets annonce → lieux de vie. Pas de costlyRateLimit : les trajets déjà calculés sont servis depuis la base,

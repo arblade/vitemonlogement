@@ -37,7 +37,8 @@ test("prod : recherche complète Apify + analyse OpenAI, de bout en bout", { tim
   const search = await getSearch(id);
   assert.equal(status, "completed", `recherche non terminée : ${status} ${search ? "" : "(introuvable)"}`);
   assert.ok(search && search.listings.length > 0, "au moins une annonce attendue");
-  assert.ok(search.listings.length <= 10, "les limites de résultats sont respectées");
+  assert.ok(search.listings.length <= 35, "une seule page lue (35 annonces au plus)");
+  assert.ok(search.listings.filter(listing => listing.analyzed).length <= 5, "5 analyses IA au plus");
   for (const listing of search.listings) {
     assert.ok(isHousingListingUrl(listing.url), `URL non locative : ${listing.url}`);
     if (listing.price !== null) assert.ok(listing.price <= 700, `budget dépassé : ${listing.price} €`);

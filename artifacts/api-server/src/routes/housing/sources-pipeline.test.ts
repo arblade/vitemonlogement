@@ -92,7 +92,6 @@ before(async () => {
   process.env.APIFY_TOKEN = "test";
   process.env.OPENAI_BASE_URL = `${origin}/v1`;
   process.env.OPENAI_API_KEY = "test";
-  process.env.APIFY_RESULT_LIMIT = "9";
   const { useMemoryDatabase } = await import("../../test/helpers");
   await useMemoryDatabase();
 });
@@ -100,7 +99,6 @@ after(async () => {
   const { setExtraSourcesForTests } = await import("./sources");
   setExtraSourcesForTests();
   fake.close();
-  delete process.env.APIFY_RESULT_LIMIT;
   const { closeDatabase } = await import("../../lib/database");
   await closeDatabase();
 });
@@ -113,7 +111,7 @@ async function runToCompletion(id: number) {
     await db().update(housingSearches).set({ nextCheckAt: 0 }).where(eq(housingSearches.id, id));
     await worker.tick();
     const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
-    if (row.status !== "running") return row;
+    if (row.status !== "running" && !row.task) return row; // terminée, et plus aucune tâche en cours
   }
   throw new Error("La recherche ne se termine pas");
 }
@@ -123,16 +121,18 @@ test("trois sources : lancées ensemble, PAP attendu, annonces alternées, aucun
   const id = await createSearch("Un T1 ou T2 à Lille, 900 € max");
   assert.equal((await runToCompletion(id)).status, "completed");
   assert.deepEqual(started.sort(), ["abotapi~seloger-france-scraper", "clearpath~pap-scraper", "fatihtahta~leboncoin-fr-scraper", "silentflow~seloger-scraper-ppr"]);
-  // Annonces lues (et payées) par source : Le Bon Coin 10, SeLoger 6, PAP 4.
-  assert.equal(inputs["fatihtahta~leboncoin-fr-scraper"].limit, 10);
+  // Annonces lues (et payées) par source : Le Bon Coin une page (35), SeLoger 6, PAP 4.
+  assert.equal(inputs["fatihtahta~leboncoin-fr-scraper"].limit, 35, "une page Le Bon Coin");
   assert.equal(inputs["silentflow~seloger-scraper-ppr"].maxItems, 6);
   assert.equal(inputs["clearpath~pap-scraper"].maxResults, 4);
 
   const search = await getSearch(id);
   const listings = search?.listings ?? [];
-  assert.equal(listings.length, 9);
+  // Toutes les annonces valides sont gardées (plus de plafond à 5 ou 9) : l'IA n'analyse que les 10 premières d'emblée.
+  assert.equal(listings.length, 11);
   const bySource = (source: string) => listings.filter(listing => listing.source === source).length;
-  assert.deepEqual([bySource("leboncoin"), bySource("seloger"), bySource("pap")], [3, 3, 3], "trois sites à tour de rôle");
+  assert.deepEqual([bySource("leboncoin"), bySource("seloger"), bySource("pap")], [3, 5, 3]);
+  assert.deepEqual(listings.slice(0, 9).map(listing => listing.source), ["leboncoin", "seloger", "pap", "leboncoin", "seloger", "pap", "leboncoin", "seloger", "pap"], "trois sites à tour de rôle");
   assert.ok(listings.every(listing => !/achat|-r999|colocation/i.test(`${listing.url} ${listing.title}`)), "ni vente ni colocation");
   assert.ok(listings.filter(listing => listing.source === "pap").every(listing => listing.url.startsWith("https://www.pap.fr/annonces/")));
   assert.ok(listings.filter(listing => listing.source === "seloger").every(listing => /^https:\/\/www\.seloger\.com\/annonces?\/locations?\//.test(listing.url)));

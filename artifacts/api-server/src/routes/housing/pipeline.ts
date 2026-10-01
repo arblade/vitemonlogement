@@ -1,8 +1,8 @@
 import { logger } from "../../lib/logger";
 import { interpret } from "./ai";
 import { locatePlaces } from "../../lib/geocode";
-import { startSearch, syncSearch } from "./apify";
-import { FAILURE_MESSAGE, getSearchRow, recordAttemptFailure, setCriteria, setFailure, setRun, type Criteria } from "./store";
+import { analyzeListings, checkPage, firstState, startPage, type PassMode } from "./reader";
+import { clearTask, FAILURE_MESSAGE, getSearchRow, pendingAnalysis, recordAttemptFailure, setCriteria, setFailure, type Criteria, type SearchRow } from "./store";
 
 export const MAX_STEP_ATTEMPTS = 3;
 const POLL_MS = 5_000; // entre deux contrôles d'un run Apify
@@ -18,54 +18,72 @@ export function blockingFailure(error: unknown): string | null {
   return null;
 }
 
+/** Annonces analysées par étape quand le navigateur en demande (en faisant défiler). */
+const ANALYSIS_STEP = 10;
+
 /**
- * Fait avancer une recherche d'une étape : interprétation + démarrage du run Apify, ou contrôle du run
- * (récupération des annonces, analyse IA, enregistrement). À appeler sous bail. Renvoie le délai avant
- * le prochain passage. Aucune dépendance à un navigateur ouvert : c'est le worker qui appelle.
+ * Fait avancer une recherche d'une étape, sous bail (voir worker.ts). Recherche « running » : interprétation de la
+ * demande puis lecture page par page (reader.ts). Recherche terminée avec une tâche : passage de la recherche suivie,
+ * page suivante (« Étendre ») ou analyse demandée en faisant défiler. Renvoie le délai avant le prochain passage.
  */
 export async function advanceSearch(id: number): Promise<number> {
   const row = await getSearchRow(id);
-  if (!row || row.status !== "running") return 0;
-  const isRefresh = Boolean(row.analyzed);
+  if (!row || (row.status !== "running" && !row.task)) return 0;
+  const isTask = row.status !== "running";
   try {
     let criteria = JSON.parse(row.criteria) as Criteria;
+    if (row.task === "analyze") {
+      const batch = await pendingAnalysis(id, { requestedOnly: true, limit: ANALYSIS_STEP });
+      await analyzeListings(id, criteria, batch);
+      // Une réponse incomplète de l'IA ne fait pas boucler : la demande retombe, le navigateur la renouvellera.
+      if (!batch.length || batch.length < ANALYSIS_STEP) { await clearTask(id); return 0; }
+      return 0;
+    }
     if (!row.runId) {
-      if (!criteria.location) {
-        criteria = await interpret(row.prompt);
-        if (!criteria.location.trim()) {
-          // Définitif : redemander ne changera rien.
-          await setFailure(id, "Indiquez une ville ou un département dans votre description.", isRefresh);
-          return 0;
+      if (!isTask) {
+        if (!criteria.location) {
+          criteria = await interpret(row.prompt);
+          if (!criteria.location.trim()) {
+            // Définitif : redemander ne changera rien.
+            await setFailure(id, "Indiquez une ville ou un département dans votre description.");
+            return 0;
+          }
+          if (criteria.places?.length) criteria = { ...criteria, places: await locatePlaces(criteria.places, criteria.location) };
+          await setCriteria(id, criteria);
         }
-        if (criteria.places?.length) criteria = { ...criteria, places: await locatePlaces(criteria.places, criteria.location) };
-        await setCriteria(id, criteria);
+        if (criteria.intent !== "rent") {
+          criteria = { ...criteria, intent: "rent" };
+          await setCriteria(id, criteria);
+        }
       }
-      if (criteria.intent !== "rent") {
-        criteria = { ...criteria, intent: "rent" };
-        await setCriteria(id, criteria);
-      }
-      const { runId, request, sourceRuns } = await startSearch(criteria);
-      await setRun(id, runId, request, sourceRuns);
+      await startPage(id, criteria, firstState(passMode(row), row));
       return POLL_MS;
     }
-    await syncSearch(id, criteria);
-    const after = await getSearchRow(id);
-    // Toujours « running » : run Apify en cours, ou phase élargie à démarrer tout de suite.
-    return after?.status === "running" ? (after.runId ? POLL_MS : 0) : 0;
+    const outcome = await checkPage(row, criteria);
+    if (outcome === "failed") {
+      if (isTask) await clearTask(id, row.task === "extend" ? "Impossible de charger plus d’annonces pour le moment." : null);
+      else await setFailure(id, FAILURE_MESSAGE);
+      return 0;
+    }
+    return outcome === "done" ? 0 : POLL_MS;
   } catch (error) {
     const blocking = blockingFailure(error);
     if (blocking) {
       logger.error({ err: error, searchId: id }, "Housing search blocked by the AI service");
-      await setFailure(id, blocking, isRefresh);
+      if (isTask) await clearTask(id, row.task === "watch" ? null : blocking);
+      else await setFailure(id, blocking);
       return 0;
     }
     const message = error instanceof Error ? error.message : "La recherche a échoué.";
     const attempts = await recordAttemptFailure(id, message);
-    logger.error({ err: error, searchId: id, attempts }, "Housing search step failed");
+    logger.error({ err: error, searchId: id, attempts, task: row.task }, "Housing search step failed");
     if (attempts >= MAX_STEP_ATTEMPTS) {
-      await setFailure(id, FAILURE_MESSAGE, isRefresh);
+      if (isTask) await clearTask(id, row.task === "watch" ? null : FAILURE_MESSAGE);
+      else await setFailure(id, FAILURE_MESSAGE);
       return 0;
     }
     return RETRY_MS * attempts;
   }
 }
+
+const passMode = (row: SearchRow): PassMode => row.status === "running" ? "initial" : row.task === "watch" ? "watch" : "extend";

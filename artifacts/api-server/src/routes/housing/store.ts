@@ -1,7 +1,8 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
+import { nextParisTime } from "../../lib/paris-time";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
 
@@ -91,8 +92,15 @@ export type Listing = {
   geoSource?: "description" | null;
   /** Phrase exacte de l'annonce qui cite l'adresse, quand geoSource vaut « description ». */
   geoEvidence?: string | null;
-  /** Code postal donné par le site (sert au géocodage ; non enregistré). */
+  /** Code postal donné par le site (sert au géocodage de l'adresse lue dans la description). */
   postcode?: string | null;
+  /** Dates Le Bon Coin (ms UTC) : publication, dernière mise à jour (« remontée »). */
+  postedAt?: number | null;
+  refreshedAt?: number | null;
+  /** Première lecture pour cette recherche (ms). */
+  firstSeenAt?: number;
+  /** false : pas encore analysée par l'IA (elle le sera quand elle sera affichée). */
+  analyzed?: boolean;
 };
 
 export type SearchRow = typeof housingSearches.$inferSelect;
@@ -108,18 +116,6 @@ export async function createSearch(prompt: string, ownerId: number | null = null
 
 export async function setCriteria(id: number, criteria: Criteria) {
   await db().update(housingSearches).set({ criteria: JSON.stringify(criteria), stage: "searching" }).where(eq(housingSearches.id, id));
-}
-
-export async function setRun(id: number, runId: string, request: ActorRequest, sourceRuns: SourceRun[] = []) {
-  const column = request.batch === "focused" ? { focusedRequest: JSON.stringify(request) } : { broadRequest: JSON.stringify(request) };
-  await db().update(housingSearches)
-    // Les runs PAP/SeLoger accompagnent la recherche ciblée ; ils restent affichés (suivi) après la phase élargie.
-    .set({ runId, ...column, ...(request.batch === "focused" ? { sourceRuns: sourceRuns.length ? JSON.stringify(sourceRuns) : null } : {}), stage: "searching", attempts: 0 })
-    .where(eq(housingSearches.id, id));
-}
-
-export async function setAnalyzing(id: number) {
-  await db().update(housingSearches).set({ stage: "analyzing" }).where(eq(housingSearches.id, id));
 }
 
 /** Message affiché à l'utilisateur quand une recherche échoue : jamais le détail technique (il reste dans les journaux du serveur). */
@@ -140,15 +136,6 @@ export async function recordAttemptFailure(id: number, message: string) {
   return row?.attempts ?? 0;
 }
 
-export async function beginRefresh(id: number) {
-  const rows = await db().update(housingSearches)
-    .set({ status: "running", stage: "searching", phase: "focused", runId: null, sourceRuns: null, focusedRequest: null, broadRequest: null,
-      focusedMatches: null, error: null, attempts: 0, nextCheckAt: 0 })
-    .where(and(eq(housingSearches.id, id), eq(housingSearches.status, "completed")))
-    .returning({ id: housingSearches.id });
-  return rows.length === 1;
-}
-
 export async function getSearchRow(id: number): Promise<SearchRow | undefined> {
   const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
   return row;
@@ -160,8 +147,22 @@ export async function getOwnedSearchRow(id: number, ownerId: number) {
   return row && row.ownerId === ownerId ? row : undefined;
 }
 
+/** Annonces de la recherche suivie arrivées depuis la dernière ouverture (0 pour une recherche ponctuelle). */
+async function unseenCount(row: SearchRow) {
+  if (row.watched === 0) return 0;
+  const t = housingListings;
+  const [result] = await db().select({ n: sql<number>`count(*)::int` }).from(t)
+    .where(and(eq(t.searchId, row.id), isNull(t.hidden), gt(t.firstSeenAt, row.lastVisitedAt ?? 0)));
+  return Number(result?.n ?? 0);
+}
+
+const iso = (ms: number | null | undefined) => ms == null || ms <= 0 ? null : new Date(ms).toISOString();
+
+/** État de suivi exposé au navigateur : « active », « paused » (arrêtée faute de visite) ou null. */
+const watchState = (row: SearchRow) => row.watched === 1 ? "active" as const : row.watched === 2 ? "paused" as const : null;
+
 async function summary(row: SearchRow) {
-  const urls = await db().select({ url: housingListings.url }).from(housingListings).where(eq(housingListings.searchId, row.id));
+  const urls = await db().select({ url: housingListings.url }).from(housingListings).where(and(eq(housingListings.searchId, row.id), isNull(housingListings.hidden)));
   const searchRequests = [row.focusedRequest, row.broadRequest]
     .filter((value): value is string => Boolean(value))
     .map(value => JSON.parse(value) as ActorRequest)
@@ -179,11 +180,18 @@ async function summary(row: SearchRow) {
     createdAt: row.createdAt,
     analyzed: Boolean(row.analyzed),
     error: row.error,
+    task: (row.task as "watch" | "extend" | "analyze" | null) ?? null,
+    watch: watchState(row),
+    watchTimes: row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [],
+    nextWatchAt: row.watched === 1 ? iso(row.nextWatchAt) : null,
+    lastVisitedAt: iso(row.lastVisitedAt),
+    unseenCount: await unseenCount(row),
   };
 }
 
 export async function listSearches(ownerId: number) {
-  const rows = await db().select().from(housingSearches).where(eq(housingSearches.ownerId, ownerId)).orderBy(desc(housingSearches.id)).limit(30);
+  const rows = await db().select().from(housingSearches).where(eq(housingSearches.ownerId, ownerId))
+    .orderBy(desc(sql`${housingSearches.watched} > 0`), desc(housingSearches.id)).limit(30);
   return Promise.all(rows.map(summary));
 }
 
@@ -191,8 +199,8 @@ export async function getSearch(id: number) {
   const row = await getSearchRow(id);
   if (!row) return null;
   const t = housingListings;
-  const rows = await db().select().from(t).where(eq(t.searchId, id))
-    .orderBy(sql`CASE ${t.batch} WHEN 'focused' THEN 0 ELSE 1 END`, desc(t.score), asc(t.id));
+  const rows = await db().select().from(t).where(and(eq(t.searchId, id), isNull(t.hidden)))
+    .orderBy(sql`${t.refreshedAt} DESC NULLS LAST`, desc(t.score), asc(t.id));
   const listings: Listing[] = rows
     .filter(listing => isHousingListingUrl(listing.url))
     .map(listing => ({
@@ -206,6 +214,8 @@ export async function getSearch(id: number) {
       features: JSON.parse(listing.features) as Feature[],
       lat: listing.lat, lng: listing.lng, geoPrecision: listing.geoPrecision as GeoPrecision | null,
       geoSource: listing.geoSource === "description" ? "description" as const : null, geoEvidence: listing.geoEvidence,
+      postcode: listing.postcode, postedAt: listing.postedAt, refreshedAt: listing.refreshedAt, firstSeenAt: listing.firstSeenAt,
+      analyzed: listing.analyzed === 1,
     }));
   return { ...await summary(row), listings, routingAvailable: routingAvailable() };
 }
@@ -253,19 +263,188 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
   });
 }
 
-export async function saveAnalysis(id: number, enriched: { id: number; features: Feature[]; aiSummary: string | null; summaryEvidence: string[]; criterionResults: CriterionResult[]; score: number; price: number | null; area: number | null; rooms: number | null; location: string | null }[]) {
+/** Recherche telle qu'exposée au navigateur (dates en ISO). */
+export async function getPublicSearch(id: number) {
+  const search = await getSearch(id);
+  return search && { ...search, listings: search.listings.map(publicListing) };
+}
+
+/** Annonce telle qu'exposée au navigateur : dates en ISO, sans le code postal. */
+export function publicListing(listing: Listing) {
+  const { postcode: _postcode, postedAt, refreshedAt, firstSeenAt, analyzed, ...rest } = listing;
+  return { ...rest, postedAt: iso(postedAt), refreshedAt: iso(refreshedAt), firstSeenAt: iso(firstSeenAt), analyzed: analyzed !== false };
+}
+
+/**
+ * Annonces lues lors d'un passage : les nouvelles sont enregistrées sans analyse (faite à l'affichage) ; celles déjà
+ * connues gardent tout, seule leur date de mise à jour avance (annonce remontée). Renvoie les adresses nouvelles.
+ */
+export async function saveRead(id: number, listings: Omit<Listing, "id">[], now = Date.now()) {
+  const t = housingListings;
+  const known = new Set((await db().select({ url: t.url }).from(t).where(eq(t.searchId, id))).map(row => row.url));
+  const fresh: string[] = [];
+  await db().transaction(async tx => {
+    for (const item of listings) {
+      if (known.has(item.url)) {
+        await tx.update(t).set({
+          refreshedAt: sql`GREATEST(COALESCE(${t.refreshedAt}, 0), ${item.refreshedAt ?? 0})`,
+          postedAt: sql`COALESCE(${t.postedAt}, ${item.postedAt ?? null})`,
+        }).where(and(eq(t.searchId, id), eq(t.url, item.url)));
+        continue;
+      }
+      known.add(item.url);
+      fresh.push(item.url);
+      await tx.insert(t).values({
+        searchId: id, source: item.source, batch: item.batch, title: item.title, url: item.url, description: item.description,
+        price: item.price, area: item.area, rooms: item.rooms == null ? null : Math.round(item.rooms),
+        location: item.location, image: item.image, score: item.score, features: JSON.stringify(item.features),
+        images: JSON.stringify(item.images), aiSummary: null, summaryEvidence: "[]", criterionResults: JSON.stringify(item.criterionResults),
+        lat: item.lat ?? null, lng: item.lng ?? null, geoPrecision: item.geoPrecision ?? null,
+        postcode: item.postcode ?? null, postedAt: item.postedAt ?? null, refreshedAt: item.refreshedAt ?? null,
+        firstSeenAt: now, analyzed: 0,
+      }).onConflictDoNothing();
+    }
+  });
+  return fresh;
+}
+
+/** Annonces à analyser, dans l'ordre d'affichage par défaut (les plus récentes d'abord). */
+export async function pendingAnalysis(id: number, options: { requestedOnly?: boolean; limit: number }) {
+  const search = await getSearch(id);
+  if (!search) return [];
+  const t = housingListings;
+  const requested = options.requestedOnly
+    ? new Set((await db().select({ id: t.id }).from(t).where(and(eq(t.searchId, id), eq(t.analysisRequested, 1)))).map(row => row.id))
+    : null;
+  return search.listings.filter(item => item.analyzed === false && (!requested || requested.has(item.id))).slice(0, options.limit);
+}
+
+/** Le navigateur affiche ces annonces : leur analyse est demandée (seulement celles de la recherche, pas encore faites). */
+export async function requestAnalysis(id: number, listingIds: number[]) {
+  if (!listingIds.length) return 0;
+  const t = housingListings;
+  const rows = await db().update(t).set({ analysisRequested: 1 })
+    .where(and(eq(t.searchId, id), inArray(t.id, listingIds.slice(0, 50)), eq(t.analyzed, 0), isNull(t.hidden)))
+    .returning({ id: t.id });
+  if (rows.length) {
+    // Une tâche déjà en cours (passage, page suivante) enchaîne sur l'analyse à sa fin.
+    await db().update(housingSearches).set({ task: "analyze", nextCheckAt: 0 })
+      .where(and(eq(housingSearches.id, id), isNull(housingSearches.task), eq(housingSearches.status, "completed")));
+  }
+  return rows.length;
+}
+
+export type AnalyzedListing = Pick<Listing, "id" | "features" | "aiSummary" | "summaryEvidence" | "criterionResults" | "score" | "price" | "area" | "rooms" | "location" | "lat" | "lng" | "geoPrecision" | "geoSource" | "geoEvidence">;
+
+/** Résultat de l'analyse d'une annonce : enrichie, ou masquée (chambre, local non habitable, prix contredit…). */
+export type AnalysisOutcome = { kind: "kept"; listing: AnalyzedListing } | { kind: "hidden"; id: number; reason: string };
+
+export async function saveAnalyzed(id: number, results: AnalysisOutcome[]) {
   const t = housingListings;
   await db().transaction(async tx => {
-    for (const item of enriched) {
+    for (const result of results) {
+      if (result.kind === "hidden") {
+        await tx.update(t).set({ hidden: result.reason, analyzed: 1, analysisRequested: 0 }).where(and(eq(t.id, result.id), eq(t.searchId, id)));
+        continue;
+      }
+      const item = result.listing;
+      const where = and(eq(t.id, item.id), eq(t.searchId, id));
       await tx.update(t).set({
-        features: JSON.stringify(item.features), aiSummary: item.aiSummary,
-        summaryEvidence: JSON.stringify(item.summaryEvidence), criterionResults: JSON.stringify(item.criterionResults),
-        score: item.score,
-        price: sql`COALESCE(${t.price}, ${item.price})`, area: sql`COALESCE(${t.area}, ${item.area})`,
-        rooms: sql`COALESCE(${t.rooms}, ${item.rooms == null ? null : Math.round(item.rooms)})`,
-        location: sql`COALESCE(${t.location}, ${item.location})`,
-      }).where(and(eq(t.id, item.id), eq(t.searchId, id)));
+        features: JSON.stringify(item.features), aiSummary: item.aiSummary, summaryEvidence: JSON.stringify(item.summaryEvidence),
+        criterionResults: JSON.stringify(item.criterionResults), score: item.score,
+        price: item.price, area: item.area, rooms: item.rooms == null ? null : Math.round(item.rooms), location: item.location,
+        lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision, geoSource: item.geoSource ?? null, geoEvidence: item.geoEvidence ?? null,
+        analyzed: 1, analysisRequested: 0,
+      }).where(where);
     }
-    await tx.update(housingSearches).set({ analyzed: 1 }).where(eq(housingSearches.id, id));
   });
+}
+
+/** Encore des annonces demandées par le navigateur et pas analysées ? */
+export async function hasRequestedAnalysis(id: number) {
+  const t = housingListings;
+  const [row] = await db().select({ id: t.id }).from(t)
+    .where(and(eq(t.searchId, id), eq(t.analysisRequested, 1), eq(t.analyzed, 0), isNull(t.hidden))).limit(1);
+  return Boolean(row);
+}
+
+/** État de la lecture page par page (voir reader.ts), conservé entre deux passages du worker. */
+export async function setPass(id: number, fields: Partial<Pick<SearchRow, "passState" | "runId" | "focusedRequest" | "sourceRuns" | "stage" | "cursorAt" | "pagesRead" | "watchRate" | "attempts">>) {
+  await db().update(housingSearches).set(fields).where(eq(housingSearches.id, id));
+}
+
+/** Fin d'une lecture (première recherche ou tâche) : la recherche est prête, la tâche suivante éventuelle est l'analyse demandée. */
+export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error">> = {}) {
+  const next = await hasRequestedAnalysis(id) ? "analyze" : null;
+  await db().update(housingSearches).set({
+    status: "completed", stage: "ready", runId: null, passState: null, task: next, analyzed: 1, attempts: 0, nextCheckAt: 0, error: null, ...fields,
+  }).where(eq(housingSearches.id, id));
+}
+
+/**
+ * Tâche abandonnée (échec répété) : la recherche reste consultable telle quelle. `message` : affiché à l'utilisateur
+ * (« Étendre »), null pour un passage automatique (rien à lui dire, le suivant réessaiera).
+ */
+export async function clearTask(id: number, message: string | null = null) {
+  const row = await getSearchRow(id);
+  const times = row?.watchTimes ? JSON.parse(row.watchTimes) as string[] : [];
+  await db().update(housingSearches).set({
+    task: null, runId: null, passState: null, attempts: 0, nextCheckAt: 0, error: message,
+    // Un passage suivi qui échoue est reprogrammé au créneau suivant.
+    ...(row?.task === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, Date.now()) } : {}),
+  }).where(eq(housingSearches.id, id));
+}
+
+/** « Étendre » : lire la page suivante (plus ancienne). false si une tâche est déjà en cours. */
+export async function requestExtend(id: number) {
+  const rows = await db().update(housingSearches).set({ task: "extend", passState: null, runId: null, nextCheckAt: 0, error: null, attempts: 0 })
+    .where(and(eq(housingSearches.id, id), eq(housingSearches.status, "completed"), sql`(${housingSearches.task} IS NULL OR ${housingSearches.task} = 'analyze')`))
+    .returning({ id: housingSearches.id });
+  return rows.length === 1;
+}
+
+/** Recherche suivie : une seule par compte ; l'activer arrête l'autre. Ce qui est déjà affiché compte comme vu. */
+export async function startWatching(id: number, ownerId: number, times: string[], nextWatchAt: number, now = Date.now()) {
+  await db().transaction(async tx => {
+    await tx.update(housingSearches).set({ watched: 0, nextWatchAt: null })
+      .where(and(eq(housingSearches.ownerId, ownerId), ne(housingSearches.id, id)));
+    await tx.update(housingSearches).set({ watched: 1, watchTimes: JSON.stringify(times), nextWatchAt, lastVisitedAt: now })
+      .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
+  });
+}
+
+export async function stopWatching(id: number, ownerId: number) {
+  await db().update(housingSearches).set({ watched: 0, nextWatchAt: null })
+    .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
+}
+
+/** Le propriétaire ouvre la recherche : ses nouvelles annonces sont vues. */
+export async function markVisited(id: number, ownerId: number, now = Date.now()) {
+  await db().update(housingSearches).set({ lastVisitedAt: now })
+    .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
+}
+
+/** Recherche suivie du compte (la seule), pour les pastilles du site. */
+export async function watchedSearch(ownerId: number) {
+  const [row] = await db().select().from(housingSearches)
+    .where(and(eq(housingSearches.ownerId, ownerId), sql`${housingSearches.watched} > 0`)).orderBy(desc(housingSearches.id)).limit(1);
+  return row ? summary(row) : null;
+}
+
+/** Jours sans visite après lesquels une recherche suivie se met en pause (elle ne coûte plus rien). */
+export const watchIdleDays = () => Number.parseInt(process.env.WATCH_IDLE_DAYS ?? "", 10) || 7;
+
+/**
+ * Appelé à chaque tour du worker : les recherches suivies dont l'heure est passée reçoivent leur tâche « watch » ; celles
+ * que leur propriétaire n'a pas ouvertes depuis `watchIdleDays` jours passent en pause. Un passage manqué (serveur
+ * arrêté à 8 h) est fait au redémarrage, une seule fois : la lecture part du curseur, rien n'est perdu.
+ */
+export async function scheduleDueWatches(now = Date.now()) {
+  const t = housingSearches;
+  const due = and(eq(t.watched, 1), sql`${t.nextWatchAt} <= ${now}`);
+  const idle = now - watchIdleDays() * 86_400_000;
+  await db().update(t).set({ watched: 2, nextWatchAt: null })
+    .where(and(due, sql`COALESCE(${t.lastVisitedAt}, 0) < ${idle}`));
+  await db().update(t).set({ task: "watch", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
+    .where(and(due, isNull(t.task), eq(t.status, "completed")));
 }

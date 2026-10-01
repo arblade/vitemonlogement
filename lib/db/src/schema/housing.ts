@@ -28,6 +28,23 @@ export const housingSearches = pgTable("housing_searches", {
   attempts: integer("attempts").notNull().default(0),
   // Propriétaire : chaque recherche appartient à un compte (NULL = ancienne recherche, adoptée par le premier compte créé).
   ownerId: integer("owner_id").references(() => users.id),
+  // Travail en arrière-plan sur une recherche terminée : « watch » (passage de la recherche suivie), « extend » (page
+  // suivante, plus ancienne), « analyze » (analyse IA demandée en faisant défiler). NULL : rien à faire.
+  task: text("task"),
+  // Lecture page par page en cours (JSON : mode, page, limite, borne d'arrêt…), voir routes/housing/reader.ts.
+  passState: text("pass_state"),
+  // Date (ms) de la mise à jour Le Bon Coin la plus récente déjà lue : le passage suivant s'arrête là.
+  cursorAt: bigint("cursor_at", { mode: "number" }),
+  // Page la plus ancienne déjà lue (« Étendre » lit la suivante).
+  pagesRead: integer("pages_read").notNull().default(0),
+  // Recherche suivie (une seule par compte) : heures de passage (JSON, heure de Paris), prochain passage (ms).
+  watched: integer("watched").notNull().default(0),
+  watchTimes: text("watch_times"),
+  nextWatchAt: bigint("next_watch_at", { mode: "number" }),
+  // Annonces lues par heure lors des derniers passages : règle la taille de la première page lue.
+  watchRate: doublePrecision("watch_rate"),
+  // Dernière ouverture de la recherche par son propriétaire (ms) : ce qui est arrivé après est « non vu ».
+  lastVisitedAt: bigint("last_visited_at", { mode: "number" }),
 }, table => [index("housing_searches_status_idx").on(table.status), index("housing_searches_owner_idx").on(table.ownerId)]);
 
 export const housingListings = pgTable("housing_listings", {
@@ -58,6 +75,18 @@ export const housingListings = pgTable("housing_listings", {
   // de position ; `geo_evidence` est la phrase exacte qui la cite. NULL : position donnée par l'annonce elle-même.
   geoSource: text("geo_source"),
   geoEvidence: text("geo_evidence"),
+  // Dates Le Bon Coin (ms, UTC) : publication et dernière mise à jour (une annonce « remontée » change la seconde).
+  postedAt: bigint("posted_at", { mode: "number" }),
+  // Code postal donné par le site : sert au géocodage de l'adresse lue dans la description, analyse faite plus tard.
+  postcode: text("postcode"),
+  refreshedAt: bigint("refreshed_at", { mode: "number" }),
+  // Première lecture de l'annonce pour cette recherche (ms) : sert au compte des « nouvelles » de la recherche suivie.
+  firstSeenAt: bigint("first_seen_at", { mode: "number" }).notNull().default(0),
+  // Analyse IA faite (1) ou à faire quand l'annonce sera affichée (0) ; demandée par le navigateur (1).
+  analyzed: integer("analyzed").notNull().default(1),
+  analysisRequested: integer("analysis_requested").notNull().default(0),
+  // Écartée après analyse (« room », « non_dwelling », « mismatch ») : gardée pour ne pas la relire, jamais affichée.
+  hidden: text("hidden"),
 }, table => [unique("housing_listings_search_id_url_unique").on(table.searchId, table.url)]);
 
 // Code de lieu SeLoger (ex. AD08FR23619 pour Lille), résolu une fois par commune (code INSEE) puis gardé.
