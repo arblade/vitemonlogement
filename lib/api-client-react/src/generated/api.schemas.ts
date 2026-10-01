@@ -285,6 +285,11 @@ export interface HousingSearchSummary {
   nextWatchAt?: string | null;
   /** @nullable */
   lastVisitedAt?: string | null;
+  /**
+     * Start of the last pass of the followed search (its listings are separated from older ones)
+     * @nullable
+     */
+  lastWatchAt?: string | null;
   /** Listings of the followed search found since the last visit */
   unseenCount: number;
 }

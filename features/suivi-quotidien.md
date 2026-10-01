@@ -205,6 +205,16 @@ Captures : `maquettes/suivi-*.png`.
 Captures : `maquettes/suivi-1-accueil-nouveautes-*`, `suivi-2-recherche-ponctuelle-mobile`, `suivi-3-fenetre-*`,
 `suivi-4-chargement-mobile`, `suivi-5-remontee-4-jours-desktop`.
 
+## Retouches du 01/10 (3e passe)
+- « Recherche suivie » (carte de l'accueil et de « Mes recherches ») en rose ; « N nouvelles annonces depuis votre
+  dernière visite » en rose sur fond rose clair.
+- Page d'une recherche suivie : plus de « Modifier ma demande » ni d'« Étendre » (ils restent sur une recherche
+  ponctuelle).
+- Trait de séparation « Fin de la dernière relève · aujourd'hui à 18:00 » entre les annonces de la dernière relève et
+  les plus anciennes (tri « Plus récentes ») ; relève sans rien de nouveau : « Relève aujourd'hui à 18:00 : aucune
+  nouvelle annonce » en tête de liste. Heure de la relève gardée en base (`last_watch_at`, migration 0008).
+Captures : `maquettes/suivi-v3-*`.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).

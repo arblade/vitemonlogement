@@ -19,7 +19,7 @@ export const checks: HousingCriterion[] = [
 export const search = (overrides: Partial<HousingSearchDetail> = {}): HousingSearchDetail => ({
   id: 1, prompt: 'Un studio à Lille, 700 € max, chat accepté', status: 'completed', stage: 'ready', phase: 'focused',
   createdAt: '2026-09-30T10:00:00Z', count: 3, error: null, focusedMatches: 3, analyzed: true,
-  task: null, watch: null, watchTimes: [], nextWatchAt: null, lastVisitedAt: null, unseenCount: 0,
+  task: null, watch: null, watchTimes: [], nextWatchAt: null, lastVisitedAt: null, lastWatchAt: null, unseenCount: 0,
   searchRequests: [{ batch: 'focused', path: '/v2/acts/x/runs', input: '{"searchQuery":"chat"}' }],
   criteria: { location: 'Lille', intent: 'rent', maxPrice: 700, radius: 5, keywords: '', wishes: ['chat accepté'], checks },
   listings: [listing(1), listing(2), listing(3)],

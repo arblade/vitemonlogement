@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ago, hoursLabel, nextPass } from '@/lib/dates';
+import { ago, at, hoursLabel, nextPass } from '@/lib/dates';
 
 const now = Date.parse('2026-10-01T16:00:00Z'); // 18 h à Paris
 
@@ -19,5 +19,10 @@ describe('Dates lisibles', () => {
   it('créneaux en mots', () => {
     expect(hoursLabel(['08:00', '18:00'])).toBe('8 h et 18 h');
     expect(hoursLabel(['07:30'])).toBe('7 h 30');
+  });
+  it('moment passé de la relève', () => {
+    expect(at('2026-10-01T06:00:00Z', now)).toBe('aujourd’hui à 08:00');
+    expect(at('2026-09-30T16:00:00Z', now)).toBe('hier à 18:00');
+    expect(at('2026-09-14T06:00:00Z', now)).toBe('le 14 sept. à 08:00');
   });
 });

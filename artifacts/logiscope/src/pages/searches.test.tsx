@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Router } from 'wouter';
@@ -62,6 +62,8 @@ describe('Mes recherches', () => {
     const card = screen.getByTestId('card-watched-search');
     expect(card).toHaveAttribute('href', '/searches/7');
     expect(card).toHaveTextContent('Recherche suivie');
+    expect(within(card).getByText('Recherche suivie').className).toContain('text-brand'); // rose, plus l'orange foncé
+    expect(within(card).getByText('Recherche suivie').className).not.toContain('text-moss');
     expect(screen.getByTestId('text-watched-unseen')).toHaveTextContent('2 nouvelles');
     expect(screen.getByTestId('text-watched-next')).toHaveTextContent('Chaque jour à 8 h et 18 h');
     expect(screen.getByText('Recherches ponctuelles')).toBeInTheDocument();

@@ -1,0 +1,1 @@
+ALTER TABLE "housing_searches" ADD COLUMN "last_watch_at" bigint;

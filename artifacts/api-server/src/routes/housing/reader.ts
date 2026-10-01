@@ -156,6 +156,8 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
     ...(state.mode === "backfill" ? { lastVisitedAt: now } : {}),
     watchRate: rate,
     ...(state.mode === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, now) } : {}),
+    // Relève : ses annonces (première lecture = début du passage) sont séparées des plus anciennes dans la liste.
+    ...(state.mode === "watch" ? { lastWatchAt: state.startedAt } : {}),
   });
   logger.info({ searchId: row.id, mode: state.mode, pages: state.pagesRead, reads: state.reads, fresh: state.fresh }, "Reading pass finished");
 }

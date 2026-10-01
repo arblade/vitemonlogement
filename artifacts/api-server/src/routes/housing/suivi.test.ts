@@ -189,6 +189,11 @@ test("passage suivi : lit juste ce qu'il faut, s'arrête au curseur ; une annonc
   assert.deepEqual(search.listings.slice(0, 4).map(listing => listing.title).sort(), ["Appartement T2 n° 2000", "Appartement T2 n° 2001", "Appartement T2 n° 2002", "Appartement T2 n° 2003"],
     "les nouvelles en tête ; la remontée ne repasse pas devant");
   assert.ok((await row(id)).nextWatchAt! > Date.now(), "prochain passage programmé");
+  // Heure de la relève : exactement la première lecture de ses annonces (le séparateur de la liste s'appuie dessus).
+  const lastWatchAt = (await row(id)).lastWatchAt!;
+  assert.ok(lastWatchAt > 0);
+  assert.deepEqual(new Set(search.listings.filter(listing => listing.firstSeenAt! >= lastWatchAt).map(listing => listing.title)),
+    new Set(["Appartement T2 n° 2000", "Appartement T2 n° 2001", "Appartement T2 n° 2002", "Appartement T2 n° 2003"]));
   // Passage suivant : la même annonce remontée encore une fois ne devient toujours pas nouvelle.
   await setRow(id, { lastVisitedAt: Date.now() });
   market[market.length - 1] = { ...bumped, updatedAt: Date.now() - 5_000 };

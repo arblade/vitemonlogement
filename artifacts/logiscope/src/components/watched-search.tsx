@@ -14,7 +14,7 @@ export function WatchedSearchCard({ search }: { search: HousingSearchSummary }) 
     className="group flex items-center gap-4 rounded-2xl border border-[#ffc2cd] bg-lime-wash p-4 text-left transition-colors hover:border-brand md:p-5">
     <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-xl bg-white text-brand">{paused ? <PauseCircle size={21}/> : <BellRing size={21}/>}</span>
     <span className="min-w-0 flex-1">
-      <span className="block text-xs font-semibold text-moss">Recherche suivie</span>
+      <span className="block text-xs font-semibold text-brand">Recherche suivie</span>
       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
         <strong className="min-w-0 truncate text-[17px] font-semibold tracking-tight">{search.criteria?.location || search.prompt}</strong>
         {unseen > 0

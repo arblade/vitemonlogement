@@ -638,6 +638,54 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     await waitFor(() => expect(calls.some(call => call.method === 'DELETE')).toBe(true));
   });
 
+  it('recherche suivie : ni « Modifier ma demande » ni « Étendre » ; « nouvelles annonces » en rose sur fond rose clair', () => {
+    mockFetch(watchRoutes());
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], lastVisitedAt: '2026-10-01T06:00:00Z',
+      listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' })] });
+    renderPage();
+    expect(screen.queryByTestId('button-edit-prompt')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('button-refresh')).not.toBeInTheDocument();
+    expect(screen.getByTestId('select-sort')).toBeInTheDocument();
+    expect(screen.getByTestId('text-new-count').className).toContain('text-brand-dark');
+    expect(screen.getByTestId('text-new-count').className).toContain('bg-lime-wash');
+    expect(screen.getByTestId('text-new-count').className).not.toContain('text-moss');
+  });
+
+  it('un trait marque la fin des annonces de la dernière relève (avec son heure), seulement en tri « Plus récentes »', async () => {
+    const user = userEvent.setup();
+    mockFetch(watchRoutes());
+    const relève = new Date(Date.now() - 3_600_000);
+    const seen = (minutes: number) => new Date(relève.getTime() + minutes * 60_000).toISOString();
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], lastVisitedAt: seen(-1), lastWatchAt: relève.toISOString(), listings: [
+      listing(1, { firstSeenAt: seen(-600) }), listing(2, { firstSeenAt: seen(0) }), listing(3, { firstSeenAt: seen(-600) }), listing(4, { firstSeenAt: seen(0) }),
+    ] });
+    renderPage();
+    expect(cardOrder()).toEqual(['2', '4', '1', '3']);
+    const line = screen.getByTestId('separator-release');
+    expect(line).toHaveTextContent(/^Fin de la dernière relève · aujourd’hui à \d\d:\d\d$/);
+    // Juste après la dernière annonce de la relève, juste avant la première plus ancienne.
+    expect(screen.getByTestId('card-listing-4').compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(line.compareDocumentPosition(screen.getByTestId('card-listing-1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await user.selectOptions(screen.getByTestId('select-sort'), 'price');
+    expect(screen.queryByTestId('separator-release')).not.toBeInTheDocument();
+  });
+
+  it('dernière relève sans rien de nouveau : le trait le dit, en tête de liste', () => {
+    mockFetch(watchRoutes());
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00'], lastWatchAt: new Date().toISOString(),
+      listings: [listing(1, { firstSeenAt: '2026-09-30T06:00:00Z' })] });
+    renderPage();
+    expect(screen.getByTestId('separator-release')).toHaveTextContent(/^Relève aujourd’hui à \d\d:\d\d : aucune nouvelle annonce$/);
+  });
+
+  it('recherche ponctuelle : ni trait de relève, et « Modifier ma demande » et « Étendre » restent', () => {
+    mockFetch(watchRoutes());
+    renderPage();
+    expect(screen.queryByTestId('separator-release')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-edit-prompt')).toBeInTheDocument();
+    expect(screen.getByTestId('button-refresh')).toBeInTheDocument();
+  });
+
   it('recherche ponctuelle : pas de « Nouvelle », pas de visite notée', async () => {
     const calls = mockFetch(watchRoutes());
     api.state.data = search({ listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' })] });

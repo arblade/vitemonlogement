@@ -293,6 +293,8 @@ test("recherche suivie (mobile puis desktop) : la fenêtre explique, on la crée
       await page.click("[data-testid=button-confirm-watch]");
       await page.waitForSelector("[data-testid=text-watch-status]:has-text('Recherche suivie')");
       assert.match(await text(page, "[data-testid=text-watch-status]"), /Recherche suivie · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
+      // Recherche suivie : ni « Modifier ma demande » ni « Étendre ».
+      assert.equal(await page.locator("[data-testid=button-edit-prompt], [data-testid=button-refresh]").count(), 0, `${name} : pas de boutons de recherche ponctuelle`);
       // La pastille vient du serveur ; on simule ici 2 annonces trouvées par un passage (le passage lui-même : tests serveur).
       await page.route(/\/api\/housing\/watch$/, async route => {
         const data = await (await route.fetch()).json();

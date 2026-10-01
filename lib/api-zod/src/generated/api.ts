@@ -117,6 +117,7 @@ export const ListHousingSearchesResponseItem = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 export const ListHousingSearchesResponse = zod.array(ListHousingSearchesResponseItem)
@@ -187,6 +188,7 @@ export const CreateHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -293,6 +295,7 @@ export const GetHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -410,6 +413,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -519,6 +523,7 @@ export const RefreshHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -637,6 +642,7 @@ export const WatchHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -704,6 +710,7 @@ export const UnwatchHousingSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -778,6 +785,7 @@ export const GetWatchedSearchResponse = zod.object({
   "watchTimes": zod.array(zod.string()),
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
+  "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }),zod.null()])
 })

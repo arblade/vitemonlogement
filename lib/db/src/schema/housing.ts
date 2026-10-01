@@ -43,6 +43,8 @@ export const housingSearches = pgTable("housing_searches", {
   nextWatchAt: bigint("next_watch_at", { mode: "number" }),
   // Annonces lues par heure lors des derniers passages : règle la taille de la première page lue.
   watchRate: doublePrecision("watch_rate"),
+  // Début de la dernière relève (passage suivi, ms) : ses annonces sont séparées des plus anciennes dans la liste.
+  lastWatchAt: bigint("last_watch_at", { mode: "number" }),
   // Dernière ouverture de la recherche par son propriétaire (ms) : ce qui est arrivé après est « non vu ».
   lastVisitedAt: bigint("last_visited_at", { mode: "number" }),
 }, table => [index("housing_searches_status_idx").on(table.status), index("housing_searches_owner_idx").on(table.ownerId)]);

@@ -185,6 +185,7 @@ async function summary(row: SearchRow) {
     watchTimes: row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [],
     nextWatchAt: row.watched === 1 ? iso(row.nextWatchAt) : null,
     lastVisitedAt: iso(row.lastVisitedAt),
+    lastWatchAt: iso(row.lastWatchAt),
     unseenCount: await unseenCount(row),
   };
 }
@@ -395,7 +396,7 @@ export async function setPass(id: number, fields: Partial<Pick<SearchRow, "passS
 }
 
 /** Fin d'une lecture (première recherche ou tâche) : la recherche est prête, la tâche suivante éventuelle est l'analyse demandée. */
-export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt">> = {}) {
+export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt" | "lastWatchAt">> = {}) {
   const next = await hasRequestedAnalysis(id) ? "analyze" : null;
   await db().update(housingSearches).set({
     status: "completed", stage: "ready", runId: null, passState: null, task: next, analyzed: 1, attempts: 0, nextCheckAt: 0, error: null, ...fields,

@@ -392,6 +392,9 @@ components:
           items: { type: string }
         nextWatchAt: { type: ["string", "null"] }
         lastVisitedAt: { type: ["string", "null"] }
+        lastWatchAt:
+          description: Start of the last pass of the followed search (its listings are separated from older ones)
+          type: ["string", "null"]
         unseenCount:
           description: Listings of the followed search found since the last visit
           type: integer

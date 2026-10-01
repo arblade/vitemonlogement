@@ -38,3 +38,12 @@ export function hoursLabel(times: string[]) {
   const label = (value: string) => { const [h, m] = value.split(':').map(Number); return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`; };
   return times.map(label).join(' et ');
 }
+
+/** Moment passé : « aujourd’hui à 08:00 », « hier à 18:00 », « le 14 sept. à 08:00 ». */
+export function at(iso: string | null | undefined, now = Date.now()) {
+  if (!iso) return null;
+  const when = Date.parse(iso);
+  if (Number.isNaN(when)) return null;
+  const days = daysBetween(when, now);
+  return `${days <= 0 ? 'aujourd’hui' : days === 1 ? 'hier' : `le ${day.format(when)}`} à ${time.format(when)}`;
+}
