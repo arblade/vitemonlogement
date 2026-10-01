@@ -1,5 +1,5 @@
 // Heure de Paris, été comme hiver, sans dépendance : Le Bon Coin donne ses dates à l'heure de Paris (étiquetées « Z »
-// à tort, mesuré le 01/10/2026) et la recherche suivie passe à 8 h et 18 h, heure de Paris.
+// à tort, mesuré le 01/10/2026) et la veille quotidienne passe à 8 h et 18 h, heure de Paris.
 
 const parts = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Paris", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",

@@ -1,4 +1,4 @@
-// Recherche en direct sur 4 jours, lecture page par page, recherche suivie (8 h / 18 h), « Étendre », analyse au défilement.
+// Recherche en direct sur 4 jours, lecture page par page, veille quotidienne (8 h / 18 h), « Étendre », analyse au défilement.
 // Faux Le Bon Coin : un « marché » d'annonces datées, servi par pages de 35, de la plus récemment mise à jour à la plus ancienne.
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
@@ -106,7 +106,7 @@ const setRow = async (id: number, fields: Partial<typeof housingSearches.$inferI
   await db().update(housingSearches).set(fields).where(eq(housingSearches.id, id));
 };
 
-/** Recherche ponctuelle terminée (15 annonces), puis transformée en recherche suivie et remontée sur 4 jours. */
+/** Recherche ponctuelle terminée (15 annonces), puis transformée en veille quotidienne et remontée sur 4 jours. */
 async function followed(times = ["08:00", "18:00"]) {
   const { createSearch, startWatching } = await import("./store");
   const id = await createSearch("Un T2 à Lille, 900 € max", owner);
@@ -132,7 +132,7 @@ test("recherche ponctuelle : les 15 annonces les plus récentes, en une seule le
   assert.ok(Math.abs(done.cursorAt! - search.listings[0].refreshedAt!) < 1000, "curseur : la mise à jour la plus récente lue");
 });
 
-test("création de la recherche suivie : elle remonte 4 jours (page 1, puis 2), sans compter ces annonces comme nouvelles", async () => {
+test("création de la veille quotidienne : elle remonte 4 jours (page 1, puis 2), sans compter ces annonces comme nouvelles", async () => {
   market = makeMarket(120, 2); // une annonce toutes les 2 h : 4 jours ≈ 48 annonces
   const id = await followed();
   assert.equal((await row(id)).task, "backfill");
@@ -148,7 +148,7 @@ test("création de la recherche suivie : elle remonte 4 jours (page 1, puis 2), 
   assert.equal((await row(id)).pagesRead, 2);
 });
 
-test("création de la recherche suivie : au plus 3 pages (105 annonces), même si 4 jours ne sont pas atteints", async () => {
+test("création de la veille quotidienne : au plus 3 pages (105 annonces), même si 4 jours ne sont pas atteints", async () => {
   market = makeMarket(200, 0.5); // très active : une annonce toutes les 30 min
   const id = await followed();
   reads = [];
@@ -251,7 +251,7 @@ test("passage suivi : plus de nouveautés que prévu → la page 1 est relue en 
   assert.equal((await getSearch(id))!.unseenCount, 50, "aucune nouveauté perdue");
 });
 
-test("recherche suivie : sans visite depuis 7 jours, elle se met en pause et ne coûte plus rien", async () => {
+test("veille quotidienne : sans visite depuis 7 jours, elle se met en pause et ne coûte plus rien", async () => {
   market = makeMarket(5, 3, 5000);
   const id = await followed(["08:00"]);
   await settle(id);
@@ -279,7 +279,7 @@ test("passage manqué (serveur arrêté) : un seul rattrapage, puis le créneau 
   assert.equal((await row(id)).task, null, "pas de second passage");
 });
 
-test("une seule recherche suivie par compte : en suivre une autre arrête la première", async () => {
+test("une seule veille quotidienne par compte : en suivre une autre arrête la première", async () => {
   const { createUser } = await import("../../lib/users");
   const user = (await createUser("suivi@example.com", "motdepasse-1"))!;
   const { createSearch, startWatching, watchedSearch } = await import("./store");

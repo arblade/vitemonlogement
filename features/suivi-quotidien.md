@@ -39,7 +39,7 @@ pas l'annonce). `updated_at` sert seulement à savoir où s'arrêter dans la lis
 
 ## Où ça tourne (technique)
 - Le **worker existe déjà** dans le service Render (plan payant, jamais en veille) : il vérifie les recherches à traiter
-  toutes les quelques secondes. On y ajoute « recherches suivies dont l'heure est passée ».
+  toutes les quelques secondes. On y ajoute « veilles quotidiennes dont l'heure est passée ».
 - Données : sur la recherche, `suivi actif`, `créneaux` (ex. 08:00 et 18:00, heure de Paris), `suivi jusqu'au`,
   `dernier passage`, `prochain passage` ; sur chaque annonce, `vue pour la première fois le`. Une migration, vérifiée sur
   un vrai Postgres.
@@ -66,7 +66,7 @@ pas l'annonce). `updated_at` sert seulement à savoir où s'arrêter dans la lis
 Hypothèse prudente : la recherche très active ci-dessus. Apify : 0,001 $ par annonce lue, sans frais de démarrage ;
 OpenAI : ≈ 0,0012 $ par nouvelle annonce analysée.
 
-| Par recherche suivie et par jour | 1 passage (8 h) | 2 passages (8 h, 18 h) |
+| Par veille quotidienne et par jour | 1 passage (8 h) | 2 passages (8 h, 18 h) |
 |---|---|---|
 | Annonces lues (nouvelles + remontées + marge 30 %) | ≈ 80 | ≈ 2 × 43 = 86 |
 | Apify | 0,08 $ | 0,086 $ |
@@ -82,7 +82,7 @@ OpenAI : ≈ 0,0012 $ par nouvelle annonce analysée.
 - Les remontées pèsent 37 % de la lecture mais n'apportent rien : on ne peut pas les filtrer à la source.
 
 ## Garde-fous (indispensables, sinon le coût suit le nombre d'abonnés)
-1. **Plafond de recherches suivies par compte** (proposé : 2).
+1. **Plafond de veilles quotidiennes par compte** (proposé : 2).
 2. **Arrêt automatique** après 7 jours sans visite de l'utilisateur, ou à date de fin (14 jours, renouvelable en un clic).
 3. **Plafond de lecture par passage** (100 annonces) et alerte si dépassé (« recherche trop large, affinez »).
 4. **Mutualiser** : deux utilisateurs avec la même adresse de recherche (même ville, mêmes filtres) partagent le même
@@ -101,7 +101,7 @@ OpenAI : ≈ 0,0012 $ par nouvelle annonce analysée.
 Les tests suivront les règles du projet : serveur (planificateur avec horloge simulée, rattrapage, limite adaptative,
 verrous, arrêt automatique), interface, parcours navigateur ; aucun appel payant (faux Apify, comme aujourd'hui).
 
-## Deux modes : recherche en direct, puis recherche suivie (idée du 01/10)
+## Deux modes : recherche en direct, puis veille quotidienne (idée du 01/10)
 Une seule recherche en base, deux états : on la lance **en direct**, et si elle plaît on la **suit** (un clic). Rien
 n'est dupliqué : activer le suivi ajoute seulement les créneaux, le curseur « dernier passage » et le prochain passage.
 
@@ -121,18 +121,18 @@ n'est dupliqué : activer le suivi ajoute seulement les créneaux, le curseur «
 - Plafond par passage : 25 annonces analysées (au-delà : « recherche très large, affinez »), lecture limitée à 100.
 
 **Interface proposée**
-- Vocabulaire : « **recherche suivie** » plutôt que « recherche longue » (parle à l'utilisateur, pas au développeur).
+- Vocabulaire : « **veille quotidienne** » plutôt que « recherche longue » (parle à l'utilisateur, pas au développeur).
 - Sur les résultats, sous la barre d'outils, une carte « **Suivre cette recherche** » : « Recevez les nouvelles annonces
   chaque jour à 8 h et 18 h », deux pastilles d'heure préremplies, bouton rose « Suivre ». Une fois actif, la carte devient
   une ligne discrète « Suivie · prochain passage 18 h · Modifier · Arrêter ».
 - Dans « Mes recherches » : deux groupes, **Suivies** en haut (badge rose « 3 nouvelles », heure du prochain passage) puis
   **Recherches ponctuelles** (l'historique actuel).
 - Au passage suivant, la page s'ouvre sur une section « **Nouvelles depuis votre dernière visite** », puis le reste.
-- Au plafond de recherches suivies (2), le bouton propose de remplacer l'une d'elles.
+- Au plafond de veilles quotidiennes (2), le bouton propose de remplacer l'une d'elles.
 - « Étendre » prendrait alors un sens naturel : **remonter plus loin dans le temps** (les 15 suivantes plus anciennes).
 
 ## Décisions du 01/10 et lecture progressive
-Décidé : nom « **recherche suivie** » ; **une seule par utilisateur** ; prévenu **seulement dans le site** (pastille avec le
+Décidé : nom « **veille quotidienne** » ; **une seule par utilisateur** ; prévenu **seulement dans le site** (pastille avec le
 nombre d'annonces pas encore vues) ; passages à **8 h et 18 h** ; première recherche plus large (25 à 30 annonces).
 
 **Lecture progressive, mesurée le 01/10** :
@@ -156,7 +156,7 @@ Toutes les annonces lues sont gardées ; l'IA analyse les **10 premières** d'em
 les plus récentes ; chaque carte dit « Publiée il y a 3 h » ou « Remontée hier · publiée le 14 sept. ».
 **Étendre** : la page suivante, plus ancienne (une lecture de 35 au plus).
 
-**Recherche suivie** (une par compte, en activer une autre remplace la précédente) : « Créer une alerte » sur la page
+**Veille quotidienne** (une par compte, en activer une autre remplace la précédente) : « Créer une alerte » sur la page
 résultats, 8 h et 18 h proposés (de 5 h à 23 h, un ou deux créneaux, heure de Paris, changements d'heure compris).
 Le worker lance le passage à l'heure dite ; première page à la taille du débit observé (10 à 35), relue en entier puis
 page suivante seulement si les nouveautés dépassent ; **arrêt à la date du passage précédent**, jamais sur « une annonce
@@ -176,7 +176,7 @@ passage, débit, dernière visite. Dates Le Bon Coin : heure de Paris étiqueté
 
 **Coût** : première recherche ≈ 0,035 $ par page lue (1 à 3) + ≈ 0,012 $ pour les 10 premières analyses, puis
 ≈ 0,006 $ par tranche de 5 annonces réellement regardées ; passage suivi : ≈ 0,01 à 0,035 $ de lecture + l'analyse des
-nouvelles regardées. Une seule recherche suivie par compte borne la dépense.
+nouvelles regardées. Une seule veille quotidienne par compte borne la dépense.
 
 **Tests** : serveur `suivi.test.ts` (faux Le Bon Coin daté servi par pages : 4 jours, 3 pages max, petite ville,
 curseur et remontées, relecture, pause, rattrapage, une par compte, analyse demandée, Étendre), `suivi-api.test.ts`
@@ -186,17 +186,17 @@ Captures : `maquettes/suivi-*.png`.
 
 ## Ajustements du 01/10 (2e passe, sur `develop`)
 - **Recherche ponctuelle** : les **15 annonces les plus récentes**, en une lecture, toutes analysées (`ONE_SHOT_LIMIT`).
-- **Créer une recherche suivie** : bouton avec cloche et texte (« Créer une recherche suivie ») à côté de la mention
+- **Créer une veille quotidienne** : bouton avec cloche et texte (« Créer une veille quotidienne ») à côté de la mention
   « Recherche ponctuelle » ; il ouvre une **fenêtre qui explique** (tout de suite les 4 derniers jours jusqu'à 105
   annonces, puis seulement les nouvelles aux heures choisies, pastille rose, remontées et republications jamais
-  comptées, pause après 7 jours) et prévient quand une autre recherche suivie sera remplacée ; rien n'est activé sans
+  comptées, pause après 7 jours) et prévient quand une autre veille quotidienne sera remplacée ; rien n'est activé sans
   confirmation. À l'activation, la recherche **remonte 4 jours** (pages de 35, 105 au plus) ; ces annonces ne sont pas
   comptées comme nouvelles (l'utilisateur est là). Puis passages à 8 h et 18 h.
 - **Affichage et analyse par 20** (`FIRST_ANALYSIS` 20) : en bas de liste, les 20 suivantes sont analysées avant d'être
   montrées ; l'indicateur rose affiche un message qui change toutes les 3,5 s (« Nous chargeons les annonces suivantes
   pour vous… », « L'IA lit les descriptions, une par une… »…). Les lots de 5 partent 4 à la fois : 20 annonces ≈ le
   temps d'un lot. Remontée de 4 jours : même indicateur, messages dédiés.
-- **Accueil** : quand la recherche suivie a des logements pas encore vus, un **bloc rose** en haut (« 3 nouveaux
+- **Accueil** : quand la veille quotidienne a des logements pas encore vus, un **bloc rose** en haut (« 3 nouveaux
   logements à Lille », « Voir les nouveautés ») ; sinon la carte discrète « À jour ».
 - **Jamais « nouvelle »** : une annonce **remontée** (même adresse, date de mise à jour plus récente) ni une annonce
   **supprimée puis republiée** (nouvelle adresse, même titre, loyer, surface, pièces et début de description ; le lien
@@ -206,9 +206,9 @@ Captures : `maquettes/suivi-1-accueil-nouveautes-*`, `suivi-2-recherche-ponctuel
 `suivi-4-chargement-mobile`, `suivi-5-remontee-4-jours-desktop`.
 
 ## Retouches du 01/10 (3e passe)
-- « Recherche suivie » (carte de l'accueil et de « Mes recherches ») en rose ; « N nouvelles annonces depuis votre
+- « Veille quotidienne » (carte de l'accueil et de « Mes recherches ») en rose ; « N nouvelles annonces depuis votre
   dernière visite » en rose sur fond rose clair.
-- Page d'une recherche suivie : plus de « Modifier ma demande » ni d'« Étendre » (ils restent sur une recherche
+- Page d'une veille quotidienne : plus de « Modifier ma demande » ni d'« Étendre » (ils restent sur une recherche
   ponctuelle).
 - Trait de séparation « Fin de la dernière relève · aujourd'hui à 18:00 » entre les annonces de la dernière relève et
   les plus anciennes (tri « Plus récentes ») ; relève sans rien de nouveau : « Relève aujourd'hui à 18:00 : aucune
@@ -217,7 +217,7 @@ Captures : `maquettes/suivi-v3-*`.
 
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
-2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).
+2. Plafond de veilles quotidiennes par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).
 3. Les annonces « remontées » (anciennes réapparues en tête) : à ignorer (proposé : le direct filtre sur la date de publication, le suivi ne garde que les adresses jamais vues) ou à signaler ?
 4. Un seul créneau par défaut à 8 h, le second (18 h ?) en option ?
 5. Garder SeLoger et PAP désactivés pour le suivi (oui, par économie) ?

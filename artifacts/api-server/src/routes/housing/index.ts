@@ -81,7 +81,7 @@ router.post("/housing/searches/:id/analyze", async (req, res): Promise<void> => 
   res.status(202).json(AnalyzeHousingSearchResponse.parse(await getPublicSearch(row.id)));
 });
 
-// Recherche suivie : une seule par compte, aux heures choisies (heure de Paris).
+// Veille quotidienne : une seule par compte, aux heures choisies (heure de Paris).
 router.put("/housing/searches/:id/watch", async (req, res): Promise<void> => {
   const params = WatchHousingSearchParams.safeParse(req.params);
   const body = WatchHousingSearchBody.safeParse(req.body);

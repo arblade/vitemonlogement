@@ -7,7 +7,7 @@ import { useWatchedSearch } from '@/lib/watch';
 
 const TITLE = 'Vite mon logement';
 
-/** Pastille rose : annonces de la recherche suivie arrivées depuis la dernière ouverture. */
+/** Pastille rose : annonces de la veille quotidienne arrivées depuis la dernière ouverture. */
 function UnseenBadge({ count, testId }: { count: number; testId: string }) {
   if (count <= 0) return null;
   return <span data-testid={testId} aria-label={`${count} nouvelle${count > 1 ? 's' : ''} annonce${count > 1 ? 's' : ''} non vue${count > 1 ? 's' : ''}`} className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-brand px-1.5 text-xs font-bold leading-none text-white">{count > 99 ? '99+' : count}</span>;

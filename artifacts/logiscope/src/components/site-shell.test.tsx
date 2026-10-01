@@ -64,7 +64,7 @@ describe('SiteShell', () => {
     expect(await screen.findByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
   });
 
-  it('pastille rose : annonces non vues de la recherche suivie, dans le menu (bureau et mobile) et le titre de l’onglet', async () => {
+  it('pastille rose : annonces non vues de la veille quotidienne, dans le menu (bureau et mobile) et le titre de l’onglet', async () => {
     const watched: Route = { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: { ...search({ id: 4 }), watch: 'active', watchTimes: ['08:00', '18:00'], unseenCount: 3 } } }) };
     mockFetch([me, favorites(0), watched]);
     renderShell();
@@ -74,7 +74,7 @@ describe('SiteShell', () => {
     expect(document.title).toBe('(3) Vite mon logement');
   });
 
-  it('aucune recherche suivie, ou rien de nouveau : ni pastille ni nombre dans l’onglet', async () => {
+  it('aucune veille quotidienne, ou rien de nouveau : ni pastille ni nombre dans l’onglet', async () => {
     mockFetch([me, favorites(0), { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: null } }) }]);
     renderShell();
     await screen.findByText('Contenu');

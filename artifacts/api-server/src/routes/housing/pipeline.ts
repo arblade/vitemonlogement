@@ -23,7 +23,7 @@ const ANALYSIS_STEP = 20;
 
 /**
  * Fait avancer une recherche d'une étape, sous bail (voir worker.ts). Recherche « running » : interprétation de la
- * demande puis lecture page par page (reader.ts). Recherche terminée avec une tâche : passage de la recherche suivie,
+ * demande puis lecture page par page (reader.ts). Recherche terminée avec une tâche : passage de la veille quotidienne,
  * page suivante (« Étendre ») ou analyse demandée en faisant défiler. Renvoie le délai avant le prochain passage.
  */
 export async function advanceSearch(id: number): Promise<number> {

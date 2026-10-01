@@ -570,7 +570,7 @@ describe('Page résultats : chargement progressif', () => {
   });
 });
 
-describe('Page résultats : recherche suivie et lecture progressive', () => {
+describe('Page résultats : veille quotidienne et lecture progressive', () => {
   const watchRoutes = (other: object | null = null): FetchRoute[] => [
     ...favoriteRoutes(),
     { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: other } }) },
@@ -580,12 +580,12 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     { method: 'POST', match: /\/api\/housing\/searches\/1\/analyze$/, respond: () => ({ status: 202, body: search() }) },
   ];
 
-  it('recherche ponctuelle : « Créer une recherche suivie » ouvre une fenêtre qui explique, puis l’active à 8 h et 18 h', async () => {
+  it('recherche ponctuelle : « Créer une veille quotidienne » ouvre une fenêtre qui explique, puis l’active à 8 h et 18 h', async () => {
     const user = userEvent.setup();
     const calls = mockFetch(watchRoutes());
     renderPage();
-    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche suivie');
-    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Pour être prévenu des nouvelles annonces de cette recherche chaque jour, suivez-la.');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Veille quotidienne');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille.');
     await user.click(screen.getByTestId('button-watch'));
     const dialog = await screen.findByTestId('dialog-watch');
     const explanation = within(dialog).getByTestId('watch-explanation');
@@ -621,16 +621,16 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
       await user.click(screen.getByTestId('button-watch'));
       expect(await screen.findByTestId('text-watch-replace')).toHaveTextContent('« Lyon » s’arrêtera et redeviendra une recherche ponctuelle');
     });
-    expect(screen.getByTestId('button-confirm-watch')).toHaveTextContent('Remplacer et suivre celle-ci');
+    expect(screen.getByTestId('button-confirm-watch')).toHaveTextContent('Remplacer et activer celle-ci');
   });
 
-  it('recherche suivie : ligne discrète (heures, prochain passage, Arrêter) ; la visite est notée ; les nouvelles sont marquées', async () => {
+  it('veille quotidienne : ligne discrète (heures, prochain passage, Arrêter) ; la visite est notée ; les nouvelles sont marquées', async () => {
     const user = userEvent.setup();
     const calls = mockFetch(watchRoutes());
     api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], nextWatchAt: new Date(Date.now() + 3_600_000).toISOString(), lastVisitedAt: '2026-10-01T06:00:00Z',
       listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' }), listing(2, { firstSeenAt: '2026-10-01T05:00:00Z' }), listing(3, { firstSeenAt: '2026-10-01T06:10:00Z' })] });
     renderPage();
-    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche suivie · chaque jour à 8 h et 18 h · prochain passage');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Veille quotidienne · chaque jour à 8 h et 18 h · prochain passage');
     expect(screen.getByTestId('text-new-count')).toHaveTextContent('2 nouvelles annonces depuis votre dernière visite');
     expect(screen.getByTestId('badge-new-1')).toHaveTextContent('Nouvelle');
     expect(screen.queryByTestId('badge-new-2')).not.toBeInTheDocument();
@@ -639,7 +639,7 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     await waitFor(() => expect(calls.some(call => call.method === 'DELETE')).toBe(true));
   });
 
-  it('recherche suivie : ni « Modifier ma demande » ni « Étendre » ; « nouvelles annonces » en rose sur fond rose clair', () => {
+  it('veille quotidienne : ni « Modifier ma demande » ni « Étendre » ; « nouvelles annonces » en rose sur fond rose clair', () => {
     mockFetch(watchRoutes());
     api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], lastVisitedAt: '2026-10-01T06:00:00Z',
       listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' })] });

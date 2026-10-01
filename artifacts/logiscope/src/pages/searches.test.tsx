@@ -56,14 +56,14 @@ describe('Mes recherches', () => {
     expect(api.history.refetch).toHaveBeenCalled();
   });
 
-  it('la recherche suivie est mise en avant en haut (nouvelles annonces, heures), les autres sous « Recherches ponctuelles »', () => {
+  it('la veille quotidienne est mise en avant en haut (nouvelles annonces, heures), les autres sous « Recherches ponctuelles »', () => {
     api.history.data = [search({ id: 7, watch: 'active', watchTimes: ['08:00', '18:00'], nextWatchAt: null, unseenCount: 2 }), search({ id: 8 }), search({ id: 9 })];
     renderPage();
     const card = screen.getByTestId('card-watched-search');
     expect(card).toHaveAttribute('href', '/searches/7');
-    expect(card).toHaveTextContent('Recherche suivie');
-    expect(within(card).getByText('Recherche suivie').className).toContain('text-brand'); // rose, plus l'orange foncé
-    expect(within(card).getByText('Recherche suivie').className).not.toContain('text-moss');
+    expect(card).toHaveTextContent('Veille quotidienne');
+    expect(within(card).getByText('Veille quotidienne').className).toContain('text-brand'); // rose, plus l'orange foncé
+    expect(within(card).getByText('Veille quotidienne').className).not.toContain('text-moss');
     expect(screen.getByTestId('text-watched-unseen')).toHaveTextContent('2 nouvelles');
     expect(screen.getByTestId('text-watched-next')).toHaveTextContent('Chaque jour à 8 h et 18 h');
     expect(screen.getByText('Recherches ponctuelles')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('Mes recherches', () => {
     expect(screen.queryByTestId('link-search-7')).not.toBeInTheDocument();
   });
 
-  it('recherche suivie en pause (7 jours sans visite) : dit comment la reprendre', () => {
+  it('veille quotidienne en pause (7 jours sans visite) : dit comment la reprendre', () => {
     api.history.data = [search({ id: 7, watch: 'paused', watchTimes: ['08:00'] })];
     renderPage();
     expect(screen.getByTestId('text-watched-next')).toHaveTextContent('En pause : 7 jours sans visite');

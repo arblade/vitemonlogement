@@ -147,7 +147,7 @@ export async function getOwnedSearchRow(id: number, ownerId: number) {
   return row && row.ownerId === ownerId ? row : undefined;
 }
 
-/** Annonces de la recherche suivie arrivées depuis la dernière ouverture (0 pour une recherche ponctuelle). */
+/** Annonces de la veille quotidienne arrivées depuis la dernière ouverture (0 pour une recherche ponctuelle). */
 async function unseenCount(row: SearchRow) {
   if (row.watched === 0) return 0;
   const t = housingListings;
@@ -425,14 +425,14 @@ export async function requestExtend(id: number) {
   return rows.length === 1;
 }
 
-/** Recherche suivie : une seule par compte ; l'activer arrête l'autre. Ce qui est déjà affiché compte comme vu. */
+/** Veille quotidienne : une seule par compte ; l'activer arrête l'autre. Ce qui est déjà affiché compte comme vu. */
 export async function startWatching(id: number, ownerId: number, times: string[], nextWatchAt: number, now = Date.now()) {
   await db().transaction(async tx => {
     await tx.update(housingSearches).set({ watched: 0, nextWatchAt: null })
       .where(and(eq(housingSearches.ownerId, ownerId), ne(housingSearches.id, id)));
     await tx.update(housingSearches).set({ watched: 1, watchTimes: JSON.stringify(times), nextWatchAt, lastVisitedAt: now })
       .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
-    // Une recherche ponctuelle n'a lu que les 15 plus récentes : la recherche suivie commence par remonter 4 jours.
+    // Une recherche ponctuelle n'a lu que les 15 plus récentes : la veille quotidienne commence par remonter 4 jours.
     await tx.update(housingSearches).set({ task: "backfill", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
       .where(and(eq(housingSearches.id, id), eq(housingSearches.pagesRead, 0), eq(housingSearches.status, "completed"),
         sql`(${housingSearches.task} IS NULL OR ${housingSearches.task} = 'analyze')`));
@@ -450,18 +450,18 @@ export async function markVisited(id: number, ownerId: number, now = Date.now())
     .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
 }
 
-/** Recherche suivie du compte (la seule), pour les pastilles du site. */
+/** Veille quotidienne du compte (la seule), pour les pastilles du site. */
 export async function watchedSearch(ownerId: number) {
   const [row] = await db().select().from(housingSearches)
     .where(and(eq(housingSearches.ownerId, ownerId), sql`${housingSearches.watched} > 0`)).orderBy(desc(housingSearches.id)).limit(1);
   return row ? summary(row) : null;
 }
 
-/** Jours sans visite après lesquels une recherche suivie se met en pause (elle ne coûte plus rien). */
+/** Jours sans visite après lesquels une veille quotidienne se met en pause (elle ne coûte plus rien). */
 export const watchIdleDays = () => Number.parseInt(process.env.WATCH_IDLE_DAYS ?? "", 10) || 7;
 
 /**
- * Appelé à chaque tour du worker : les recherches suivies dont l'heure est passée reçoivent leur tâche « watch » ; celles
+ * Appelé à chaque tour du worker : les veilles quotidiennes dont l'heure est passée reçoivent leur tâche « watch » ; celles
  * que leur propriétaire n'a pas ouvertes depuis `watchIdleDays` jours passent en pause. Un passage manqué (serveur
  * arrêté à 8 h) est fait au redémarrage, une seule fois : la lecture part du curseur, rien n'est perdu.
  */

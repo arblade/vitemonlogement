@@ -2,8 +2,8 @@
  * Lecture des annonces page par page, de la plus récemment mise à jour à la plus ancienne (ordre de Le Bon Coin,
  * vérifié le 01/10/2026). On ne paie que ce qu'on lit :
  *  - recherche ponctuelle (« initial ») : les 15 plus récentes, une seule lecture ;
- *  - recherche suivie, à sa création (« backfill ») : pages de 35, la suivante tant que 4 jours ne sont pas atteints ;
- *  - passage de la recherche suivie (« watch ») : la mise à jour la plus récente lue au passage précédent (curseur) ;
+ *  - veille quotidienne, à sa création (« backfill ») : pages de 35, la suivante tant que 4 jours ne sont pas atteints ;
+ *  - passage de la veille quotidienne (« watch ») : la mise à jour la plus récente lue au passage précédent (curseur) ;
  *    la date, pas « une annonce déjà vue » : une annonce remontée réapparaît en tête et ferait s'arrêter trop tôt ;
  *  - « Étendre » (« extend ») : une seule page, la suivante, plus ancienne.
  * Les annonces lues sont enregistrées sans analyse ; l'IA analyse les premières, puis les autres quand elles s'affichent.
@@ -152,7 +152,7 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
     cursorAt: Math.max(row.cursorAt ?? 0, state.newest ?? 0) || null,
     // Une page lue en partie (recherche ponctuelle, 15 sur 35) ne compte pas : « Étendre » la relira en entier.
     pagesRead: state.mode === "watch" || state.limit < PAGE_SIZE ? row.pagesRead : Math.max(row.pagesRead, state.page),
-    // Création de la recherche suivie : ce qu'elle trouve sur 4 jours n'est pas « nouveau » (l'utilisateur est là).
+    // Création de la veille quotidienne : ce qu'elle trouve sur 4 jours n'est pas « nouveau » (l'utilisateur est là).
     ...(state.mode === "backfill" ? { lastVisitedAt: now } : {}),
     watchRate: rate,
     ...(state.mode === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, now) } : {}),

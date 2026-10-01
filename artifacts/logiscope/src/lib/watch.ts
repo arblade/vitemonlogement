@@ -1,7 +1,7 @@
 import { getGetWatchedSearchQueryKey, useGetWatchedSearch } from '@workspace/api-client-react';
 
 /**
- * La recherche suivie du compte (une au plus), pour les pastilles du site : nombre d'annonces arrivées depuis la
+ * La veille quotidienne du compte (une au plus), pour les pastilles du site : nombre d'annonces arrivées depuis la
  * dernière ouverture. Relue chaque minute et au retour sur l'onglet (les passages ont lieu à 8 h et 18 h).
  */
 export function useWatchedSearch() {

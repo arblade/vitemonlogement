@@ -1,4 +1,4 @@
-// Routes de la recherche suivie : suivre (une par compte), arrêter, visite (compteur à zéro), pastille, analyse demandée.
+// Routes de la veille quotidienne : suivre (une par compte), arrêter, visite (compteur à zéro), pastille, analyse demandée.
 import assert from "node:assert/strict";
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
@@ -56,7 +56,7 @@ test("suivre : heures valides seulement (1 ou 2, « HH:MM »), prochain passage 
   assert.equal(search.unseenCount, 0, "ce qui est déjà là compte comme vu");
 });
 
-test("une seule recherche suivie par compte ; la pastille donne son nombre de non vues ; la visite le remet à zéro", async () => {
+test("une seule veille quotidienne par compte ; la pastille donne son nombre de non vues ; la visite le remet à zéro", async () => {
   const first = await completedSearch(0), second = await completedSearch(0);
   await call(`/housing/searches/${first}/watch`, { method: "PUT", body: JSON.stringify({ times: ["08:00"] }) });
   await call(`/housing/searches/${second}/watch`, { method: "PUT", body: JSON.stringify({ times: ["08:00", "18:00"] }) });
@@ -66,7 +66,7 @@ test("une seule recherche suivie par compte ; la pastille donne son nombre de no
   assert.equal(watch.search?.id, second);
   assert.equal(watch.search?.unseenCount, 2);
   const list = await (await call("/housing/searches")).json() as { id: number; watch: string | null }[];
-  assert.equal(list[0].id, second, "la recherche suivie en tête de « Mes recherches »");
+  assert.equal(list[0].id, second, "la veille quotidienne en tête de « Mes recherches »");
   assert.equal(list.find(search => search.id === first)?.watch, null, "la précédente n'est plus suivie");
   assert.equal((await call(`/housing/searches/${second}/visit`, { method: "POST" })).status, 204);
   assert.equal(((await (await call("/housing/watch")).json()) as { search: { unseenCount: number } }).search.unseenCount, 0);

@@ -35,7 +35,7 @@ export default function Searches() {
     </section>
 
     <section aria-label="Historique des recherches" className="mx-auto max-w-[1440px] px-5 pb-20 pt-10 md:px-10 md:pb-28 md:pt-14 lg:px-16">
-      {watched && <div className="mb-10" aria-label="Recherche suivie"><WatchedSearchCard search={watched}/></div>}
+      {watched && <div className="mb-10" aria-label="Veille quotidienne"><WatchedSearchCard search={watched}/></div>}
       <div className="mb-6 flex items-center justify-between gap-4 border-b border-line pb-4">
         <span className="font-data text-xs uppercase tracking-[.16em] text-stone">{watched ? 'Recherches ponctuelles' : 'Historique'}</span>
         {!history.isLoading && !history.isError && oneOff.length > 0 && <span data-testid="text-search-count" className="font-data text-xs uppercase tracking-[.12em] text-stone">{oneOff.length} recherche{oneOff.length > 1 ? 's' : ''}</span>}
