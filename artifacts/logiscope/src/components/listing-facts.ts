@@ -22,6 +22,9 @@ function topic(label: string) {
   if (/\b(ascenseur|elevator)\b/.test(key)) return 'elevator';
   if (/\b(balcon|balcony)\b/.test(key)) return 'balcony';
   if (/\b(terrasse|terrace)\b/.test(key)) return 'terrace';
+  // Diagnostics : « Classe énergie » du site et « DPE » relu par l'IA sont la même information, idem pour le GES.
+  if (/\b(dpe|classe energie|classe energetique|diagnostic de performance energetique|performance energetique|etiquette energie)\b/.test(key)) return 'dpe';
+  if (/\b(ges|gaz a effet de serre|emissions? de ges|emissions? de gaz)\b/.test(key)) return 'ges';
   return key;
 }
 
@@ -58,16 +61,30 @@ export function listingFacts(listing: HousingListing, checks: HousingCriterion[]
   const requestedTopics = new Set(criteria.map(item => topic(item.label)));
   for (const feature of listing.features || []) {
     const key = normalize(feature.label);
-    if (!key || isGeneral(feature.label) || seenFeatures.has(key) || requestedTopics.has(topic(feature.label)) || criterionFields.has(key) ||
+    const kind = topic(feature.label);
+    if (!key || isGeneral(feature.label) || requestedTopics.has(kind) || criterionFields.has(key) ||
       [...seenCriteria].some(label => label === key || (key.length >= 5 && (` ${label} `).includes(` ${key} `)))) continue;
+    if (seenFeatures.has(kind)) {
+      // Même sujet déjà listé : on garde la première, sauf si c'est le même libellé et que celle-ci précise la valeur (« Cave » puis « Cave privative »).
+      const at = features.findIndex(other => topic(other.label) === kind);
+      if (at >= 0 && normalize(features[at].label) === key && !features[at].value && feature.value) features[at] = feature;
+      continue;
+    }
     features.push(feature);
-    seenFeatures.add(key);
+    seenFeatures.add(kind);
   }
-  return { generals, criteria, features };
+  return { generals, criteria, features: dropRepeats(features) };
 }
 
 /** « Non », « Aucun » : la caractéristique est absente du logement (affichée barrée dans la fiche). */
 export const isAbsent = (feature: Pick<HousingFeature, 'value'>) => ['non', 'aucun', 'aucune'].includes(normalize(feature.value || ''));
+
+/** Une caractéristique dont tous les mots sont déjà dans une autre, plus précise, n'est pas répétée (« Chauffage collectif » / « Chauffage collectif gaz »). */
+function dropRepeats<T extends Pick<HousingFeature, 'label' | 'value'>>(features: T[]): T[] {
+  const sets = features.map(feature => new Set(words(featureText(feature))));
+  const contains = (big: Set<string>, small: Set<string>) => [...small].every(word => big.has(word));
+  return features.filter((_, i) => !features.some((__, j) => j !== i && contains(sets[j], sets[i]) && (sets[j].size > sets[i].size || j < i)));
+}
 
 const lower = (text: string) => text.charAt(0).toLocaleLowerCase('fr') + text.slice(1);
 

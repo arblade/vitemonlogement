@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Check, Zap } from 'lucide-react';
-import { featureIcon, featureText, sortFeatures } from '@/components/listing-facts';
+import type { HousingListing } from '@workspace/api-client-react';
+import { featureIcon, featureText, listingFacts, sortFeatures } from '@/components/listing-facts';
 
 const text = (label: string, value = '') => featureText({ label, value });
 
@@ -61,5 +62,33 @@ describe('Ordre des caractéristiques', () => {
       { label: 'Cave', value: '' }, { label: 'Étage', value: '3' }, { label: 'Chambres', value: '1 ch.' }, { label: 'Chauffage', value: 'gaz' },
     ]).map(feature => feature.label);
     expect(labels).toEqual(['Chambres', 'Étage', 'Cave', 'Chauffage', 'Classe énergie', 'Charges', 'Ascenseur']);
+  });
+});
+
+describe('Une même caractéristique n’apparaît qu’une fois (signalé : énergie / GES en double)', () => {
+  const facts = (features: { label: string; value: string; source: 'annonce' | 'ia' }[]) => listingFacts(
+    { price: 1, area: 1, rooms: 1, location: 'Lille', criterionResults: [], features: features.map(feature => ({ ...feature, evidence: 'x' })) } as unknown as HousingListing, [],
+  ).features.map(feature => featureText(feature));
+
+  it('« Classe énergie » du site et « DPE » / « Diagnostic de performance énergétique » relus par l’IA : une seule ligne (celle du site)', () => {
+    expect(facts([
+      { label: 'Classe énergie', value: 'D', source: 'annonce' }, { label: 'Émissions GES', value: 'B', source: 'annonce' },
+      { label: 'DPE', value: 'D', source: 'ia' }, { label: 'GES', value: 'B', source: 'ia' },
+      { label: 'Diagnostic de performance énergétique', value: 'D', source: 'ia' }, { label: 'Émissions de gaz à effet de serre', value: 'B', source: 'ia' },
+    ])).toEqual(['DPE D', 'GES B']);
+  });
+
+  it('une caractéristique contenue dans une autre plus précise disparaît', () => {
+    expect(facts([
+      { label: 'Chauffage', value: 'collectif gaz', source: 'annonce' }, { label: 'Chauffage collectif', value: '', source: 'ia' },
+      { label: 'Cave', value: '', source: 'ia' }, { label: 'Cave', value: 'privative', source: 'ia' },
+    ])).toEqual(['Chauffage collectif gaz', 'Cave privative']);
+  });
+
+  it('des caractéristiques différentes restent toutes', () => {
+    expect(facts([
+      { label: 'Chauffage', value: 'collectif gaz', source: 'annonce' }, { label: 'Eau chaude', value: 'collective', source: 'ia' },
+      { label: 'Consommation énergétique', value: '180 kWh/m²/an', source: 'ia' }, { label: 'Charges', value: '60 €', source: 'annonce' },
+    ])).toHaveLength(4);
   });
 });
