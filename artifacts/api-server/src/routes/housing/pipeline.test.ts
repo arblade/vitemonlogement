@@ -16,6 +16,7 @@ const ads = [1, 2].map(n => fatihRecord({
   ...(n === 1 ? { lat: 50.6365, lng: 3.0635, type: "streetNumber" } : { lat: 50.63, lng: 3.06, type: "city" }),
 }));
 const counts = { interpret: 0, analyze: 0, apifyRuns: 0, geocode: 0 };
+const actorStarts: string[] = []; // tous les acteurs Apify lancés, quels qu'ils soient
 const openaiBodies: { model?: string; reasoning_effort?: string; max_completion_tokens?: number }[] = [];
 let fake: Server;
 
@@ -26,6 +27,7 @@ before(async () => {
     req.on("end", () => {
       const json = (value: unknown) => { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(value)); };
       const url = req.url ?? "";
+      if (req.method === "POST" && url.startsWith("/v2/")) actorStarts.push(url.split("/")[3]);
       if (req.method === "POST" && url.startsWith("/v2/acts/fatihtahta~leboncoin-fr-scraper/runs")) { counts.apifyRuns++; return json({ data: { id: "run-1" } }); }
       if (url.startsWith("/v2/actor-runs/")) return json({ data: { status: "SUCCEEDED", defaultDatasetId: "ds-1" } });
       if (url.startsWith("/v2/datasets/")) return json(ads);
@@ -95,6 +97,8 @@ test("le worker mène une recherche jusqu'au bout sans aucun navigateur, puis un
   assert.equal(one?.listings[0].criterionResults.find(check => check.label === "chat accepté")?.status, "confirmed");
   assert.equal(one?.listings[0].aiSummary, "Studio calme.");
   assert.equal(counts.analyze, 1, "un seul appel d'analyse pour les deux annonces");
+  assert.deepEqual([...new Set(actorStarts)], ["fatihtahta~leboncoin-fr-scraper"], "réglage en dur : Le Bon Coin seul, ni SeLoger ni PAP");
+  assert.ok(one?.listings.every(listing => listing.source === "leboncoin"));
 
   const second = await createSearch("Studio Lille 700 euros, chats acceptés");
   assert.equal((await runToCompletion(second)).status, "completed");

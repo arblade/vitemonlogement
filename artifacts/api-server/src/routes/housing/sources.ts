@@ -16,17 +16,24 @@ import type { Criteria, Feature, GeoPrecision, Listing } from "./store";
  */
 export type ListingSource = "leboncoin" | "pap" | "seloger";
 export type ExtraSource = Exclude<ListingSource, "leboncoin">;
-export const EXTRA_SOURCES: ExtraSource[] = ["seloger", "pap"];
+/** Sources secondaires que le code sait interroger (toutes les valeurs possibles de ACTIVE_EXTRA_SOURCES). */
+export const EXTRA_SOURCES: readonly ExtraSource[] = ["seloger", "pap"];
 export type SourceRun = { source: ExtraSource; runId: string; request: ActorRequest };
 
 export const SOURCE_LABELS: Record<ListingSource, string> = { leboncoin: "Le Bon Coin", pap: "PAP", seloger: "SeLoger" };
 
-/** LISTING_SOURCES (ex. « leboncoin,pap ») coupe une source sans redéploiement de code ; toutes actives par défaut. */
-export function enabledExtraSources(): ExtraSource[] {
-  const raw = process.env.LISTING_SOURCES;
-  if (!raw?.trim()) return EXTRA_SOURCES;
-  const wanted = new Set(raw.split(",").map(value => value.trim().toLowerCase()));
-  return EXTRA_SOURCES.filter(source => wanted.has(source));
+/**
+ * EN DUR : seul Le Bon Coin est interrogé. SeLoger et PAP, branchés et testés, coûtent trop cher pour l'instant
+ * (≈ 0,04 $ d'Apify en plus par recherche, et l'offre Apify gratuite plafonne à 5 $ par mois). Pour les réactiver :
+ * mettre ["seloger", "pap"] (ou l'un des deux) ici, sans autre changement. Aucune variable d'environnement.
+ */
+export const ACTIVE_EXTRA_SOURCES: readonly ExtraSource[] = [];
+
+let activeExtraSources = ACTIVE_EXTRA_SOURCES;
+export const enabledExtraSources = (): readonly ExtraSource[] => activeExtraSources;
+/** Réservé aux tests : active d'autres sources le temps d'un test ; sans argument, revient au réglage en dur. */
+export function setExtraSourcesForTests(sources: readonly ExtraSource[] = ACTIVE_EXTRA_SOURCES) {
+  activeExtraSources = sources;
 }
 
 const ACTORS: Record<ExtraSource, string> = { pap: "clearpath~pap-scraper", seloger: "silentflow~seloger-scraper-ppr" };

@@ -129,7 +129,10 @@ Les deux sources sont branchées, en plus de Le Bon Coin.
 - **Affichage** : source sur chaque carte (« 01 · PAP »), « Voir sur SeLoger », favoris compris ; appels PAP et
   SeLoger visibles dans le suivi `?debug=1`. Champ `source` en base (`housing_listings`) et dans l'API.
 - **Confidentialité** : téléphones et contacts renvoyés par les acteurs jamais enregistrés (testé).
-- **Réglage** : `LISTING_SOURCES` (ex. `leboncoin,pap`) coupe une source sans redéployer de code.
+- **Réglage (en dur)** : `ACTIVE_EXTRA_SOURCES` dans `sources.ts`. **Depuis le 01/10, il vaut `[]` : seul Le Bon Coin est
+  interrogé** (SeLoger et PAP coûtent trop cher pour l'instant). Aucune variable d'environnement (`LISTING_SOURCES`,
+  prévue d'abord, a été retirée). Réactiver : y mettre `["seloger", "pap"]` ou l'un des deux, rien d'autre à changer ;
+  le code, la migration et les tests des deux sources restent en place.
 
 Vérifié en réel (≈ 0,39 $) : « T1 ou T2 à Lille, 700 € max » → 3 Le Bon Coin, 3 SeLoger, 3 PAP ; « T2 à Rennes,
 800 € max » → Le Bon Coin et SeLoger (PAP n'a rien), 4 colivings SeLoger écartés par l'IA ; « 30 à 45 m² à Nantes,

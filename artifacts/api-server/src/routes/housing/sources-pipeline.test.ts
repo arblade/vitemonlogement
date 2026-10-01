@@ -41,6 +41,8 @@ beforeEach(() => {
 });
 
 before(async () => {
+  const { setExtraSourcesForTests } = await import("./sources");
+  setExtraSourcesForTests(["seloger", "pap"]); // réglage en dur : Le Bon Coin seul ; ces tests couvrent les trois sources
   fake = createServer((req, res) => {
     let body = "";
     req.on("data", chunk => (body += chunk));
@@ -95,6 +97,8 @@ before(async () => {
   await useMemoryDatabase();
 });
 after(async () => {
+  const { setExtraSourcesForTests } = await import("./sources");
+  setExtraSourcesForTests();
   fake.close();
   delete process.env.APIFY_RESULT_LIMIT;
   const { closeDatabase } = await import("../../lib/database");
@@ -145,16 +149,21 @@ test("une source en échec (SeLoger) ne fait pas échouer la recherche : Le Bon 
   assert.deepEqual([...sources].sort(), ["leboncoin", "pap"]);
 });
 
-test("LISTING_SOURCES=leboncoin : ni PAP ni SeLoger ne sont lancés", async () => {
-  process.env.LISTING_SOURCES = "leboncoin";
+test("réglage en dur (Le Bon Coin seul) : ni SeLoger, ni PAP, ni code de ville ne sont lancés", async () => {
+  const { setExtraSourcesForTests, enabledExtraSources } = await import("./sources");
+  setExtraSourcesForTests(); // retour au réglage en dur
   try {
+    assert.deepEqual(enabledExtraSources(), []);
     const { createSearch, getSearch } = await import("./store");
     const id = await createSearch("Studio ou T2 à Lille, 900 € max");
     assert.equal((await runToCompletion(id)).status, "completed");
     assert.deepEqual(started, ["fatihtahta~leboncoin-fr-scraper"]);
-    assert.ok((await getSearch(id))?.listings.every(listing => listing.source === "leboncoin"));
+    const search = await getSearch(id);
+    assert.ok(search?.listings.length);
+    assert.ok(search?.listings.every(listing => listing.source === "leboncoin"));
+    assert.deepEqual(search?.searchRequests?.map(request => request.source ?? "leboncoin"), ["leboncoin"]);
   } finally {
-    delete process.env.LISTING_SOURCES;
+    setExtraSourcesForTests(["seloger", "pap"]);
   }
 });
 

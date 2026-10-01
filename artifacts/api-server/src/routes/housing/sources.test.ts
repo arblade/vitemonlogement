@@ -181,17 +181,23 @@ test("mélange des sources : une annonce de chaque site à tour de rôle, doublo
   assert.equal(sameHome(home("a", 600, 30, null, 1), home("b", 600, 30, null, 2)), false, "sans position : pièces différentes");
 });
 
-test("LISTING_SOURCES coupe une source sans changer le code ; toutes actives par défaut", async () => {
-  const { enabledExtraSources } = await import("./sources");
+test("réglage en dur : aucune source secondaire active ; aucune variable d'environnement ne change cela", async () => {
+  const { ACTIVE_EXTRA_SOURCES, EXTRA_SOURCES, enabledExtraSources, setExtraSourcesForTests, startExtraSources } = await import("./sources");
   const previous = process.env.LISTING_SOURCES;
+  process.env.LISTING_SOURCES = "leboncoin,pap,seloger";
   try {
-    delete process.env.LISTING_SOURCES;
-    assert.deepEqual(enabledExtraSources(), ["seloger", "pap"]);
-    process.env.LISTING_SOURCES = "leboncoin, PAP";
-    assert.deepEqual(enabledExtraSources(), ["pap"]);
-    process.env.LISTING_SOURCES = "leboncoin";
+    assert.deepEqual(ACTIVE_EXTRA_SOURCES, []);
     assert.deepEqual(enabledExtraSources(), []);
+    calls.length = 0;
+    assert.deepEqual(await startExtraSources(criteria, "0.10", 120), []);
+    assert.deepEqual(calls, [], "aucun appel Apify : ni SeLoger, ni PAP, ni code de ville");
+    // Les sources restent disponibles pour une réactivation : le code sait toujours les lancer.
+    assert.deepEqual([...EXTRA_SOURCES], ["seloger", "pap"]);
+    setExtraSourcesForTests(["pap"]);
+    assert.deepEqual(enabledExtraSources(), ["pap"]);
   } finally {
+    setExtraSourcesForTests();
     if (previous === undefined) delete process.env.LISTING_SOURCES; else process.env.LISTING_SOURCES = previous;
   }
+  assert.deepEqual(enabledExtraSources(), []);
 });

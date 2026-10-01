@@ -4,7 +4,12 @@ Sources : facturation réelle lue sur chaque run Apify (`chargedEventCounts`), t
 appels, tarifs publics vérifiés le 01/10/2026, configuration Render lue sur le service. 1 $ ≈ 0,85 €.
 « prod » = branche `main` (Le Bon Coin seul) ; « develop » = 3 sources (Le Bon Coin, SeLoger, PAP), non déployé.
 
-## Mise à jour du 01/10/2026 (après optimisation, branche develop)
+## Mise à jour du 01/10/2026 (sources désactivées : Le Bon Coin seul)
+SeLoger et PAP sont désactivés en dur. **Coût réel d'une recherche : ≈ 0,010 $ d'Apify (Le Bon Coin, `fatihtahta`) +
+≈ 0,007 à 0,02 $ d'OpenAI = ≈ 0,02 à 0,03 $** ; 10 recherches ≈ 0,2 à 0,3 $ (≈ 0,17 à 0,26 €). Avec les 5 $ d'Apify
+gratuit : ≈ 500 recherches par mois. Les tableaux ci-dessous décrivent les trois sources, désormais inactives.
+
+## Mise à jour du 01/10/2026 (après optimisation, trois sources)
 Recherche élargie supprimée, Le Bon Coin lu par l'acteur `fatihtahta`, 6 annonces lues sur SeLoger et 4 sur PAP.
 Mesuré en réel sur 3 recherches (Lille, Rennes avec « balcon », Nantes) :
 
@@ -129,6 +134,7 @@ Reste Apify jusqu'au 13/10 : 2,84 $ ≈ 40 à 75 recherches en prod, ≈ 20 à 3
 ## 9. À faire pour ne pas être surpris
 1. Budget mensuel dans la console OpenAI (par exemple 10 $).
 2. `QUOTA_GLOBAL_PER_DAY=30`, `QUOTA_COOKIE_PER_HOUR=10` sur Render : pire cas ≈ 5 $ / jour.
-3. Avant de déployer les 3 sources : `LISTING_SOURCES=leboncoin` tant qu'Apify est gratuit, ou passer en Starter.
+3. SeLoger et PAP sont **désactivés en dur** dans le code (`ACTIVE_EXTRA_SOURCES = []`, depuis le 01/10) : aucune
+   variable Render à poser. Les réactiver seulement après être passé en Apify Starter.
 4. Vérifier l'offre Neon dans sa console.
 5. Économies possibles : voir `reduction-des-couts.md` (≈ 0,05 à 0,07 $ par recherche à 3 sources).
