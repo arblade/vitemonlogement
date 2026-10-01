@@ -5,7 +5,7 @@ import {
   getGetHousingSearchQueryKey, getGetWatchedSearchQueryKey, getListHousingSearchesQueryKey, useUnwatchHousingSearch, useWatchHousingSearch,
   type HousingSearchDetail, type HousingSearchSummary,
 } from '@workspace/api-client-react';
-import { BellRing, CalendarClock, History, Info, PauseCircle, Repeat, Search, X } from 'lucide-react';
+import { BellRing, History, Info, PauseCircle, Repeat, Search, X } from 'lucide-react';
 import { hoursLabel, nextPass } from '@/lib/dates';
 
 const DEFAULT_TIMES = ['08:00', '18:00'];
@@ -105,11 +105,9 @@ function WatchDialog({ open, onOpenChange, search, replaced, onDone }: {
           {editing ? 'Votre veille quotidienne repasse chaque jour à ces heures (heure de Paris).' : <>Une recherche ponctuelle montre les annonces du moment. <strong>Une veille quotidienne continue de chercher pour vous</strong>, chaque jour :</>}
         </p>
         {!editing && <ul data-testid="watch-explanation" className="mt-4 space-y-3 text-sm leading-relaxed">
-          {step(History, <><strong>Tout de suite</strong> : toutes les annonces des 4 derniers jours (jusqu’à 105).</>)}
+          {step(History, <><strong>Dès le début</strong>, toutes les annonces des 4 derniers jours sont récupérées.</>)}
           {step(Repeat, <><strong>Puis chaque jour</strong>, aux heures choisies ci-dessous : seulement les nouvelles annonces.</>)}
           {step(BellRing, <>Une <strong>pastille rose</strong> vous les signale dès que vous ouvrez le site.</>)}
-          {step(Info, <>Une annonce simplement remontée ou republiée par son auteur n’est jamais comptée comme nouvelle.</>)}
-          {step(CalendarClock, <>Sans visite pendant 7 jours, elle se met en pause : elle ne coûte rien tant que vous ne la regardez pas.</>)}
         </ul>}
         <div className="mt-5 flex flex-wrap gap-3">
           {[0, 1].map(index => <label key={index} className="flex flex-col gap-1 text-xs text-stone">{index === 0 ? 'Premier passage' : 'Second (facultatif)'}

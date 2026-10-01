@@ -589,7 +589,9 @@ describe('Page résultats : veille quotidienne et lecture progressive', () => {
     await user.click(screen.getByTestId('button-watch'));
     const dialog = await screen.findByTestId('dialog-watch');
     const explanation = within(dialog).getByTestId('watch-explanation');
-    for (const point of ['4 derniers jours', 'seulement les nouvelles annonces', 'pastille rose', 'remontée ou republiée', '7 jours']) expect(explanation).toHaveTextContent(point);
+    for (const point of ['Dès le début, toutes les annonces des 4 derniers jours sont récupérées.', 'seulement les nouvelles annonces', 'pastille rose']) expect(explanation).toHaveTextContent(point);
+    for (const gone of ['remontée', 'republiée', '7 jours', 'ne coûte rien', '105']) expect(explanation).not.toHaveTextContent(gone);
+    expect(within(explanation).getAllByRole('listitem')).toHaveLength(3);
     expect(within(dialog).getByTestId('input-watch-time-0')).toHaveValue('08:00');
     expect(within(dialog).getByTestId('input-watch-time-1')).toHaveValue('18:00');
     expect(calls.some(call => call.method === 'PUT')).toBe(false);
