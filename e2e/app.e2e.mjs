@@ -154,6 +154,32 @@ async function checkListingMap(page) {
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
 }
 
+test("sources (mobile puis desktop) : chaque carte nomme son site, et le lien y renvoie", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      await page.goto(`${base}/searches/1`);
+      await page.waitForSelector("[data-testid=card-listing-2]");
+      assert.match((await text(page, "[data-testid=text-listing-source-1]")).trim(), /^le bon coin$/i, name);
+      assert.match((await text(page, "[data-testid=text-listing-source-2]")).trim(), /^pap$/i, name);
+      assert.match(await text(page, "[data-testid=link-source-2]"), /Voir sur PAP/, name);
+      assert.equal(await page.getAttribute("[data-testid=link-source-2]", "href"), "https://www.pap.fr/annonces/-r442803002", name);
+      if (process.env.E2E_SCREENSHOTS) await page.locator("[data-testid=card-listing-2]").screenshot({ path: `${process.env.E2E_SCREENSHOTS}/sources-${name}.png` });
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
 test("carte (mobile) : adresse exacte → logement, lieu de travail, trajet et durée ; commune seule → cercle et lieu, sans trajet", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");

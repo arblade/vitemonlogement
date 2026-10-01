@@ -14,6 +14,8 @@ export const housingSearches = pgTable("housing_searches", {
   broadRequest: text("broad_request"),
   focusedMatches: integer("focused_matches"),
   runId: text("run_id"),
+  // Runs des sources secondaires (PAP, SeLoger) lancés avec celui de Le Bon Coin : [{ source, runId, request }] en JSON.
+  sourceRuns: text("source_runs"),
   error: text("error"),
   analyzed: integer("analyzed").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')`),
@@ -32,6 +34,8 @@ export const housingListings = pgTable("housing_listings", {
   id: serial("id").primaryKey(),
   searchId: integer("search_id").notNull().references(() => housingSearches.id),
   batch: text("batch").notNull().default("focused"),
+  // Site d'origine de l'annonce : leboncoin, pap ou seloger.
+  source: text("source").notNull().default("leboncoin"),
   title: text("title").notNull(),
   url: text("url").notNull(),
   description: text("description").notNull(),
@@ -51,6 +55,14 @@ export const housingListings = pgTable("housing_listings", {
   lng: doublePrecision("lng"),
   geoPrecision: text("geo_precision"),
 }, table => [unique("housing_listings_search_id_url_unique").on(table.searchId, table.url)]);
+
+// Code de lieu SeLoger (ex. AD08FR23619 pour Lille), résolu une fois par commune (code INSEE) puis gardé.
+export const selogerLocations = pgTable("seloger_locations", {
+  inseeCode: text("insee_code").primaryKey(),
+  code: text("code").notNull(),
+  label: text("label").notNull(),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+});
 
 // Cache d'analyse LLM partagé entre toutes les recherches, par annonce et par version d'analyse.
 export const listingAnalyses = pgTable("listing_analyses", {

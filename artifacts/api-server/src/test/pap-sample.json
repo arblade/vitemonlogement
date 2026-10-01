@@ -1,0 +1,364 @@
+[
+ {
+  "listingId": 442803002,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Lille (59)",
+  "price": "650 €",
+  "priceValue": 650,
+  "rooms": 2,
+  "bedrooms": 1,
+  "characteristics": "Appartement / 2 pièces / 1 chambre / 44 m²",
+  "description": "Appartement en location nue au 2ème étage, avec chauffage et eau chaude tout électrique.\nAu pied du métro, à 3 stations de la Gare Lille Flandres et au centre des différentes Grandes écoles et commerce.",
+  "coordinates": {
+   "lat": 50.638053,
+   "lng": 3.034121
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/04/44/04445ce1973c8988420f709ed8dced0f/0-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c2/de/c2de3c9afe33812e4359635fcc2cabb7/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/54/d1/54d1dde80669ab01afdb3920e1b103f6/5-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/29/95/29950f8c68dfcad6ae2e625c23a045e5/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/57/63/5763d958f80060294d87eb0a040a0034/5-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/bc/9a/bc9ad232af2feeda482b8ef06233da3c/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/e3/2a/e32a4a9dd335459a651e48f1d335bb25/e-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/61/85/6185552e15e62400ac76e65f26f47ea0/6-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c2/d5/c2d5ac9430f125ff4a3efd230da8f8a7/c-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "e",
+   "description": "Logement avec une consommation annuelle d'énergie comprise entre 251 et 330 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "d",
+   "description": "Logement avec une émission de gaz à effet de serre comprise entre 31 à 50 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r442803002",
+  "phones": [
+   "06 00 00 00 00"
+  ]
+ },
+ {
+  "listingId": 464402516,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Lambersart (59130)",
+  "price": "640 €",
+  "priceValue": 640,
+  "rooms": 1,
+  "bedrooms": null,
+  "characteristics": "Appartement / 1 pièce / 25 m²",
+  "description": "Disponible.\nLoyer :  560 € + 80 € de charges (comprenant chauffage central, eau chaude, eau froide, entretien des communs)\n\nStudio 25 m2, au 3e étage et dernier étage d'une petite résidence de 5 appartements situé dans un quartier calme et résidentiel, avec possibilité de stationnement gratuit dans un quartier.\nTrès bon état général. Cuisine équipée : cuisinière et plaque électrique- réfrigérateur, hotte de cuisine - Salle de bains : douche, lavabo, wc, lave-linge et sèche-linge.\nGrand séjour avec placard, penderie et un sommier 140 x 190 cm, parquet flottant, velux double vitrage avec store o",
+  "coordinates": {
+   "lat": 50.645424,
+   "lng": 3.033277
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/a8/84/a88413d2b35e6ac6c52b30c9b3f6f25d/a-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/7a/3e/7a3e7927a389f75bc0b7fc88ec0f6131/7-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/a7/7f/a77f188d7a9249745e07ecf89b860930/a-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/1f/ea/1fea4972a707766f7bf2bc28213ebac9/1-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "d",
+   "description": "Logement avec une consommation annuelle d'énergie comprise entre 181 et 250 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "d",
+   "description": "Logement avec une émission de gaz à effet de serre comprise entre 31 à 50 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r464402516",
+  "phones": []
+ },
+ {
+  "listingId": 465500344,
+  "product": "location",
+  "propertyType": "colocation",
+  "propertyTypeLabel": "",
+  "title": "Loos (59120)",
+  "price": "565 €",
+  "priceValue": 565,
+  "rooms": 5,
+  "bedrooms": 4,
+  "characteristics": "Chambre dans une colocation / 5 pièces / 4 chambres / 80 m²",
+  "description": "Chambres dans un appartement de 80m2 - Colocation 4 chambres - Rue du Maréchal Foch à Loos  – Étudiants seulement - Proche CHR / écoles santé & accès direct Vauban / La Catho\n\nLocation réservée aux étudiants / Disponible dès janvier 27\n\nQuatre chambres sont disponibles dans une colocation meublée de 4 chambres, au sein d'un appartement entièrement rénové de 80 m², idéalement situé pour les étudiants des filières santé et des établissements de la Catho.\nUn emplacement pratique\nÀ quelques minutes à pied du CHU de Lille et des facultés de santé.\nAccès direct à Vauban, La Catho et au centre de Lil",
+  "coordinates": {
+   "lat": 50.61431,
+   "lng": 3.010596
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/28/5e/285e054d106721ba0bbc3c51e0bb959d/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/38/f9/38f9b46879d3c90a9ee2809e8c50f814/3-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/1f/a3/1fa3bd2e47f9c3ff2e560a8a6f4605e5/1-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/b7/00/b700e8820a3aa804b6b791b002a9f77f/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/4b/91/4b9160e56645632498bdb507e5c2bd0f/4-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/b4/97/b4975983e40ee916de77f69b50642ad2/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/b5/2a/b52a64d3e28ff027d6a245ddb4bbd1d3/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/dd/9d/dd9df972fdb2b1bb0ccd502823e02200/d-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/be/ac/beac0d7c270be97d8b04f3a881b2d487/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/ff/07/ff07dd7393834978f604096025e6204e/f-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/61/3c/613c4476d94698f3a47a8c202ded6792/6-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/bc/89/bc89e5d1af9eab7b664e17cebb87228c/b-p1.jpg"
+  ],
+  "energyClass": null,
+  "gesClass": null,
+  "detailUrl": "https://www.pap.fr/annonces/-r465500344",
+  "phones": []
+ },
+ {
+  "listingId": 465202826,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Marcq-en-Barœul (59700)",
+  "price": "640 €",
+  "priceValue": 640,
+  "rooms": 2,
+  "bedrooms": 1,
+  "characteristics": "Appartement / 2 pièces / 1 chambre / 33 m²",
+  "description": "Appartement 33 m² au 2ème et dernier d’un petit immeuble, Croisé-Laroche (au centre de Lille,\nRoubaix et Tourcoing).\n**Très bon état général**.\n1 PIECE CUISINE /SALLE A MANGER EQUIPEE : réfrigérateur/congélateur, plaque de\ncuisson vitrocéramique, four encastrable électrique, hotte, micro-onde et de nombreux rangements\nmeubles et tiroirs.\n\n1 PIECE SALON/CHAMBRE avec un grand placard/penderie\n\n1 SALLE DE BAIN : 1\nmeuble vasque avec tiroirs, 1 armoire de toilette avec miroir, baignoire/douche et branchement pour une\nmachine à laver - Chauffage et eau chaude individuels au gaz.\n\nFenêtres double-vi",
+  "coordinates": {
+   "lat": 50.677168,
+   "lng": 3.111839
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/66/a7/66a7f9c1580f7576c45d7def89e8bfe0/6-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/bc/6a/bc6a64750b44b4ef4acfc9bf3631900a/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c0/3b/c03bafc39e6a6652984a03546bb21354/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/4f/55/4f55955aa95bd62479152ec2b81d9b7e/4-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/bd/b1/bdb129e03fd0c3a383b04541acf2d431/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/ac/a9/aca9182988ce87a9a80d95f6c8963805/a-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "c",
+   "description": "Logement avec une consommation annuelle d’énergie comprise entre 111 et 180 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "d",
+   "description": "Logement avec une émission de gaz à effet de serre comprise entre 31 à 50 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r465202826",
+  "phones": []
+ },
+ {
+  "listingId": 465500956,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Villeneuve-d'Ascq (59)",
+  "price": "620 €",
+  "priceValue": 620,
+  "rooms": 1,
+  "bedrooms": null,
+  "characteristics": "Appartement / 1 pièce / 30 m²",
+  "description": "Studio de 30 m2 au rez-de-chaussée d’une ancienne ferme  à Villeneuve d’Ascq : une pièce de 25 m2 et une salle de bains de 5 m2 avec douche et wc.\nCuisine equipée avec plaques chauffantes et four electrique, grand frigo avec une partie congelateur, lave linge.\nProche des métros Fort de Mons et Les Prés.  A15 mn du métro Pont de Bois.\nLoyer de 620€ tout compris : chauffage, eau et électricité.",
+  "coordinates": {
+   "lat": 50.642202,
+   "lng": 3.135183
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/dc/8f/dc8f7c32477f6a756861b2e1c901ea24/d-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/f1/68/f16897068413151605573c50961f3c70/f-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/17/85/1785ac9c6c2376d5ed8d5a30dbd5e6ad/1-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/97/e1/97e1642494851e1be4a4409f3a077c09/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/cf/f5/cff56cf4ba2c8d8222cc63419e8f825d/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/3b/77/3b77cdded2f31bcc8be507bdc0e3c478/3-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "d",
+   "description": "Logement avec une consommation annuelle d'énergie comprise entre 181 et 250 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "d",
+   "description": "Logement avec une émission de gaz à effet de serre comprise entre 31 à 50 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r465500956",
+  "phones": [
+   "06 00 00 00 00"
+  ]
+ },
+ {
+  "listingId": 34767,
+  "product": "acceslogement",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Hallennes-lez-Haubourdin (59320)",
+  "price": "547 €",
+  "priceValue": 547,
+  "rooms": null,
+  "bedrooms": null,
+  "characteristics": "",
+  "description": "",
+  "coordinates": null,
+  "photos": [
+   "https://cdn.pap.fr/visuels/acceslogement/55/db/55db2a0d57224a6ec941912ad60b61da/5-a5.jpg"
+  ],
+  "energyClass": null,
+  "gesClass": null,
+  "detailUrl": "https://www.acceslogement.fr/annonces/location-hallennes-lez-haubourdin-59320-appartement-logement-social-r34767?utm_source=pap-ios&utm_medium=link&utm_campaign=pap_annonces",
+  "phones": []
+ },
+ {
+  "listingId": 450001536,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Wambrechies (59118)",
+  "price": "625 €",
+  "priceValue": 625,
+  "rooms": 2,
+  "bedrooms": 1,
+  "characteristics": "Appartement / 2 pièces / 1 chambre / 27,96 m²",
+  "description": "appartement refait à neuf, étage  dans petite résidence de 12 logements, parking fermé, 2 pièces cuisine équipée, proximité rocade nord ouest,transports, commerce.\nchauffage électrique,  placard dans chambre\nSalle de douche- WC séparé- petite terrasse-\nacompte charges mensuel 35€ comportant consommation eau, OM, charges communes avec les solde en fin d'année.\nPrévoir des frais (partagés) chez le notaire pour la rédaction du bail et en contre partie pas de dépôt de garantie.\nDISPO APRES LE 20-10-2026",
+  "coordinates": {
+   "lat": 50.681048,
+   "lng": 3.054337
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/4d/46/4d460a5d777207bffaa91590a9e3889f/4-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/27/2f/272f1c64a956988644a93e4e584e3ac6/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/61/8c/618c588f7e1bb26179f02029d4de982f/6-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/91/1a/911a5a487d0acaad24127cedb29c9670/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/72/02/7202b522c1ed05b3d843ca4100cfcb46/7-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/4d/46/4d460a5d777207bffaa91590a9e3889f/4-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/5e/9d/5e9d8b3fa3be50ad32c780b2feac3809/5-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/7d/a3/7da3b4bd55a287c4ddb49793c4a952b5/7-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/3b/97/3b97af18a4fc5671110ecab159b0c45f/3-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/53/52/5352bc57b9ef5f56f8714fba4dc4fbd7/5-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/8f/ed/8fed2821a156f3d9721f074778ef5083/8-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "e",
+   "description": "Logement avec une consommation annuelle d'énergie comprise entre 251 et 330 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "a",
+   "description": "Logement avec une émission de gaz à effet de serre inférieure ou égale à 5 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r450001536",
+  "phones": [
+   "06 00 00 00 00"
+  ]
+ },
+ {
+  "listingId": 465302646,
+  "product": "location",
+  "propertyType": "appartement",
+  "propertyTypeLabel": "Appartement",
+  "title": "Croix (59170)",
+  "price": "650 €",
+  "priceValue": 650,
+  "rooms": 1,
+  "bedrooms": null,
+  "characteristics": "Appartement / 1 pièce / 20 m²",
+  "description": "• Studio meublé de 20 m² clé en main au 33 Avenue du Général de Gaulle à Croix :\n- dans une résidence sécurisée, calme et verdoyante\n- au 2ème étage (sur 5) avec ascenseur\n- vue dégagée sans vis-à-vis\n- une exposition Sud-Ouest\n\n• Confort & Isolation : double vitrage, chauffage électrique individuel et DPE C\n• Équipements neufs : mobilier, literie et vaisselle intégralement neufs\n• Kitchenette aménagée avec réfrigérateur, 2 plaques et micro-ondes\n• Salle de bain : douche, wc, meuble vasque, miroir, porte serviette et matériel de nettoyage\n• Nombreux rangements : placards, grands tiroirs roulan",
+  "coordinates": {
+   "lat": 50.67911,
+   "lng": 3.15913
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/21/41/2141dfabac31773f134a51582015ebad/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/3d/58/3d5865667ae838ea42ab92b46af18cdd/3-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/f1/88/f18834f0a01afbad23eca1209f58d6bf/f-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/77/d0/77d0b0054e260ab046cb3610d6b06620/7-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/81/d8/81d877a5637a0e57725f1d10bea93d69/8-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/53/40/5340e45350010bc472bbdee32337c5ce/5-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/ac/b4/acb4acef28586d4a759acaace4e4ba33/a-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/32/11/32111984218a0632e303edd1d2817493/3-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c3/80/c380ff245dd2e9af24d392418da4d2dd/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/88/f8/88f8d6e889a52b7d5267b7300066dc59/8-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "c",
+   "description": "Logement avec une consommation annuelle d’énergie comprise entre 111 et 180 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "a",
+   "description": "Logement avec une émission de gaz à effet de serre inférieure ou égale à 5 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r465302646",
+  "phones": []
+ },
+ {
+  "listingId": 444000830,
+  "product": "location",
+  "propertyType": "colocation",
+  "propertyTypeLabel": "",
+  "title": "Roubaix (59100)",
+  "price": "450 €",
+  "priceValue": 450,
+  "rooms": 7,
+  "bedrooms": 5,
+  "characteristics": "Chambre dans une colocation / 7 pièces / 5 chambres / 120 m²",
+  "description": "Proche bus et à proximité des Écoles : Lycée St Rémy, Jean Rostand, ESMOD, ESAAT, ENSAIT, EDHEC ...\n\nColocation dans maison d'environ 120 m², entièrement équipée, lumineux, traversant.\nGrand salon avec canapé convertible et fauteuils, TV salle à manger, cuisine toute équipée avec électroménager. Buanderie avec lave-linge et sèche-linge. La maison comporte 5 chambres et 3 salles de bains et 3 wc..\nChambre meublée avec lit double, literie, bureau, dressing.\n\nCharges 80 € comprenant électricité, chauffage, eau chaude et froide, internet. Éligible APL.\n\nUne présentation par mail de votre situation",
+  "coordinates": {
+   "lat": 50.687265,
+   "lng": 3.190042
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/d3/e1/d3e1cceb3da0661777be93de4572c7de/d-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c1/97/c1979d8f45494139dbf02dfde1f6e85a/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/81/4b/814ba0286a7276db26b4206d7060857f/8-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/b8/f3/b8f3ae60164910bba7b38b1c89f833aa/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/14/1b/141ba75d2a531311c21decc6fdff94dd/1-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/c4/70/c470c5d2a8954f3f227be8f8c43410e4/c-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/27/54/2754fcb02069cd173e4b9567632a751d/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/20/16/2016b13782821da7cbb11837c805c518/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/91/65/91651ec4837657cd188e7b30578402ea/9-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "c",
+   "description": "Logement avec une consommation annuelle d’énergie comprise entre 111 et 180 kWh/m²/an."
+  },
+  "gesClass": {
+   "lettre": "c",
+   "description": "Logement avec une émission de gaz à effet de serre comprise entre 11 et 30 kgéqCO2/m²/an."
+  },
+  "detailUrl": "https://www.pap.fr/annonces/-r444000830",
+  "phones": [
+   "06 00 00 00 00"
+  ]
+ },
+ {
+  "listingId": 449002263,
+  "product": "location",
+  "propertyType": "colocation",
+  "propertyTypeLabel": "",
+  "title": "Roubaix (59100)",
+  "price": "535 €",
+  "priceValue": 535,
+  "rooms": 6,
+  "bedrooms": 3,
+  "characteristics": "Chambre dans une colocation / 6 pièces / 3 chambres / 140 m²",
+  "description": "Une maison de charme de 140 m² entièrement rénovée en 2023, meublée, tout équipée, décorée avec goût, traversante et lumineuse, avec une grande cour extérieure, propice au bien être individuel et collectif.\n\nTrois chambres disponibles.\n**Chambre Bleue (16 m²) et Chambre verte (16 m²) encore disponibles au 2ᵉ et dernier étage, et la Chambre Terracotta ((17 m²) au 1er étage, les trois avec salle de bain privative, meublée avec :\n\n•⁠ ⁠un lit double, couette et oreillers pour faire tes meilleurs rêves\n•⁠ ⁠un bureau avec chaise pour travailler sur tes plus beaux projets\n•⁠ ⁠un dressing pour y range",
+  "coordinates": {
+   "lat": 50.685971,
+   "lng": 3.175851
+  },
+  "photos": [
+   "https://cdn.pap.fr/photos/pap/48/ea/48ea81b45efb8d1b0453b66e9255d625/4-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/96/01/960189be83797e97a5354b85fc8cf02d/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/9b/75/9b7548840d26778e402660f1adab3280/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/ba/4a/ba4ab28414477f933cfbc40f2ce719eb/b-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/75/62/7562b347c9ce12f5ec3b8e0872c4d1e5/7-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/2a/5f/2a5f27060fd94474f289b6268eb27648/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/83/fd/83fd7f6768e5a659e207a27f6dbf34b5/8-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/95/e0/95e0291fd5b070deb353d9a1aca31b3d/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/6a/11/6a11ce79b799a70558d47dc39cbee3a6/6-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/95/ae/95aec21dd3d6504aa7b9e4dcf2f80dde/9-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/28/fd/28fde917de0fe2e9fc6c8365e5584396/2-p1.jpg",
+   "https://cdn.pap.fr/photos/pap/82/fe/82fe16d8da8adc7e793996479214f3a6/8-p1.jpg"
+  ],
+  "energyClass": {
+   "lettre": "d",
+   "description": "Logement avec une consommation annuelle d'énergie comprise entre 181 et 250 kWh/m²/an."
+  },
+  "gesClass": null,
+  "detailUrl": "https://www.pap.fr/annonces/-r449002263",
+  "phones": [
+   "06 00 00 00 00"
+  ]
+ }
+]

@@ -103,6 +103,7 @@ export const ListHousingSearchesResponseItem = zod.object({
   "phase": zod.enum(['focused', 'broad']).optional(),
   "searchRequests": zod.array(zod.object({
   "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
   "path": zod.string(),
   "input": zod.string()
 })).optional(),
@@ -166,6 +167,7 @@ export const CreateHousingSearchResponse = zod.object({
   "phase": zod.enum(['focused', 'broad']).optional(),
   "searchRequests": zod.array(zod.object({
   "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
   "path": zod.string(),
   "input": zod.string()
 })).optional(),
@@ -177,6 +179,7 @@ export const CreateHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).describe('Site the listing comes from'),
   "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
@@ -258,6 +261,7 @@ export const GetHousingSearchResponse = zod.object({
   "phase": zod.enum(['focused', 'broad']).optional(),
   "searchRequests": zod.array(zod.object({
   "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
   "path": zod.string(),
   "input": zod.string()
 })).optional(),
@@ -269,6 +273,7 @@ export const GetHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).describe('Site the listing comes from'),
   "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
@@ -353,6 +358,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "phase": zod.enum(['focused', 'broad']).optional(),
   "searchRequests": zod.array(zod.object({
   "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
   "path": zod.string(),
   "input": zod.string()
 })).optional(),
@@ -364,6 +370,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).describe('Site the listing comes from'),
   "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),
@@ -448,6 +455,7 @@ export const RefreshHousingSearchResponse = zod.object({
   "phase": zod.enum(['focused', 'broad']).optional(),
   "searchRequests": zod.array(zod.object({
   "batch": zod.enum(['focused', 'broad']),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).optional(),
   "path": zod.string(),
   "input": zod.string()
 })).optional(),
@@ -459,6 +467,7 @@ export const RefreshHousingSearchResponse = zod.object({
 }).and(zod.object({
   "listings": zod.array(zod.object({
   "id": zod.number().int(),
+  "source": zod.enum(['leboncoin', 'pap', 'seloger']).describe('Site the listing comes from'),
   "batch": zod.enum(['focused', 'broad']),
   "title": zod.string(),
   "url": zod.string(),

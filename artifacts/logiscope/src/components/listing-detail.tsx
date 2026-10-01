@@ -4,11 +4,8 @@ import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles
 import { ListingGallery } from '@/components/listing-gallery';
 import { generalIcons, listingFacts } from '@/components/listing-facts';
 import { ListingMap } from '@/components/listing-map';
+import { sourceName } from '@/lib/sources';
 
-function sourceName(url: string) {
-  try { return new URL(url).hostname.replace(/^www\./, ''); }
-  catch { return 'la source'; }
-}
 
 export function ListingDetail({ listing, checks = [], open, onOpenChange, selected, compareFull, onSelect, searchId, places, routingAvailable }: {
   listing: HousingListing;

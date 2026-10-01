@@ -285,6 +285,7 @@ components:
       required: [batch, path, input]
       properties:
         batch: { type: string, enum: [focused, broad] }
+        source: { type: string, enum: [leboncoin, pap, seloger] }
         path: { type: string }
         input: { type: string }
     HousingFeature:
@@ -307,9 +308,13 @@ components:
         evidence: { type: string }
     HousingListing:
       type: object
-      required: [id, batch, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
+      required: [id, source, batch, title, url, description, features, criterionResults, score, images, aiSummary, summaryEvidence]
       properties:
         id: { type: integer }
+        source:
+          description: Site the listing comes from
+          type: string
+          enum: [leboncoin, pap, seloger]
         batch: { type: string, enum: [focused, broad] }
         title: { type: string }
         url: { type: string }

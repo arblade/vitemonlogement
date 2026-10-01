@@ -89,7 +89,7 @@ test("parsePlaces : lieux de vie bornés (3 max), type validé, libellé par dé
 });
 
 const ad = (n: number, position: Partial<Listing> = {}): Omit<Listing, "id"> => ({
-  batch: "focused", title: `T2 ${n}`, url: `https://www.leboncoin.fr/ad/locations/${100 + n}`, description: "d", price: 600, area: 40, rooms: 2,
+  source: "leboncoin", batch: "focused", title: `T2 ${n}`, url: `https://www.leboncoin.fr/ad/locations/${100 + n}`, description: "d", price: 600, area: 40, rooms: 2,
   location: "Rennes", image: null, images: [], aiSummary: null, summaryEvidence: [], score: 70, features: [], criterionResults: [],
   lat: null, lng: null, geoPrecision: null, ...position,
 });

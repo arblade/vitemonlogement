@@ -38,7 +38,7 @@ describe('Mes favoris', () => {
     renderPage();
     await screen.findByText('Studio 1');
     expect(screen.getByRole('link', { name: /voir dans la recherche/i })).toHaveAttribute('href', '/searches/3');
-    const source = screen.getByRole('link', { name: /voir sur leboncoin/i });
+    const source = screen.getByRole('link', { name: /voir sur le bon coin/i });
     expect(source).toHaveAttribute('href', favorite(1).url);
     expect(source.getAttribute('rel')).toContain('noopener');
   });

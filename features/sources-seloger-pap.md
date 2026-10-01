@@ -13,7 +13,7 @@ ce que l'app utilise déjà (`normalize` dans `apify.ts`).
 
 | Site | Acteur | Utilisation (30 j) | Entrée | Coût mesuré (10 annonces complètes) |
 |---|---|---|---|---|
-| Le Bon Coin (actuel) | `clearpath/leboncoin-api` | — | champs ou URL | **0,009 $** |
+| Le Bon Coin (actuel) | `clearpath/leboncoin-api` | — | champs ou URL | **0,024 $** (0,009 départ + 0,0015/annonce) |
 | SeLoger | `silentflow/seloger-scraper-ppr` ✅ | 14 utilisateurs, 472 runs, 0 échec | URL de recherche SeLoger | **0,038 $** (0,004 départ + 0,0034/annonce ; 0,0014 sans le détail) |
 | SeLoger | `abotapi/seloger-france-scraper` | 20 utilisateurs | ville en clair + filtres | 0,09 $ ; a rendu 4 annonces sur 179 à Rennes → écarté |
 | SeLoger | `azzouzana/seloger-mass-products-…` | 58 utilisateurs | URL | refuse les URL testées → écarté |
@@ -96,14 +96,41 @@ SeLoger, 10 PAP à Lille). Échantillon petit : une déduplication (prix, surfac
 6. **Confidentialité** : ne jamais stocker `phones` (PAP) ni `contactPhone` (SeLoger).
 
 ## Coût par recherche (5 annonces retenues)
-Le Bon Coin seul ≈ 0,01 $ d'Apify. Avec SeLoger (lecture de 10 à 30 annonces pour écarter les colocations) :
-+ 0,02 à 0,06 $. Avec PAP : + 0,02 à 0,045 $. Soit **≈ 0,05 à 0,12 $ par recherche au lieu de 0,01 $**, plus
+Le Bon Coin seul ≈ 0,024 $ d'Apify. Avec SeLoger (10 annonces avec détail) : + 0,038 $. Avec PAP : + 0,045 $
+(0,005 $ seulement quand PAP n'a rien). Soit **≈ 0,11 $ par recherche au lieu de 0,024 $** (mesuré en réel), plus
 l'analyse IA des annonces en plus. Le plafond `APIFY_MAX_CHARGE_USD` (0,10 $) est par run : à garder par source.
 
 ## Recommandation
 - **PAP d'abord** : branchement simple (entrée structurée, même éditeur, pas de code de lieu), données propres,
   annonces de particuliers sans frais d'agence, absentes de nos résultats Le Bon Coin. Faible volume : en complément.
 - **SeLoger ensuite** : le plus de stock d'agences et les données les plus riches, mais deux chantiers (codes de
-  lieu, colocations sur petits budgets) et un coût ×4.
+  lieu, colocations sur petits budgets) et un coût d'environ 1,6 × celui de Le Bon Coin.
 - À évaluer avant SeLoger : **Bien'ici** (agrège les agences, 7 acteurs Apify dont `solidcode/bienici-com-scraper`),
   qui pourrait éviter le problème des codes de lieu.
+
+## Branchement réalisé (01/10/2026)
+Les deux sources sont branchées, en plus de Le Bon Coin.
+
+- **Lancement** : à la recherche ciblée, Le Bon Coin, SeLoger et PAP partent en parallèle (`sources.ts`). La phase
+  élargie ne relance que Le Bon Coin. Une source qui ne démarre pas ou échoue est journalisée et ignorée : la recherche
+  aboutit avec les autres. La recherche attend que toutes les sources aient fini avant de lire les résultats.
+- **Ville** : PAP et SeLoger seulement si la ville est une commune reconnue sans ambiguïté (sinon Le Bon Coin seul).
+  Code de lieu SeLoger résolu au premier usage (run `abotapi` sans annonce, coût nul mesuré, ≈ 5 s), vérifié par le
+  département, puis gardé dans la table `seloger_locations`.
+- **Location uniquement** : requête (`product: "location"`, `distributionTypes=Rent`) puis lecture (`product`,
+  `transactionType`, chemin d'URL `/annonce/location/` ou `/annonces/locations/` pour SeLoger). Tests : une vente
+  glissée dans les résultats de chaque source est écartée ; chaque verrou retiré fait échouer un test.
+- **Logements entiers** : PAP `propertyType` appartement ou maison ; SeLoger sans titre « Colocation… » ; puis la
+  vérification IA « logement entier » commune à toutes les sources (elle a écarté en réel 4 chambres de coliving
+  SeLoger à Rennes, non titrées « Colocation »).
+- **Mélange** : une annonce de chaque site à tour de rôle, doublons d'un site à l'autre retirés (loyer, surface à
+  1 m², position à 300 m ou même nombre de pièces). Jamais à l'intérieur d'un même site.
+- **Affichage** : source sur chaque carte (« 01 · PAP »), « Voir sur SeLoger », favoris compris ; appels PAP et
+  SeLoger visibles dans le suivi `?debug=1`. Champ `source` en base (`housing_listings`) et dans l'API.
+- **Confidentialité** : téléphones et contacts renvoyés par les acteurs jamais enregistrés (testé).
+- **Réglage** : `LISTING_SOURCES` (ex. `leboncoin,pap`) coupe une source sans redéployer de code.
+
+Vérifié en réel (≈ 0,39 $) : « T1 ou T2 à Lille, 700 € max » → 3 Le Bon Coin, 3 SeLoger, 3 PAP ; « T2 à Rennes,
+800 € max » → Le Bon Coin et SeLoger (PAP n'a rien), 4 colivings SeLoger écartés par l'IA ; « 30 à 45 m² à Nantes,
+900 € max » → les trois sources, surfaces respectées. Cas limite : un studio privé en résidence de coliving (Ecla, Lille)
+est gardé, l'IA le juge logement entier.

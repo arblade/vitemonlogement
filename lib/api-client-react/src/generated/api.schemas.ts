@@ -198,8 +198,18 @@ export const HousingSearchRequestBatch = {
   broad: 'broad',
 } as const;
 
+export type HousingSearchRequestSource = typeof HousingSearchRequestSource[keyof typeof HousingSearchRequestSource];
+
+
+export const HousingSearchRequestSource = {
+  leboncoin: 'leboncoin',
+  pap: 'pap',
+  seloger: 'seloger',
+} as const;
+
 export interface HousingSearchRequest {
   batch: HousingSearchRequestBatch;
+  source?: HousingSearchRequestSource;
   path: string;
   input: string;
 }
@@ -263,6 +273,18 @@ export interface HousingCriterionResult {
   evidence: string;
 }
 
+/**
+ * Site the listing comes from
+ */
+export type HousingListingSource = typeof HousingListingSource[keyof typeof HousingListingSource];
+
+
+export const HousingListingSource = {
+  leboncoin: 'leboncoin',
+  pap: 'pap',
+  seloger: 'seloger',
+} as const;
+
 export type HousingListingBatch = typeof HousingListingBatch[keyof typeof HousingListingBatch];
 
 
@@ -286,6 +308,8 @@ export const HousingListingGeoPrecision = {
 
 export interface HousingListing {
   id: number;
+  /** Site the listing comes from */
+  source: HousingListingSource;
   batch: HousingListingBatch;
   title: string;
   url: string;

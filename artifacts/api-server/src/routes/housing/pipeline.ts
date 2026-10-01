@@ -44,8 +44,8 @@ export async function advanceSearch(id: number): Promise<number> {
         criteria = { ...criteria, intent: "rent" };
         await setCriteria(id, criteria);
       }
-      const { runId, request } = await startSearch(criteria, row.phase === "broad" ? "broad" : "focused");
-      await setRun(id, runId, request);
+      const { runId, request, sourceRuns } = await startSearch(criteria, row.phase === "broad" ? "broad" : "focused");
+      await setRun(id, runId, request, sourceRuns);
       return POLL_MS;
     }
     await syncSearch(id, criteria);

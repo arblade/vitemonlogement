@@ -1,7 +1,7 @@
 import type { HousingCriterion, HousingListing, HousingSearchDetail } from '@workspace/api-client-react';
 
 export const listing = (id: number, overrides: Partial<HousingListing> = {}): HousingListing => ({
-  id, batch: 'focused', title: `Studio lumineux ${id}`, url: `https://www.leboncoin.fr/ad/locations/${id}`, description: 'd',
+  id, source: 'leboncoin', batch: 'focused', title: `Studio lumineux ${id}`, url: `https://www.leboncoin.fr/ad/locations/${id}`, description: 'd',
   price: 590 + id * 10, area: 25, rooms: 1, location: 'Lille', image: null, images: [], aiSummary: 'Studio calme proche métro.',
   summaryEvidence: [], score: 80 - id, features: [],
   criterionResults: [

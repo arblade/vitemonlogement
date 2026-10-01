@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight, Heart, Trash2 } from 'lucide-react';
 import { formatPrice } from '@/components/site-shell';
 import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
 import { useState } from 'react';
+import { sourceName } from '@/lib/sources';
 
 export default function Likes() {
   const { favorites, viewed, favoritesLoading, favoritesError } = useListingInteractions();
@@ -24,7 +25,7 @@ export default function Likes() {
           <p className="mt-3 text-sm font-semibold">{formatPrice(item.price)} <span className="font-normal text-stone">· {item.area != null ? `${item.area} m²` : 'Surface non précisée'} · {item.location || 'Lieu non précisé'}</span></p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href={`/searches/${item.searchId}`} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4">Voir dans la recherche <ArrowUpRight size={13}/></Link>
-            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={() => { if (!markListingViewed(item.url)) setError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4">Voir sur Leboncoin <ArrowUpRight size={13}/></a>
+            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={() => { if (!markListingViewed(item.url)) setError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold underline underline-offset-4">Voir sur {sourceName(item.url)} <ArrowUpRight size={13}/></a>
             <button type="button" aria-label={`Retirer des favoris : ${item.title}`} onClick={() => { void favoriteActions.remove(item.url).then(ok => setError(ok ? '' : 'Impossible de retirer ce favori pour le moment. Réessayez.')); }} className="ml-auto inline-flex min-h-11 items-center gap-1.5 px-2 text-sm text-[#b42318] hover:text-brick"><Trash2 size={15}/> Retirer</button>
           </div>
         </div>

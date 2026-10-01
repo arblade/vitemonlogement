@@ -60,7 +60,9 @@ const id = await createSearch("Un studio à Lille, 700 € max, chat accepté");
 await setCriteria(id, { location: "Lille", intent: "rent", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }],
   places: [{ id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille" }] });
 const listing = (n: number) => ({
-  batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: `https://www.leboncoin.fr/ad/locations/${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
+  // Annonce 1 : Le Bon Coin ; annonce 2 : PAP (sources multiples).
+  source: n === 1 ? "leboncoin" as const : "pap" as const,
+  batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: n === 1 ? `https://www.leboncoin.fr/ad/locations/${n}` : `https://www.pap.fr/annonces/-r44280300${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
   location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n,
   features: n === 1 ? [
     { label: "Meublé", value: "", source: "annonce" as const, evidence: "furnished: 1" },

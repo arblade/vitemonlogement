@@ -37,7 +37,8 @@ l'exemple du prompt d'interprétation).
 - **Filtrer à la source fonctionne.** L'acteur accepte une URL de recherche Le Bon Coin (`searchUrl`).
   `…/recherche?category=10&locations=Lille_59000__50.63297_3.05858_5000&real_estate_type=1,2&rooms=1-2&price=min-700`
   → 10/10 appartements ou maisons de 1 à 2 pièces à Lille, plus aucun parking ni chambre « Autre », **même prix**
-  (0,009 $). Sans coordonnées dans `locations`, l'acteur cherche dans toute la France et coûte 0,024 $.
+  (0,024 $ : 0,009 de départ + 0,0015 par annonce ; le chiffre de 0,009 $ relevé d'abord était lu avant la facturation
+  des annonces). Sans coordonnées dans `locations`, l'acteur cherche dans toute la France.
 - **Mots-clés interdits pour la colocation.** « parties communes » apparaît dans 9 logements entiers, « colocation » dans un
   T4 entier : une regex écarterait de bonnes annonces.
 - **L'IA sait reconnaître une chambre, preuve à l'appui.** Question posée sur les 59 annonces (logement entier / chambre
@@ -74,7 +75,7 @@ la demande) ; « un T2 » = exactement 2 pièces, « au moins un T2 » = 2 et pl
   « 1 à 2 pièces », « 2 pièces », « Au moins 2 pièces ». Faux critère « souhait exact de l'utilisateur » filtré.
 - Requête : URL de recherche Le Bon Coin (`searchUrl`) avec `real_estate_type=1,2`, `rooms`, `square`, `price`, mot-clé
   (`text`) et `locations=Ville_CP__lat_lng_rayon` tirés de la base des communes (sans réseau). Vérifié en réel :
-  `rooms=2-2` → 10 T2/10, `text=balcon` → 10/10, `square=30-45` → 10/10, même prix (0,009 $). Ville non reconnue
+  `rooms=2-2` → 10 T2/10, `text=balcon` → 10/10, `square=30-45` → 10/10, même prix (0,024 $). Ville non reconnue
   (département, homonyme) : requête par champs d'avant.
 - Filet : `real_estate_type` Parking ou Terrain (libellé ou code) écarté à la lecture.
 - Analyse IA : question « logement entier / chambre / non habitable » avec citation exacte vérifiée

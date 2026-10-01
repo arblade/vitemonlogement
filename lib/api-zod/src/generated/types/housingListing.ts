@@ -9,9 +9,12 @@ import type { HousingCriterionResult } from './housingCriterionResult';
 import type { HousingFeature } from './housingFeature';
 import type { HousingListingBatch } from './housingListingBatch';
 import type { HousingListingGeoPrecision } from './housingListingGeoPrecision';
+import type { HousingListingSource } from './housingListingSource';
 
 export interface HousingListing {
   id: number;
+  /** Site the listing comes from */
+  source: HousingListingSource;
   batch: HousingListingBatch;
   title: string;
   url: string;

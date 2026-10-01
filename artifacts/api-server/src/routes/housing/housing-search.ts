@@ -1,8 +1,9 @@
 import type { Criteria } from "./store";
 import { resolvePlace } from "../../lib/places";
+import { extraSourceOf } from "./sources";
 
 export type SearchBatch = "focused" | "broad";
-export type ActorRequest = { batch: SearchBatch; path: string; input: string };
+export type ActorRequest = { batch: SearchBatch; path: string; input: string; source?: "leboncoin" | "pap" | "seloger" };
 export const BROAD_THRESHOLD = 40;
 
 // An actor accepts only one free-text searchQuery. Prefer the first explicit
@@ -22,6 +23,10 @@ export function shouldRunBroad(focusedMatches: number, hasFocusedQuery: boolean)
 // The app only searches rentals. The actor's documented category 10 is locations;
 // category 11 (colocations) is also a rental in older saved searches.
 export function isHousingListingUrl(value: string) {
+  return isLeboncoinRentalUrl(value) || extraSourceOf(value) !== null;
+}
+
+export function isLeboncoinRentalUrl(value: string) {
   try {
     const url = new URL(value);
     if (!/^https?:$/.test(url.protocol) || !/(^|\.)leboncoin\.fr$/i.test(url.hostname)) return false;

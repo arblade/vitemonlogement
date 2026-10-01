@@ -14,11 +14,8 @@ import { SearchRequestDebug } from '@/components/search-request-debug';
 import { SearchPromptEditor } from '@/components/search-prompt-editor';
 import { useAppConfig } from '@/hooks/use-app-config';
 import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
+import { sourceName } from '@/lib/sources';
 
-function sourceName(url: string) {
-  try { return new URL(url).hostname.replace(/^www\./, ''); }
-  catch { return 'Source de l’annonce'; }
-}
 
 function refreshErrorMessage(error: unknown) {
   if (error && typeof error === 'object') {
@@ -66,7 +63,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
       </div>
       <div className="flex flex-col p-5 md:p-6">
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <div className="min-w-0"><div className="mb-2 font-data text-xs uppercase tracking-[.08em] text-[#717171]">{String(index+1).padStart(2,'0')}{viewed ? ' · déjà consultée' : ''}</div><h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
+            <div className="min-w-0"><div className="mb-2 font-data text-xs uppercase tracking-[.08em] text-[#717171]">{String(index+1).padStart(2,'0')} · <span data-testid={`text-listing-source-${listing.id}`}>{sourceName(listing.url)}</span>{viewed ? ' · déjà consultée' : ''}</div><h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
            <div className="relative z-20 flex shrink-0 items-center justify-between gap-2 sm:items-start sm:justify-end">
              <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={onFavorite} className={`grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-[#ff385c] bg-lime-wash text-[#c13515]' : 'border-[#dddddd] bg-white text-stone hover:text-[#c13515]'}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'}/></button>
              <div className="rounded-lg bg-lime-wash px-2.5 py-2 text-center"><span className="block font-data text-[16px] font-bold leading-none">{Math.round(listing.score)}<span className="text-xs">/100</span></span><span className="mt-1 block text-xs uppercase tracking-[.05em]">pertinence</span></div>

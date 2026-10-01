@@ -1,6 +1,9 @@
 import { completeSearch, FAILURE_MESSAGE, getSearch, getSearchRow, setAnalyzing, setFailure, type Criteria, type Feature, type GeoPrecision, type Listing } from "./store";
 import { analyze } from "./ai";
 import { logger } from "../../lib/logger";
+import { first, getImages, number, object, text } from "./parse";
+import { apify } from "./apify-client";
+import { interleave, normalizeExtra, startExtraSources, type SourceRun } from "./sources";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
 import { actorRequest, focusedSearchTerm, isHousingListingUrl, shouldRunBroad, type SearchBatch } from "./housing-search";
 
@@ -14,67 +17,6 @@ function intEnv(name: string, fallback: number) {
 export const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
 const CANDIDATE_LIMIT = Math.max(10, intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
 
-async function apify(path: string, init?: { method: string; headers: Record<string, string>; body: string }) {
-  const token = process.env.APIFY_TOKEN;
-  if (!token) throw new Error("APIFY_TOKEN n'est pas configuré.");
-  const response = await fetch(`${process.env.APIFY_BASE_URL || "https://api.apify.com"}${path}`, {
-    ...init,
-    headers: { ...init?.headers, Authorization: `Bearer ${token}` },
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Apify (${response.status}) : ${body.slice(0, 250)}`);
-  }
-  return response.json() as Promise<unknown>;
-}
-
-function object(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function first(item: Record<string, unknown>, keys: string[]): unknown {
-  for (const key of keys) {
-    if (item[key] !== undefined && item[key] !== null) return item[key];
-  }
-  return null;
-}
-
-function text(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number") return String(value);
-  return "";
-}
-
-function number(value: unknown): number | null {
-  if (Array.isArray(value)) return number(value[0]);
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "string") {
-    const n = Number(value.replace(/[^\d.,]/g, "").replace(",", "."));
-    return Number.isFinite(n) && n > 0 ? n : null;
-  }
-  if (value && typeof value === "object") return number(first(object(value), ["value", "amount"]));
-  return null;
-}
-
-function getImages(value: unknown): string[] {
-  const image = object(value);
-  // clearpath/leboncoin-api supplies images as an object containing urls_large
-  // and urls, not as an array. Prefer full-size photos over thumbnails.
-  const candidates = [
-    image.urls_large, image.urls, image.urls_thumb, image.classifications,
-    image.small_url, image.thumb_url, value,
-  ];
-  for (const source of candidates) {
-    const values = Array.isArray(source) ? source : [source];
-    const urls = values.map(item => typeof item === "string" ? item
-      : text(first(object(item), ["url", "imageUrl", "large", "medium", "thumb_url"])))
-      .filter(url => {
-        try { return new URL(url).protocol === "https:"; } catch { return false; }
-      });
-    if (urls.length) return [...new Set(urls)].slice(0, 12);
-  }
-  return [];
-}
 
 function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
   let score = 60;
@@ -182,7 +124,7 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const images = getImages(first(data, ["images", "pictures", "photos", "image", "imageUrl"]));
   const image = images[0] ?? null;
   const features = otherApiFeatures(data, criteria);
-  const listing = { batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data) };
+  const listing = { source: "leboncoin" as const, batch, title, url, description, price, area, rooms: rooms === null ? null : Math.floor(rooms), location, image, images, aiSummary: null, summaryEvidence: [], features, ...listingPosition(data) };
   const criterionResults = evaluateStructured(criteria, listing, data);
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
@@ -199,7 +141,44 @@ export async function startSearch(criteria: Criteria, batch: SearchBatch = "focu
   }));
   const runId = text(object(response.data).id);
   if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
-  return { runId, request };
+  // PAP et SeLoger en parallèle, seulement pour la recherche ciblée (la phase élargie ne concerne que Le Bon Coin).
+  const sourceRuns = batch === "focused" ? await startExtraSources(criteria, CANDIDATE_LIMIT, chargeCap, timeout) : [];
+  return { runId, request, sourceRuns };
+}
+
+const PENDING = new Set(["READY", "RUNNING", "TIMING-OUT", "ABORTING"]);
+
+/**
+ * Annonces des sources secondaires : « pending » tant qu'un de leurs runs tourne encore. Un run en échec, ou
+ * illisible, est ignoré (journalisé) : il ne fait jamais échouer la recherche, Le Bon Coin suffit.
+ */
+async function extraSourceItems(raw: string | null): Promise<"pending" | { source: SourceRun["source"]; items: unknown[] }[]> {
+  const runs = raw ? JSON.parse(raw) as SourceRun[] : [];
+  const states = await Promise.all(runs.map(async ({ source, runId }) => {
+    try {
+      const run = object(object(await apify(`/v2/actor-runs/${encodeURIComponent(runId)}`)).data);
+      return { source, runId, status: text(run.status), datasetId: text(run.defaultDatasetId) };
+    } catch (error) {
+      logger.warn({ err: error, source, runId }, "Listing source run unreadable");
+      return { source, runId, status: "UNREADABLE", datasetId: "" };
+    }
+  }));
+  // Résultats lus une seule fois, quand plus aucune source ne tourne.
+  if (states.some(state => PENDING.has(state.status))) return "pending";
+  const results = await Promise.all(states.map(async ({ source, runId, status, datasetId }) => {
+    if (status !== "SUCCEEDED" || !datasetId) {
+      logger.warn({ source, runId, status }, "Listing source run did not succeed");
+      return null;
+    }
+    try {
+      const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${CANDIDATE_LIMIT}`);
+      return Array.isArray(items) ? { source, items } : null;
+    } catch (error) {
+      logger.warn({ err: error, source, runId }, "Listing source results unreadable");
+      return null;
+    }
+  }));
+  return results.filter(result => result !== null);
 }
 
 /** Contrôle une fois le run Apify d'une recherche ; à appeler sous bail (voir worker.ts). */
@@ -212,6 +191,8 @@ export async function syncSearch(id: number, criteria: Criteria) {
     const run = object(result.data);
     const status = text(run.status);
     if (status === "SUCCEEDED") {
+      const extra = phase === "focused" ? await extraSourceItems(row.sourceRuns) : [];
+      if (extra === "pending") return; // une autre source tourne encore : le worker repasse au prochain contrôle
       const datasetId = text(run.defaultDatasetId);
       if (!datasetId) throw new Error("L'exécution Apify n'a pas de jeu de résultats.");
       const items = await apify(`/v2/datasets/${encodeURIComponent(datasetId)}/items?format=json&clean=true&limit=${CANDIDATE_LIMIT}`);
@@ -219,11 +200,16 @@ export async function syncSearch(id: number, criteria: Criteria) {
       const existing = await getSearch(id);
       const oldUrls = new Set(existing?.listings.map(item => item.url) ?? []);
       const seen = new Set<string>();
-      const listings = items.map(item => normalize(item, criteria, phase)).filter((item): item is Omit<Listing, "id"> => {
+      const keep = (item: Omit<Listing, "id"> | null): item is Omit<Listing, "id"> => {
         if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria)) return false;
         seen.add(item.url);
         return true;
-      });
+      };
+      const listings = interleave([
+        items.map(item => normalize(item, criteria, phase)).filter(keep),
+        ...extra.map(({ source, items: sourceItems }) =>
+          sourceItems.map(item => normalizeExtra(source, item, criteria, phase, listing => scoreListing(listing, criteria))).filter(keep)),
+      ]);
       let runBroad = false;
       await setAnalyzing(id);
       try {
@@ -257,7 +243,7 @@ export async function syncSearch(id: number, criteria: Criteria) {
             const features = [...(previous?.features ?? []), ...additions.filter(feature =>
               !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
             saved.push({
-              batch: item.batch, title: item.title, url: item.url, description: item.description,
+              source: item.source, batch: item.batch, title: item.title, url: item.url, description: item.description,
               price: observations?.price ?? item.price, area: observations?.area ?? item.area,
               rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
               image: item.image, images: item.images, score: observations?.score ?? item.score,

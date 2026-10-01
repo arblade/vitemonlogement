@@ -3,6 +3,7 @@ import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
+import type { ListingSource, SourceRun } from "./sources";
 
 export type Criterion = {
   id: string;
@@ -67,6 +68,7 @@ export type Feature = {
 
 export type Listing = {
   id: number;
+  source: ListingSource;
   batch: SearchBatch;
   title: string;
   url: string;
@@ -102,9 +104,12 @@ export async function setCriteria(id: number, criteria: Criteria) {
   await db().update(housingSearches).set({ criteria: JSON.stringify(criteria), stage: "searching" }).where(eq(housingSearches.id, id));
 }
 
-export async function setRun(id: number, runId: string, request: ActorRequest) {
+export async function setRun(id: number, runId: string, request: ActorRequest, sourceRuns: SourceRun[] = []) {
   const column = request.batch === "focused" ? { focusedRequest: JSON.stringify(request) } : { broadRequest: JSON.stringify(request) };
-  await db().update(housingSearches).set({ runId, ...column, stage: "searching", attempts: 0 }).where(eq(housingSearches.id, id));
+  await db().update(housingSearches)
+    // Les runs PAP/SeLoger accompagnent la recherche ciblée ; ils restent affichés (suivi) après la phase élargie.
+    .set({ runId, ...column, ...(request.batch === "focused" ? { sourceRuns: sourceRuns.length ? JSON.stringify(sourceRuns) : null } : {}), stage: "searching", attempts: 0 })
+    .where(eq(housingSearches.id, id));
 }
 
 export async function setAnalyzing(id: number) {
@@ -131,7 +136,7 @@ export async function recordAttemptFailure(id: number, message: string) {
 
 export async function beginRefresh(id: number) {
   const rows = await db().update(housingSearches)
-    .set({ status: "running", stage: "searching", phase: "focused", runId: null, focusedRequest: null, broadRequest: null,
+    .set({ status: "running", stage: "searching", phase: "focused", runId: null, sourceRuns: null, focusedRequest: null, broadRequest: null,
       focusedMatches: null, error: null, attempts: 0, nextCheckAt: 0 })
     .where(and(eq(housingSearches.id, id), eq(housingSearches.status, "completed")))
     .returning({ id: housingSearches.id });
@@ -153,7 +158,8 @@ async function summary(row: SearchRow) {
   const urls = await db().select({ url: housingListings.url }).from(housingListings).where(eq(housingListings.searchId, row.id));
   const searchRequests = [row.focusedRequest, row.broadRequest]
     .filter((value): value is string => Boolean(value))
-    .map(value => JSON.parse(value) as ActorRequest);
+    .map(value => JSON.parse(value) as ActorRequest)
+    .concat(row.sourceRuns ? (JSON.parse(row.sourceRuns) as SourceRun[]).map(run => run.request) : []);
   return {
     id: Number(row.id),
     prompt: row.prompt,
@@ -184,7 +190,7 @@ export async function getSearch(id: number) {
   const listings: Listing[] = rows
     .filter(listing => isHousingListingUrl(listing.url))
     .map(listing => ({
-      id: listing.id, batch: listing.batch as SearchBatch, title: listing.title, url: listing.url,
+      id: listing.id, source: listing.source as ListingSource, batch: listing.batch as SearchBatch, title: listing.title, url: listing.url,
       description: listing.description, price: listing.price, area: listing.area, rooms: listing.rooms,
       location: listing.location, image: listing.image, score: listing.score,
       images: JSON.parse(listing.images) as string[],
@@ -202,7 +208,7 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
   await db().transaction(async tx => {
     for (const item of listings.slice(0, maxResults)) {
       const values = {
-        searchId: id, batch: batchName, title: item.title, url: item.url, description: item.description,
+        searchId: id, source: item.source, batch: batchName, title: item.title, url: item.url, description: item.description,
         price: item.price, area: item.area, rooms: item.rooms == null ? null : Math.round(item.rooms),
         location: item.location, image: item.image, score: item.score, features: JSON.stringify(item.features),
         images: JSON.stringify(item.images), aiSummary: item.aiSummary,

@@ -13,7 +13,7 @@ const criteriaOf = (wishes: string[]): Criteria => ({ location: "Lille", intent:
 function listingOf(url: string, criteria: Criteria, id = -1, text = description): Listing {
   const base = { price: 590, area: 25, rooms: 1, location: "Lille" };
   return {
-    id, batch: "focused", title: "Studio Lille", url, description: text, ...base, image: null, images: [],
+    id, source: "leboncoin", batch: "focused", title: "Studio Lille", url, description: text, ...base, image: null, images: [],
     aiSummary: null, summaryEvidence: [], score: 60, features: [],
     criterionResults: evaluateStructured(criteria, base, {}), lat: null, lng: null, geoPrecision: null,
   };

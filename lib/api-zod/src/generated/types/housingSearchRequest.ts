@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingSearchRequestBatch } from './housingSearchRequestBatch';
+import type { HousingSearchRequestSource } from './housingSearchRequestSource';
 
 export interface HousingSearchRequest {
   batch: HousingSearchRequestBatch;
+  source?: HousingSearchRequestSource;
   path: string;
   input: string;
 }
