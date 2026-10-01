@@ -131,6 +131,23 @@ n'est dupliqué : activer le suivi ajoute seulement les créneaux, le curseur «
 - Au plafond de recherches suivies (2), le bouton propose de remplacer l'une d'elles.
 - « Étendre » prendrait alors un sens naturel : **remonter plus loin dans le temps** (les 15 suivantes plus anciennes).
 
+## Décisions du 01/10 et lecture progressive
+Décidé : nom « **recherche suivie** » ; **une seule par utilisateur** ; prévenu **seulement dans le site** (pastille avec le
+nombre d'annonces pas encore vues) ; passages à **8 h et 18 h** ; première recherche plus large (25 à 30 annonces).
+
+**Lecture progressive, mesurée le 01/10** :
+- L'acteur repart toujours du haut de la liste (seuls `startUrls` + `limit`), mais l'adresse accepte `page=2`, `page=3`…
+  et **Le Bon Coin découpe par 35 annonces** : la page 2 commence ≈ 6 h plus tôt que la page 1 (vérifié).
+- Donc pas de « 10 par 10 » sans repayer : relire avec `limit` 10 puis 20 refacture les 10 premières. On fait :
+  1. page 1 avec une limite **adaptée** (débit observé × heures écoulées × 1,3, entre 10 et 35) ;
+  2. si on n'a pas atteint le dernier passage : page 1 complète (35, seul surcoût possible), puis page 2, page 3 (105 au plus,
+     au-delà « recherche trop large, affinez »).
+- **Condition d'arrêt : la date, pas « une annonce déjà vue »** : une annonce vue hier et remontée ce matin réapparaît en
+  tête ; s'arrêter dessus ferait rater toutes les nouvelles en dessous. On s'arrête à la première annonce dont `updated_at`
+  est antérieure ou égale à la plus récente lue au passage précédent ; « nouvelle » = adresse jamais vue.
+- Dates Le Bon Coin : heure de Paris étiquetée « Z » (décalage de 2 h l'été, mesuré) : à corriger avant toute comparaison.
+- Première recherche : 30 annonces les plus récentes publiées dans les 10 derniers jours = une seule page.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).
