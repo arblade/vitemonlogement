@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test, { after, before, beforeEach } from "node:test";
 import { closeDatabase } from "./database";
 import { useMemoryDatabase } from "../test/helpers";
-import { commuteOptions, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, transitSegments, travelRoute } from "./travel";
+import { commuteOptions, COMMUTE, crowDistance, decodePolyline, nextTuesdayNineParis, routeKey, RoutingQuotaError, simplifyPath, transitSegments, travelRoute } from "./travel";
 
 before(async () => { await useMemoryDatabase(); });
 after(async () => { await closeDatabase(); });
@@ -122,6 +122,30 @@ test("travelRoute : en transports, les étapes sont renvoyées et relues depuis 
   assert.deepEqual(fresh?.segments.map(segment => segment.line?.name ?? segment.mode), ["walk", "M1", "Liane 5"]);
   assert.deepEqual(await travelRoute("transit", home, to, fetcher), fresh);
   assert.equal(calls.length, 1);
+});
+
+test("simplifyPath : points alignés retirés, virages gardés, écarts de moins de 5 m gommés", () => {
+  const straight: [number, number][] = Array.from({ length: 101 }, (_, index) => [48 + index * 1e-5, -1.6]);
+  assert.deepEqual(simplifyPath(straight), [straight[0], straight[100]]);
+  const corner: [number, number][] = [[48, -1.6], [48.001, -1.6], [48.002, -1.6], [48.002, -1.598], [48.002, -1.596]];
+  assert.deepEqual(simplifyPath(corner), [[48, -1.6], [48.002, -1.6], [48.002, -1.596]]);
+  const wobble: [number, number][] = [[48, -1.6], [48.001, -1.60003], [48.002, -1.6]]; // ≈ 2 m de côté
+  assert.equal(simplifyPath(wobble).length, 2);
+  const detour: [number, number][] = [[48, -1.6], [48.001, -1.5998], [48.002, -1.6]]; // ≈ 15 m de côté
+  assert.equal(simplifyPath(detour).length, 3);
+  assert.deepEqual(simplifyPath([[48, -1.6], [48.1, -1.6]]), [[48, -1.6], [48.1, -1.6]]);
+});
+
+test("travelRoute : le tracé haute précision est allégé avant d'être stocké et renvoyé", async () => {
+  const dense: [number, number][] = Array.from({ length: 400 }, (_, index) => [47 + index * 1e-5, index < 200 ? -1.6 : -1.6 + (index - 200) * 1e-5]);
+  let encoded = "", prevLat = 0, prevLng = 0;
+  const push = (value: number) => { let v = value < 0 ? ~(value << 1) : value << 1; while (v >= 0x20) { encoded += String.fromCharCode((0x20 | (v & 0x1f)) + 63); v >>= 5; } encoded += String.fromCharCode(v + 63); };
+  for (const [lat, lng] of dense) { const a = Math.round(lat * 1e5), b = Math.round(lng * 1e5); push(a - prevLat); push(b - prevLng); [prevLat, prevLng] = [a, b]; }
+  const { fetcher } = fakeGoogle({ routes: [{ duration: "600s", distanceMeters: 800, polyline: { encodedPolyline: encoded } }] });
+  const route = await travelRoute("bike", home, { lat: 47.5, lng: -1.7 }, fetcher);
+  assert.equal(decodePolyline(encoded).length, 400);
+  assert.ok(route!.path.length <= 4, `${route!.path.length} points gardés sur 400`);
+  assert.deepEqual(route!.path[0], [47, -1.6]);
 });
 
 test("routeKey : arrondi à 5 décimales, mode inclus", () => {

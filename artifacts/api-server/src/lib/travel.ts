@@ -11,6 +11,35 @@ export const routingAvailable = () => Boolean(process.env.GOOGLE_MAPS_API_KEY);
 const baseUrl = () => process.env.GOOGLE_ROUTES_BASE_URL || "https://routes.googleapis.com";
 
 export type Point = { lat: number; lng: number };
+/**
+ * Allège un tracé (Douglas-Peucker) : retire les points à moins de `tolerance` mètres de la ligne qui les entoure.
+ * Le tracé haute précision de Google garde ainsi son allure, pour le poids d'un tracé simplifié.
+ */
+export function simplifyPath(path: [number, number][], tolerance = 5): [number, number][] {
+  if (path.length < 3) return path;
+  const lat0 = path[0][0] * Math.PI / 180;
+  const xy = path.map(([lat, lng]) => [lng * 111_320 * Math.cos(lat0), lat * 110_540]);
+  const keep = new Uint8Array(path.length);
+  keep[0] = keep[path.length - 1] = 1;
+  const stack: [number, number][] = [[0, path.length - 1]];
+  while (stack.length) {
+    const [first, last] = stack.pop()!;
+    const [ax, ay] = xy[first], [bx, by] = xy[last];
+    const dx = bx - ax, dy = by - ay, length2 = dx * dx + dy * dy;
+    let farthest = -1, worst = tolerance;
+    for (let index = first + 1; index < last; index++) {
+      const [px, py] = xy[index];
+      const t = length2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length2)) : 0;
+      const distance = Math.hypot(px - ax - t * dx, py - ay - t * dy);
+      if (distance > worst) { worst = distance; farthest = index; }
+    }
+    if (farthest < 0) continue;
+    keep[farthest] = 1;
+    stack.push([first, farthest], [farthest, last]);
+  }
+  return path.filter((_, index) => keep[index]);
+}
+
 /** Étape d'un trajet en transports : marche, ou une ligne (nom court, couleur, type de véhicule). */
 export type RouteSegment = { mode: TravelMode; path: [number, number][]; line: { name: string; color: string | null; vehicle: string | null } | null };
 export type TravelRoute = { durationSeconds: number; distanceMeters: number; path: [number, number][]; segments: RouteSegment[] };
@@ -25,7 +54,7 @@ type GoogleStep = {
 export function transitSegments(steps: GoogleStep[]): RouteSegment[] {
   const segments: RouteSegment[] = [];
   for (const step of steps) {
-    const path = step.polyline?.encodedPolyline ? decodePolyline(step.polyline.encodedPolyline) : [];
+    const path = step.polyline?.encodedPolyline ? simplifyPath(decodePolyline(step.polyline.encodedPolyline)) : [];
     if (path.length < 2) continue;
     const line = step.transitDetails?.transitLine;
     if (step.travelMode === "TRANSIT" && line) {
@@ -114,7 +143,7 @@ async function callGoogle(mode: TravelMode, from: Point, to: Point, fetcher: typ
   return {
     durationSeconds: Math.round(Number.parseFloat(route.duration)),
     distanceMeters: route.distanceMeters ?? 0,
-    path: route.polyline?.encodedPolyline ? decodePolyline(route.polyline.encodedPolyline) : [[from.lat, from.lng], [to.lat, to.lng]],
+    path: route.polyline?.encodedPolyline ? simplifyPath(decodePolyline(route.polyline.encodedPolyline)) : [[from.lat, from.lng], [to.lat, to.lng]],
     segments: mode === "transit" ? transitSegments(route.legs?.flatMap(leg => leg.steps ?? []) ?? []) : [],
   };
 }
