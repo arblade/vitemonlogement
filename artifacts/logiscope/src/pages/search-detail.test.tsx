@@ -585,7 +585,7 @@ describe('Page résultats : veille quotidienne et lecture progressive', () => {
     const calls = mockFetch(watchRoutes());
     renderPage();
     expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Veille quotidienne');
-    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille.');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille quotidienne.');
     await user.click(screen.getByTestId('button-watch'));
     const dialog = await screen.findByTestId('dialog-watch');
     const explanation = within(dialog).getByTestId('watch-explanation');

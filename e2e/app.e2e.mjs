@@ -285,7 +285,7 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
       const page = await context.newPage();
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid=card-watch]");
-      assert.match(await text(page, "[data-testid=card-watch]"), /Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille\./, name);
+      assert.match(await text(page, "[data-testid=card-watch]"), /Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille quotidienne\./, name);
       await page.click("[data-testid=button-watch]");
       await page.waitForSelector("[data-testid=dialog-watch]");
       assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose/, name);

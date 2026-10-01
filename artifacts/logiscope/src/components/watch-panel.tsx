@@ -67,7 +67,7 @@ export function WatchPanel({ search, other }: { search: HousingSearchDetail; oth
     <span className="flex min-w-0 items-start gap-3 text-sm">
       <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-xl bg-sage text-stone"><Search size={17}/></span>
       <span data-testid="text-watch-status"><strong className="block font-semibold">Veille quotidienne</strong>
-        <span className="text-xs text-stone">Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille.</span></span>
+        <span className="text-xs text-stone">Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille quotidienne.</span></span>
     </span>
     <button type="button" data-testid="button-watch" onClick={() => setOpen(true)} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark sm:ml-auto">
       <BellRing size={16} aria-hidden="true"/> Créer une veille quotidienne</button>
