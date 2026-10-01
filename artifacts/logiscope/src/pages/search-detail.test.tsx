@@ -76,6 +76,14 @@ describe('Page résultats : contenu', () => {
     expect(api.refresh).toHaveBeenCalledWith({ id: 1 });
   });
 
+  it('« Votre demande » montre la fourchette de pièces (« T1 ou T2 » : 1 à 2)', () => {
+    api.state.data = search({ criteria: { ...search().criteria, minRooms: 1, maxRooms: 2 } });
+    renderPage();
+    const row = (label: string) => screen.getByText(label).parentElement;
+    expect(row('Pièces min.')).toHaveTextContent('Pièces min.1');
+    expect(row('Pièces max.')).toHaveTextContent('Pièces max.2');
+  });
+
   it('plus de bloc promotionnel « Le tri est fait » avant les annonces', () => {
     renderPage();
     expect(document.body).not.toHaveTextContent('Le tri est fait');

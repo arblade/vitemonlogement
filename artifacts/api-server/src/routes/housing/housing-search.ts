@@ -1,4 +1,5 @@
 import type { Criteria } from "./store";
+import { resolvePlace } from "../../lib/places";
 
 export type SearchBatch = "focused" | "broad";
 export type ActorRequest = { batch: SearchBatch; path: string; input: string };
@@ -32,10 +33,40 @@ export function isHousingListingUrl(value: string) {
   }
 }
 
+/** Types de bien Le Bon Coin (`real_estate_type`) : 1 maison, 2 appartement, 3 terrain, 4 parking, 5 autre. */
+export const DWELLING_TYPES = ["1", "2"] as const;
+const bound = (min: number | null | undefined, max: number | null | undefined) =>
+  min == null && max == null ? null : `${min ?? "min"}-${max ?? "max"}`;
+
+/**
+ * URL de recherche Le Bon Coin : seule façon de demander « appartement ou maison » et une fourchette de pièces à
+ * l'acteur (ses champs manuels n'ont ni l'un ni l'autre). La ville doit être reconnue sans ambiguïté : ses
+ * coordonnées et son code postal viennent de la base des communes (sans coordonnées, l'acteur cherche dans toute
+ * la France). Sinon null : on garde la requête par champs.
+ */
+export function leboncoinSearchUrl(criteria: Criteria, term: string | null): string | null {
+  const place = resolvePlace(criteria.location);
+  if (place.status !== "resolved") return null;
+  const { name, postalCodes, lat, lon } = place.commune;
+  const radiusMeters = Math.round(Math.max(1, Math.min(200, criteria.radius ?? 5)) * 1000);
+  const params = new URLSearchParams({
+    category: "10",
+    locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}`,
+    real_estate_type: DWELLING_TYPES.join(","),
+  });
+  const ranges = { rooms: bound(criteria.minRooms, criteria.maxRooms), square: bound(criteria.minArea, criteria.maxArea), price: bound(criteria.minPrice, criteria.maxPrice) };
+  for (const [key, value] of Object.entries(ranges)) if (value) params.set(key, value);
+  if (term) params.set("text", term);
+  return `https://www.leboncoin.fr/recherche?${params}`;
+}
+
 export function housingActorInput(criteria: Criteria, batch: SearchBatch = "focused", adLimit = 10) {
   // Even a keyword-only search remains restricted to rental category, place,
   // radius and budget. A missing mention is not proof the amenity is absent.
   const term = batch === "focused" ? focusedSearchTerm(criteria) : null;
+  const searchUrl = leboncoinSearchUrl(criteria, term);
+  const options = { adLimit, mode: "standard", includeSeller: false, includePhone: false, shippable: false };
+  if (searchUrl) return { searchUrl, ...options };
   return {
     ...(term ? { searchQuery: term } : {}),
     category: "10",

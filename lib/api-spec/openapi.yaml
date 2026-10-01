@@ -166,6 +166,7 @@ components:
         minArea: { type: ["integer", "null"] }
         maxArea: { type: ["integer", "null"] }
         minRooms: { type: ["integer", "null"] }
+        maxRooms: { type: ["integer", "null"] }
         radius: { type: integer, minimum: 0, maximum: 200 }
         keywords: { type: string }
         wishes:

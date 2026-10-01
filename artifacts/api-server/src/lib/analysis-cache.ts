@@ -5,7 +5,9 @@ import { db } from "./database";
 import type { Feature } from "../routes/housing/store";
 
 export type Verdict = { status: "confirmed" | "contradicted" | "unknown"; value: string; evidence: string };
-export type GeneralExtraction = { summary: string | null; summaryEvidence: string[]; features: Feature[] };
+/** Ce que l'annonce loue vraiment. room / non_dwelling ne sont retenus qu'avec une citation exacte. */
+export type OfferKind = "entire" | "room" | "non_dwelling" | "unclear";
+export type GeneralExtraction = { summary: string | null; summaryEvidence: string[]; features: Feature[]; offer?: { kind: OfferKind; evidence: string } };
 export type CachedAnalysis = { general: GeneralExtraction | null; verdicts: Record<string, Verdict> };
 export type CacheKey = { urlKey: string; descriptionHash: string };
 export type CacheEntry = CacheKey & { general?: GeneralExtraction | null; verdicts?: Record<string, Verdict> };

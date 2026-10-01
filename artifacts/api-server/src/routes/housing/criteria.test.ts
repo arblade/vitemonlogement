@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { checksFor, classifyWish, evaluateStructured, matchesKnownBasics } from "./criteria";
+import { checksFor, classifyWish, evaluateStructured, matchesKnownBasics, matchesValue } from "./criteria";
 import { focusedSearchTerm } from "./housing-search";
 import type { Criteria } from "./store";
 
@@ -92,4 +92,18 @@ test("evaluateStructured : les preuves sont en langage courant, sans mention d'A
     assert.match(result.evidence, /^Indiqué dans l’annonce : « .+ »\.$/);
     assert.doesNotMatch(result.evidence, /API|structur/i);
   }
+});
+
+test("fourchette de pièces : libellés, bornes min et max, annonce sans nombre de pièces laissée à l'analyse", () => {
+  const label = (minRooms: number | null, maxRooms: number | null) => checksFor({ ...base, minRooms, maxRooms }).find(check => check.id === "rooms")?.label;
+  assert.equal(label(1, 2), "1 à 2 pièces");
+  assert.equal(label(2, 2), "2 pièces");
+  assert.equal(label(1, 1), "1 pièce");
+  assert.equal(label(2, null), "Au moins 2 pièces");
+  assert.equal(label(null, 3), "Au plus 3 pièces");
+  assert.equal(label(null, null), undefined);
+  const t1t2 = { ...base, minRooms: 1, maxRooms: 2 };
+  assert.deepEqual([1, 2, 3].map(rooms => matchesValue("rooms", rooms, t1t2)), [true, true, false]);
+  assert.equal(matchesKnownBasics({ price: 600, area: 60, rooms: 3, location: "Lille" }, t1t2), false);
+  assert.equal(matchesKnownBasics({ price: 600, area: 30, rooms: null, location: "Lille" }, t1t2), true);
 });

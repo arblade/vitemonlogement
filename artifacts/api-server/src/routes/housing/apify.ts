@@ -83,6 +83,7 @@ function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" |
   if (criteria.minArea != null && item.area != null) score += item.area >= criteria.minArea ? 10 : -15;
   if (criteria.maxArea != null && item.area != null) score += item.area <= criteria.maxArea ? 8 : -15;
   if (criteria.minRooms != null && item.rooms != null) score += item.rooms >= criteria.minRooms ? 8 : -12;
+  if (criteria.maxRooms != null && item.rooms != null) score += item.rooms <= criteria.maxRooms ? 6 : -12;
   const haystack = `${item.title} ${item.description}`.toLocaleLowerCase("fr");
   for (const wish of (criteria.wishes ?? []).slice(0, 4)) {
     const terms = wish.toLocaleLowerCase("fr").split(/[^\p{L}]+/u).filter(term => term.length > 5);
@@ -155,11 +156,20 @@ export function listingPosition(data: Record<string, unknown>): Pick<Listing, "l
   return { lat, lng, geoPrecision };
 }
 
+// Type de bien Le Bon Coin : libellé au premier niveau (« Parking »), code dans attributes (« 4 »).
+const NOT_DWELLING = new Set(["3", "4", "terrain", "parking"]);
+export const isDwellingType = (data: Record<string, unknown>) =>
+  !NOT_DWELLING.has(text(first(data, ["real_estate_type"])).trim().toLocaleLowerCase("fr")) &&
+  !NOT_DWELLING.has(text(apiValue({ attributes: data.attributes }, "real_estate_type")).trim().toLocaleLowerCase("fr"));
+
 export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch = "focused"): Omit<Listing, "id"> | null {
   const source = object(raw);
   const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
   const url = text(first(data, ["url", "link", "adUrl", "ad_url", "listingUrl"]));
   if (!isHousingListingUrl(url)) return null;
+  // Filet de sécurité : la recherche demande déjà « appartement ou maison », mais la requête de repli (ville non
+  // reconnue) ne le peut pas. Un parking ou un terrain n'est jamais un logement.
+  if (!isDwellingType(data)) return null;
   const title = text(first(data, ["title", "subject", "name"])).slice(0, 250);
   if (!title) return null;
   const description = text(first(data, ["description", "body", "text", "content"])).slice(0, 10000);
@@ -219,37 +229,46 @@ export async function syncSearch(id: number, criteria: Criteria) {
       try {
         // Prefer new ads to ones already saved during a refresh or the focused
         // pass; each pass keeps its own limit and the listing URLs are unique.
-        const selected = [...listings].sort((a, b) => Number(oldUrls.has(a.url)) - Number(oldUrls.has(b.url))).slice(0, RESULT_LIMIT);
-        const candidates = selected.filter(item =>
-          !oldUrls.has(item.url) || !existing?.listings.find(previous => previous.url === item.url)?.criterionResults.length)
-          .map((item, index) => ({ ...item, id: -(index + 1) }));
-        const enriched: Awaited<ReturnType<typeof analyze>> = [];
-        // The LLM receives at most five ads in each bounded request.
-        for (let offset = 0; offset < candidates.length; offset += 15) {
-          const groups = [0, 5, 10].map(start => candidates.slice(offset + start, offset + start + 5)).filter(group => group.length);
-          const analyses = await Promise.all(groups.map(group => analyze(group, criteria)));
-          enriched.push(...analyses.flat());
+        const ordered = [...listings].sort((a, b) => Number(oldUrls.has(a.url)) - Number(oldUrls.has(b.url)));
+        const saved: Omit<Listing, "id">[] = [];
+        const setAside: { url: string; offer: string; evidence: string }[] = [];
+        let nextId = 0;
+        // Une annonce écartée (chambre, parking…) libère sa place : on analyse les suivantes jusqu'à RESULT_LIMIT.
+        for (let offset = 0; offset < ordered.length && saved.length < RESULT_LIMIT;) {
+          const selected = ordered.slice(offset, offset + RESULT_LIMIT - saved.length);
+          offset += selected.length;
+          const candidates = selected.filter(item =>
+            !oldUrls.has(item.url) || !existing?.listings.find(previous => previous.url === item.url)?.criterionResults.length)
+            .map(item => ({ ...item, id: -(++nextId) }));
+          // The LLM receives at most five ads in each bounded request.
+          const enriched = candidates.length ? await analyze(candidates, criteria) : [];
+          for (const item of selected) {
+            const enrichedItem = candidates.find(candidate => candidate.url === item.url);
+            const observations = enriched.find(result => result.id === enrichedItem?.id);
+            if (observations?.offer && (observations.offer.kind === "room" || observations.offer.kind === "non_dwelling")) {
+              setAside.push({ url: item.url, offer: observations.offer.kind, evidence: observations.offer.evidence });
+              continue;
+            }
+            const previous = existing?.listings.find(result => result.url === item.url);
+            const criterionResults = observations?.criterionResults ?? item.criterionResults.map(check =>
+              check.source === "api" ? check : previous?.criterionResults.find(old => old.id === check.id) ?? check);
+            if (criterionResults.some(check => ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")) continue;
+            const additions = observations?.features ?? item.features;
+            const features = [...(previous?.features ?? []), ...additions.filter(feature =>
+              !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
+            saved.push({
+              batch: item.batch, title: item.title, url: item.url, description: item.description,
+              price: observations?.price ?? item.price, area: observations?.area ?? item.area,
+              rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
+              image: item.image, images: item.images, score: observations?.score ?? item.score,
+              aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
+              features,
+              criterionResults,
+              lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision,
+            });
+          }
         }
-        const saved = selected.map(item => {
-          const enrichedItem = candidates.find(candidate => candidate.url === item.url);
-          const observations = enriched.find(result => result.id === enrichedItem?.id);
-          const previous = existing?.listings.find(result => result.url === item.url);
-          const criterionResults = observations?.criterionResults ?? item.criterionResults.map(check =>
-            check.source === "api" ? check : previous?.criterionResults.find(old => old.id === check.id) ?? check);
-          const additions = observations?.features ?? item.features;
-          const features = [...(previous?.features ?? []), ...additions.filter(feature =>
-            !(previous?.features ?? []).some(old => old.label.toLocaleLowerCase("fr") === feature.label.toLocaleLowerCase("fr")))];
-          return {
-          batch: item.batch, title: item.title, url: item.url, description: item.description,
-          price: observations?.price ?? item.price, area: observations?.area ?? item.area,
-          rooms: observations?.rooms ?? item.rooms, location: observations?.location ?? item.location,
-          image: item.image, images: item.images, score: observations?.score ?? item.score,
-          aiSummary: observations?.aiSummary ?? null, summaryEvidence: observations?.summaryEvidence ?? [],
-          features,
-          criterionResults,
-          lat: item.lat, lng: item.lng, geoPrecision: item.geoPrecision,
-        }; }).filter(item => !item.criterionResults.some(check =>
-          ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description"));
+        if (setAside.length) logger.info({ searchId: id, setAside }, "Listings set aside: not an entire dwelling");
         // Count only homes that survived all checks, including description-based
         // contradictions. A large raw dataset is not 40 usable matches.
         runBroad = phase === "focused" && shouldRunBroad(saved.length, Boolean(focusedSearchTerm(criteria)));

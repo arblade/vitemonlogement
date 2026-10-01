@@ -13,6 +13,12 @@ export function classifyWish(label: string): Criterion["apiField"] {
   return null;
 }
 
+const pieces = (count: number) => `${count} pièce${count > 1 ? "s" : ""}`;
+function roomsLabel(min: number | null, max: number | null) {
+  if (min != null && max != null) return min === max ? pieces(min) : `${min} à ${pieces(max)}`;
+  return max != null ? `Au plus ${pieces(max)}` : `Au moins ${pieces(min!)}`;
+}
+
 export function checksFor(criteria: Criteria): Criterion[] {
   if (criteria.checks?.length) return criteria.checks;
   const checks: Criterion[] = [];
@@ -25,7 +31,7 @@ export function checksFor(criteria: Criteria): Criterion[] {
     id: "area", label: `Surface : ${criteria.minArea ?? 0} à ${criteria.maxArea ?? "sans limite"} m²`,
     availability: "api", apiField: "area",
   });
-  if (criteria.minRooms != null) checks.push({ id: "rooms", label: `Au moins ${criteria.minRooms} pièce(s)`, availability: "api", apiField: "rooms" });
+  if (criteria.minRooms != null || criteria.maxRooms != null) checks.push({ id: "rooms", label: roomsLabel(criteria.minRooms ?? null, criteria.maxRooms ?? null), availability: "api", apiField: "rooms" });
   for (const [index, wish] of (criteria.wishes ?? []).slice(0, 8).entries()) {
     const label = labelForWish(wish);
     if (!label) continue;
@@ -39,14 +45,14 @@ export function matchesKnownBasics(listing: Basic, criteria: Criteria) {
   return !(
     (listing.price != null && ((criteria.minPrice != null && listing.price < criteria.minPrice) || (criteria.maxPrice != null && listing.price > criteria.maxPrice))) ||
     (listing.area != null && ((criteria.minArea != null && listing.area < criteria.minArea) || (criteria.maxArea != null && listing.area > criteria.maxArea))) ||
-    (listing.rooms != null && criteria.minRooms != null && listing.rooms < criteria.minRooms)
+    (listing.rooms != null && !matchesValue("rooms", listing.rooms, criteria))
   );
 }
 
 export function matchesValue(id: string, value: number, criteria: Criteria): boolean {
   if (id === "price") return (criteria.minPrice == null || value >= criteria.minPrice) && (criteria.maxPrice == null || value <= criteria.maxPrice);
   if (id === "area") return (criteria.minArea == null || value >= criteria.minArea) && (criteria.maxArea == null || value <= criteria.maxArea);
-  if (id === "rooms") return criteria.minRooms == null || value >= criteria.minRooms;
+  if (id === "rooms") return (criteria.minRooms == null || value >= criteria.minRooms) && (criteria.maxRooms == null || value <= criteria.maxRooms);
   return false;
 }
 

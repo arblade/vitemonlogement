@@ -1,0 +1,1269 @@
+[
+{
+"url": "https://www.leboncoin.fr/ad/locations/3227706939",
+"subject": "Garage/box 12 m² Montgermont",
+"real_estate_type": "Parking",
+"price_euros": 74,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+},
+{
+"key": "square",
+"value": "12",
+"value_label": "12 m²"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3242037018",
+"subject": "Sous location 1 mois - T3 meublée 60m2 avec jardin proche Rennes",
+"real_estate_type": "Appartement",
+"price_euros": 700,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "60",
+"value_label": "60 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279847232",
+"subject": "Appartement T3",
+"real_estate_type": "Appartement",
+"price_euros": 680,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "63.58",
+"value_label": "63.58 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279846402",
+"subject": "Garage box fermé",
+"real_estate_type": "Parking",
+"price_euros": 80,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279845639",
+"subject": "Location studio meublé - Rennes centre (gare sud)",
+"real_estate_type": "Appartement",
+"price_euros": 445,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "16",
+"value_label": "16 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279843539",
+"subject": "Garage quartier Lorient à Rennes",
+"real_estate_type": "Parking",
+"price_euros": 80,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3276145184",
+"subject": "Appartement 2 pièces 40 m²",
+"real_estate_type": "Appartement",
+"price_euros": 674,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "40",
+"value_label": "40 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3272519392",
+"subject": "Appartement 1 pièce 9 m²",
+"real_estate_type": "Appartement",
+"price_euros": 394,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "9",
+"value_label": "9 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279838783",
+"subject": "Location appartement 3 mois centre ville",
+"real_estate_type": "Appartement",
+"price_euros": 477,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "16",
+"value_label": "16 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3249314706",
+"subject": "Appartement 4 pièces 82 m²",
+"real_estate_type": "Appartement",
+"price_euros": 1150,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "82",
+"value_label": "82 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279833111",
+"subject": "T4 métro Clémenceau proche gare et centre ville Rennes",
+"real_estate_type": "Appartement",
+"price_euros": 395,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "65",
+"value_label": "65 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3273956945",
+"subject": "Studio 1 pièce 23 m²",
+"real_estate_type": "Appartement",
+"price_euros": 561,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "23",
+"value_label": "23 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3265370147",
+"subject": "Studio 1 pièce 23 m²",
+"real_estate_type": "Appartement",
+"price_euros": 561,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "23",
+"value_label": "23 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3270942156",
+"subject": "Studio 1 pièce 25 m²",
+"real_estate_type": "Appartement",
+"price_euros": 428,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "25",
+"value_label": "25 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279835118",
+"subject": "Appartement 2 pièces 47 m²",
+"real_estate_type": "Appartement",
+"price_euros": 895,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "47",
+"value_label": "47 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3272172688",
+"subject": "Maison T4",
+"real_estate_type": "Maison",
+"price_euros": 1139,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "1",
+"value_label": "Maison"
+},
+{
+"key": "square",
+"value": "85",
+"value_label": "85 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3266752008",
+"subject": "Appartement 4 pièces 81 m²",
+"real_estate_type": "Appartement",
+"price_euros": 1745,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "81",
+"value_label": "81 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279852375",
+"subject": "Appartement T2 Kerfeunteun",
+"real_estate_type": "Appartement",
+"price_euros": 650,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "37.17",
+"value_label": "37.17 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279845839",
+"subject": "Studio meublé",
+"real_estate_type": "Appartement",
+"price_euros": 360,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "20",
+"value_label": "20 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3270769355",
+"subject": "Apartment",
+"real_estate_type": "Appartement",
+"price_euros": 659,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "54",
+"value_label": "54 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3234511809",
+"subject": "Duplex 1 pièce 22 m²",
+"real_estate_type": "Appartement",
+"price_euros": 470,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "22",
+"value_label": "22 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3271784107",
+"subject": "Maison 3 pièces 63 m²",
+"real_estate_type": "Maison",
+"price_euros": 750,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "1",
+"value_label": "Maison"
+},
+{
+"key": "square",
+"value": "63",
+"value_label": "63 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3150155877",
+"subject": "A louer appartement Meublé 77M2 dans résidence privée calme",
+"real_estate_type": "Appartement",
+"price_euros": 940,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "77",
+"value_label": "77 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279755651",
+"subject": "Appartement 4 pièces 94 m²",
+"real_estate_type": "Appartement",
+"price_euros": 900,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "94",
+"value_label": "94 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3265237764",
+"subject": "Maison 5 pièces 101 m²",
+"real_estate_type": "Maison",
+"price_euros": 850,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "1",
+"value_label": "Maison"
+},
+{
+"key": "square",
+"value": "101",
+"value_label": "101 m²"
+},
+{
+"key": "rooms",
+"value": "5",
+"value_label": "5"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3270076547",
+"subject": "Appartement 4 pièces 102 m²",
+"real_estate_type": "Appartement",
+"price_euros": 950,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "102",
+"value_label": "102 m²"
+},
+{
+"key": "rooms",
+"value": "4",
+"value_label": "4"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3258421985",
+"subject": "Appartement 3 pièces 72 m²",
+"real_estate_type": "Appartement",
+"price_euros": 990,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "72",
+"value_label": "72 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3271305040",
+"subject": "Maison 2 pièces 41 m²",
+"real_estate_type": "Maison",
+"price_euros": 640,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "1",
+"value_label": "Maison"
+},
+{
+"key": "square",
+"value": "41",
+"value_label": "41 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3280020971",
+"subject": "Particulier loue T2 hyper centre de Lille",
+"real_estate_type": "Appartement",
+"price_euros": 600,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "35",
+"value_label": "35 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279403738",
+"subject": "Studio étudiant meublé proche Lille centre",
+"real_estate_type": "Appartement",
+"price_euros": 570,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "17",
+"value_label": "17 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3219297320",
+"subject": "Parking 15 m² Loos",
+"real_estate_type": "Parking",
+"price_euros": 80,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+},
+{
+"key": "square",
+"value": "15",
+"value_label": "15 m²"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3136482252",
+"subject": "Parking 10 m² Lille",
+"real_estate_type": "Parking",
+"price_euros": 51,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+},
+{
+"key": "square",
+"value": "10",
+"value_label": "10 m²"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3276642472",
+"subject": "Appartement 1 pièce 24 m²",
+"real_estate_type": "Appartement",
+"price_euros": 600,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "24",
+"value_label": "24 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3273797939",
+"subject": "Studio 1 pièce 19 m²",
+"real_estate_type": "Appartement",
+"price_euros": 630,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "19",
+"value_label": "19 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279999296",
+"subject": "A louer chambre etudiant ou alternant",
+"real_estate_type": "Autre",
+"price_euros": 530,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "5",
+"value_label": "Autre"
+},
+{
+"key": "square",
+"value": "24",
+"value_label": "24 m²"
+},
+{
+"key": "rooms",
+"value": "3",
+"value_label": "3"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279998885",
+"subject": "Loue studio Lille centre",
+"real_estate_type": "Appartement",
+"price_euros": 490,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "20",
+"value_label": "20 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279993621",
+"subject": "Appartement Lille centre",
+"real_estate_type": "Appartement",
+"price_euros": 630,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "30",
+"value_label": "30 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3272190333",
+"subject": "Garage/box Faches Thumesnil",
+"real_estate_type": "Parking",
+"price_euros": 65,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3274001431",
+"subject": "Apartment",
+"real_estate_type": "Appartement",
+"price_euros": 673,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "45",
+"value_label": "45 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279986408",
+"subject": "Studio lille proximité métros, gare lille Europe",
+"real_estate_type": "Appartement",
+"price_euros": 525,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "25",
+"value_label": "25 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3269442831",
+"subject": "Loue studio meublé Lille Gambetta",
+"real_estate_type": "Appartement",
+"price_euros": 628,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "24",
+"value_label": "24 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3270708271",
+"subject": "Appartement 1 pièce 26 m²",
+"real_estate_type": "Appartement",
+"price_euros": 535,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "26",
+"value_label": "26 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3236625253",
+"subject": "Chambre avec SDB privée - Coliving - Lille Centre",
+"real_estate_type": "Appartement",
+"price_euros": 660,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "30",
+"value_label": "30 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3263152269",
+"subject": "Parking Lille",
+"real_estate_type": "Parking",
+"price_euros": 60,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3270061720",
+"subject": "Apartment",
+"real_estate_type": "Appartement",
+"price_euros": 633,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "45",
+"value_label": "45 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279968934",
+"subject": "Parking 10 m² Villeneuve D Ascq",
+"real_estate_type": "Parking",
+"price_euros": 37,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+},
+{
+"key": "square",
+"value": "10",
+"value_label": "10 m²"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3269516371",
+"subject": "Appartement 2 pièces 49 m²",
+"real_estate_type": "Appartement",
+"price_euros": 680,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "49",
+"value_label": "49 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279958457",
+"subject": "Place de parking dans une résidence sécurisé",
+"real_estate_type": "Parking",
+"price_euros": 80,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279958441",
+"subject": "Studio meublé - résidence étudiante",
+"real_estate_type": "Appartement",
+"price_euros": 500,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "19",
+"value_label": "19 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279950989",
+"subject": "Appartement 1 pièce 20 m²",
+"real_estate_type": "Appartement",
+"price_euros": 590,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "20",
+"value_label": "20 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279948256",
+"subject": "Au cœur du croisé Laroche, superbe appartement",
+"real_estate_type": "Appartement",
+"price_euros": 690,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "27",
+"value_label": "27 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279936689",
+"subject": "Appartement 1 pièce 33 m²",
+"real_estate_type": "Appartement",
+"price_euros": 518,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "33",
+"value_label": "33 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279936672",
+"subject": "Appartement 2 pièces 46 m²",
+"real_estate_type": "Appartement",
+"price_euros": 661,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "46",
+"value_label": "46 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279894123",
+"subject": "Appartement meublé. Type 2",
+"real_estate_type": "Appartement",
+"price_euros": 630,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "31",
+"value_label": "31 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279890726",
+"subject": "Location parking souterrain Lille Fives",
+"real_estate_type": "Parking",
+"price_euros": 60,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279876634",
+"subject": "Parking à louer à proximité de la citadelle de Lille",
+"real_estate_type": "Parking",
+"price_euros": 40,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "4",
+"value_label": "Parking"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279874980",
+"subject": "Studio meublé lumineux 22 m² — Vieux-Lille — libre au 10 octobre2026",
+"real_estate_type": "Appartement",
+"price_euros": 550,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "22",
+"value_label": "22 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3276365449",
+"subject": "Studio 1 pièce 17 m²",
+"real_estate_type": "Appartement",
+"price_euros": 368,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "17",
+"value_label": "17 m²"
+},
+{
+"key": "rooms",
+"value": "1",
+"value_label": "1"
+}
+]
+},
+{
+"url": "https://www.leboncoin.fr/ad/locations/3279822636",
+"subject": "Appartement 34m2 secteur Gambetta",
+"real_estate_type": "Appartement",
+"price_euros": 690,
+"attributes": [
+{
+"key": "real_estate_type",
+"value": "2",
+"value_label": "Appartement"
+},
+{
+"key": "square",
+"value": "34",
+"value_label": "34 m²"
+},
+{
+"key": "rooms",
+"value": "2",
+"value_label": "2"
+}
+]
+}
+]

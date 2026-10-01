@@ -50,6 +50,7 @@ export type Criteria = {
   minArea?: number | null;
   maxArea?: number | null;
   minRooms?: number | null;
+  maxRooms?: number | null;
   radius?: number;
   keywords: string;
   wishes?: string[];

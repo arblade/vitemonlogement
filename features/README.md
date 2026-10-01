@@ -19,3 +19,4 @@ La carte est sur `develop` ; le reste est aussi sur `main`.
 - `pnpm test` : serveur (`node:test`, 94 + 4 `todo` connus) et front (Vitest, 97).
 - `pnpm test:e2e` : scénario navigateur mobile puis desktop (12).
 - `pnpm test:prod` : vrais Apify/OpenAI, sur demande explicite seulement (non validé : crédit OpenAI épuisé lors du dernier essai).
+| Logements entiers seulement (parkings, colocations) | Corrigé le 01/10 après signalement : recherche Le Bon Coin limitée aux appartements et maisons avec fourchette de pièces, parkings écartés, chambres et colocations écartées par l'analyse IA (citation exigée) ; recherche par département à corriger | [enquete-parkings-colocations.md](enquete-parkings-colocations.md) |

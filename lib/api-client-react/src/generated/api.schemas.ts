@@ -96,6 +96,8 @@ export interface HousingCriteria {
   maxArea?: number | null;
   /** @nullable */
   minRooms?: number | null;
+  /** @nullable */
+  maxRooms?: number | null;
   /**
      * @minimum 0
      * @maximum 200
