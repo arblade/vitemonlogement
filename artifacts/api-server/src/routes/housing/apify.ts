@@ -8,6 +8,7 @@ import { apify } from "./apify-client";
 import { interleave, normalizeExtra, startExtraSources, type SourceRun } from "./sources";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
 import { actorRequest, isHousingListingUrl, type SearchBatch } from "./housing-search";
+import { isSeekerAd } from "./offer";
 
 // Limites par appel Apify, identiques en développement et en production (protège le budget Apify).
 // Modifiables par variables d'environnement : APIFY_RESULT_LIMIT (annonces conservées, défaut 5),
@@ -128,6 +129,7 @@ export function fromFatihRecord(record: Record<string, unknown>): Record<string,
     .map(attribute => [attribute.key as string, attribute.value_label]));
   return {
     ...labels,
+    ad_type: record.listing_type, // « offer » ou « demand » (au premier niveau de l'annonce, pas dans listing)
     url: record.url, subject: record.title, body: record.description,
     price_euros: object(record.pricing).amount_eur,
     square: property.surface_m2, rooms: property.rooms,
@@ -149,6 +151,8 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   const title = text(first(data, ["title", "subject", "name"])).slice(0, 250);
   if (!title) return null;
   const description = text(first(data, ["description", "body", "text", "content"])).slice(0, 10000);
+  // Une demande (« Recherche appartement T2 ») publiée dans Locations n'est pas un logement à louer.
+  if (isSeekerAd({ adType: data.ad_type, title, description })) return null;
   const attrs = object(first(data, ["attributes", "details", "criteria"]));
   const price = number(first(data, ["price_euros", "price", "price_value", "priceValue"]));
   const area = number(first(data, ["square", "surface", "area", "livingArea", "squareMeters"])) ?? number(first(attrs, ["surface", "area", "livingArea"]));
