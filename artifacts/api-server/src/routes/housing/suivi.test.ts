@@ -16,6 +16,7 @@ let reads: { page: number; limit: number }[] = [];
 let llmListings = 0;
 const runs = new Map<string, unknown[]>();
 let fake: Server;
+let owner = 0;
 
 const record = (ad: Ad) => fatihRecord({
   url: `https://www.leboncoin.fr/ad/locations/${ad.n}`, title: ad.title ?? `Appartement T2 n° ${ad.n}`, description: "Appartement lumineux, proche métro.",
@@ -73,6 +74,8 @@ before(async () => {
   process.env.OPENAI_API_KEY = "test";
   const { useMemoryDatabase } = await import("../../test/helpers");
   await useMemoryDatabase();
+  const { createUser } = await import("../../lib/users");
+  owner = (await createUser("suivi-lecture@example.com", "motdepasse-1"))!.id;
 });
 after(async () => {
   fake.close();
@@ -103,73 +106,135 @@ const setRow = async (id: number, fields: Partial<typeof housingSearches.$inferI
   await db().update(housingSearches).set(fields).where(eq(housingSearches.id, id));
 };
 
-test("première recherche : page 1 (35), puis page 2 tant que les 4 jours ne sont pas atteints ; les 10 premières analysées, les autres plus tard", async () => {
-  market = makeMarket(120, 2); // une annonce toutes les 2 h : 4 jours ≈ 48 annonces
+/** Recherche ponctuelle terminée (15 annonces), puis transformée en recherche suivie et remontée sur 4 jours. */
+async function followed(times = ["08:00", "18:00"]) {
+  const { createSearch, startWatching } = await import("./store");
+  const id = await createSearch("Un T2 à Lille, 900 € max", owner);
+  await settle(id);
+  await startWatching(id, owner, times, Date.now() + HOUR);
+  return id;
+}
+
+test("recherche ponctuelle : les 15 annonces les plus récentes, en une seule lecture, toutes analysées", async () => {
+  market = makeMarket(120, 2);
   const { createSearch, getSearch } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await createSearch("Un T2 à Lille, 900 € max", owner);
   const done = await settle(id);
   assert.equal(done.status, "completed");
-  assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 35 }], "la page 2 atteint 4 jours : on s'arrête");
+  assert.deepEqual(reads, [{ page: 1, limit: 15 }]);
   const search = (await getSearch(id))!;
-  assert.equal(search.listings.length, 70, "tout ce qui est lu (et payé) est gardé");
-  assert.equal(search.listings.filter(listing => listing.analyzed).length, 10, "seules les 10 premières sont analysées d'emblée");
-  assert.equal(llmListings, 10);
-  assert.ok(search.listings.slice(0, 10).every(listing => listing.analyzed && listing.aiSummary), "les plus récentes d'abord");
-  // Dates : heure de Paris relue correctement (la plus récente a 10 minutes).
+  assert.equal(search.listings.length, 15);
+  assert.ok(search.listings.every(listing => listing.analyzed && listing.aiSummary), "15 ≤ 20 : toutes analysées d'emblée");
+  assert.equal(llmListings, 15);
+  // Dates : heure de Paris relue correctement (la plus récente a 10 minutes) ; ordre : les plus récentes d'abord.
   assert.ok(Math.abs(search.listings[0].refreshedAt! - (Date.now() - 10 * 60_000)) < 2 * 60_000);
-  assert.equal(done.pagesRead, 2);
+  assert.equal(done.pagesRead, 0, "page lue en partie : « Étendre » la relira en entier");
   assert.ok(Math.abs(done.cursorAt! - search.listings[0].refreshedAt!) < 1000, "curseur : la mise à jour la plus récente lue");
 });
 
-test("première recherche : au plus 3 pages (105 annonces), même si 4 jours ne sont pas atteints", async () => {
+test("création de la recherche suivie : elle remonte 4 jours (page 1, puis 2), sans compter ces annonces comme nouvelles", async () => {
+  market = makeMarket(120, 2); // une annonce toutes les 2 h : 4 jours ≈ 48 annonces
+  const id = await followed();
+  assert.equal((await row(id)).task, "backfill");
+  reads = []; llmListings = 0;
+  await settle(id);
+  assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 35 }], "la page 2 atteint 4 jours : on s'arrête");
+  const { getSearch } = await import("./store");
+  const search = (await getSearch(id))!;
+  assert.equal(search.listings.length, 70, "tout ce qui est lu (et payé) est gardé, sans doublon avec les 15 déjà là");
+  assert.equal(llmListings, 20, "20 analysées d'emblée, les autres au défilement");
+  assert.equal(search.listings.filter(listing => listing.analyzed).length, 35);
+  assert.equal(search.unseenCount, 0, "l'utilisateur vient de la créer : rien de « nouveau »");
+  assert.equal((await row(id)).pagesRead, 2);
+});
+
+test("création de la recherche suivie : au plus 3 pages (105 annonces), même si 4 jours ne sont pas atteints", async () => {
   market = makeMarket(200, 0.5); // très active : une annonce toutes les 30 min
-  const { createSearch } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await followed();
+  reads = [];
   await settle(id);
   assert.deepEqual(reads.map(read => read.page), [1, 2, 3]);
 });
 
-test("petite ville : une seule page suffit (moins de 35 annonces)", async () => {
+test("petite ville : 12 annonces en tout, une seule page à chaque fois", async () => {
   market = makeMarket(12, 3);
-  const { createSearch, getSearch } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await followed();
+  assert.deepEqual(reads, [{ page: 1, limit: 15 }]);
+  reads = [];
   await settle(id);
   assert.deepEqual(reads, [{ page: 1, limit: 35 }]);
+  const { getSearch } = await import("./store");
   assert.equal((await getSearch(id))!.listings.length, 12);
 });
 
-test("recherche suivie : le passage lit juste ce qu'il faut et s'arrête au curseur ; une annonce remontée n'est pas « nouvelle »", async () => {
+test("passage suivi : lit juste ce qu'il faut, s'arrête au curseur ; une annonce remontée n'est pas « nouvelle » (ni plus tard)", async () => {
   market = makeMarket(30, 3, 1000);
-  const { createSearch, getSearch, scheduleDueWatches } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await followed();
   await settle(id);
-  // Suivie juste après la première lecture (comme startWatching : ce qui est affiché compte comme vu), passage dû.
-  await setRow(id, { watched: 1, watchTimes: JSON.stringify(["08:00", "18:00"]), nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now() });
-  assert.equal((await getSearch(id))!.unseenCount, 0, "ce qui était affiché compte comme vu");
-
-  // 4 nouvelles annonces et une ancienne remontée en tête depuis le passage précédent.
+  const { getSearch, scheduleDueWatches } = await import("./store");
+  // 4 nouvelles annonces ; une ancienne remontée en tête par son auteur.
   const now = Date.now();
   market = [...makeMarket(4, 0.2, 2000).map(ad => ({ ...ad, postedAt: now - 60_000, updatedAt: now - 60_000 })), ...market];
-  market[market.length - 1] = { ...market[market.length - 1], updatedAt: now - 30_000 };
+  const bumped = market[market.length - 1];
+  market[market.length - 1] = { ...bumped, updatedAt: now - 30_000 };
+  await setRow(id, { nextWatchAt: Date.now() - 1000 });
   reads = [];
   await scheduleDueWatches();
   assert.equal((await row(id)).task, "watch");
   await settle(id);
   assert.equal(reads.length, 1, "une seule lecture : le curseur est atteint dans la première page");
   assert.ok(reads[0].limit < 35 && reads[0].limit >= 10, `première page à la taille du débit observé (${reads[0].limit})`);
-  const search = (await getSearch(id))!;
+  let search = (await getSearch(id))!;
   assert.equal(search.unseenCount, 4, "4 nouvelles ; la remontée n'en est pas une");
+  assert.deepEqual(search.listings.slice(0, 4).map(listing => listing.title).sort(), ["Appartement T2 n° 2000", "Appartement T2 n° 2001", "Appartement T2 n° 2002", "Appartement T2 n° 2003"],
+    "les nouvelles en tête ; la remontée ne repasse pas devant");
   assert.ok((await row(id)).nextWatchAt! > Date.now(), "prochain passage programmé");
-  await setRow(id, { lastVisitedAt: Date.now() }); // ouverture de la recherche (markVisited, testé par l'API)
-  assert.equal((await getSearch(id))!.unseenCount, 0, "ouverte : plus rien de non vu");
+  // Passage suivant : la même annonce remontée encore une fois ne devient toujours pas nouvelle.
+  await setRow(id, { lastVisitedAt: Date.now() });
+  market[market.length - 1] = { ...bumped, updatedAt: Date.now() - 5_000 };
+  await setRow(id, { nextWatchAt: Date.now() - 1000 });
+  await scheduleDueWatches();
+  await settle(id);
+  search = (await getSearch(id))!;
+  assert.equal(search.unseenCount, 0);
 });
 
-test("recherche suivie : plus de nouveautés que prévu → la page 1 est relue en entier, puis la page 2 si besoin", async () => {
-  market = makeMarket(20, 6, 3000);
-  const { createSearch, getSearch, scheduleDueWatches } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+test("annonce supprimée puis republiée (nouvelle adresse, même contenu) : pas « nouvelle », le lien suit la nouvelle adresse", async () => {
+  market = makeMarket(20, 3, 2500);
+  const id = await followed();
   await settle(id);
-  await setRow(id, { watched: 1, watchTimes: JSON.stringify(["08:00"]), nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now(), watchRate: 0.5 });
+  const { getSearch, scheduleDueWatches } = await import("./store");
+  const gone = market[3];
+  market = [{ ...gone, n: 2999, title: `Appartement T2 n° ${gone.n}`, postedAt: Date.now() - 60_000, updatedAt: Date.now() - 60_000 }, ...market.filter(ad => ad !== gone)];
+  await setRow(id, { nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now() });
+  await scheduleDueWatches();
+  await settle(id);
+  const search = (await getSearch(id))!;
+  assert.equal(search.unseenCount, 0, "republiée : pas nouvelle");
+  assert.equal(search.listings.length, 20, "pas de doublon");
+  assert.ok(search.listings.some(listing => listing.url.endsWith("/2999")), "le lien mène à la nouvelle annonce");
+  assert.ok(!search.listings.some(listing => listing.url.endsWith(`/${gone.n}`)));
+});
+
+test("deux studios identiques d'une même résidence, lus ensemble : deux annonces, toutes deux nouvelles", async () => {
+  market = makeMarket(10, 3, 2700);
+  const id = await followed();
+  await settle(id);
+  const { getSearch, scheduleDueWatches } = await import("./store");
+  const now = Date.now();
+  market = [{ n: 2790, postedAt: now - 60_000, updatedAt: now - 60_000, title: "Studio résidence Gambetta" }, { n: 2791, postedAt: now - 50_000, updatedAt: now - 50_000, title: "Studio résidence Gambetta" }, ...market];
+  await setRow(id, { nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now() });
+  await scheduleDueWatches();
+  await settle(id);
+  assert.equal((await getSearch(id))!.unseenCount, 2);
+});
+
+test("passage suivi : plus de nouveautés que prévu → la page 1 est relue en entier, puis la page 2 si besoin", async () => {
+  market = makeMarket(20, 6, 3000);
+  const id = await followed(["08:00"]);
+  await settle(id);
+  const { getSearch, scheduleDueWatches } = await import("./store");
+  await setRow(id, { nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now(), watchRate: 0.5 });
   const now = Date.now();
   market = [...Array.from({ length: 50 }, (_, i) => ({ n: 4000 + i, postedAt: now - i * 5_000, updatedAt: now - i * 5_000 })), ...market];
   reads = [];
@@ -183,10 +248,10 @@ test("recherche suivie : plus de nouveautés que prévu → la page 1 est relue 
 
 test("recherche suivie : sans visite depuis 7 jours, elle se met en pause et ne coûte plus rien", async () => {
   market = makeMarket(5, 3, 5000);
-  const { createSearch, scheduleDueWatches } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await followed(["08:00"]);
   await settle(id);
-  await setRow(id, { watched: 1, watchTimes: JSON.stringify(["08:00"]), nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now() - 8 * 24 * HOUR });
+  const { scheduleDueWatches } = await import("./store");
+  await setRow(id, { nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now() - 8 * 24 * HOUR });
   reads = [];
   await scheduleDueWatches();
   const paused = await row(id);
@@ -197,10 +262,10 @@ test("recherche suivie : sans visite depuis 7 jours, elle se met en pause et ne 
 
 test("passage manqué (serveur arrêté) : un seul rattrapage, puis le créneau suivant", async () => {
   market = makeMarket(5, 3, 6000);
-  const { createSearch, scheduleDueWatches } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await followed();
   await settle(id);
-  await setRow(id, { watched: 1, watchTimes: JSON.stringify(["08:00", "18:00"]), nextWatchAt: Date.now() - 3 * 24 * HOUR, lastVisitedAt: Date.now() });
+  const { scheduleDueWatches } = await import("./store");
+  await setRow(id, { nextWatchAt: Date.now() - 3 * 24 * HOUR, lastVisitedAt: Date.now() });
   await scheduleDueWatches();
   await settle(id);
   const after = await row(id);
@@ -225,36 +290,40 @@ test("une seule recherche suivie par compte : en suivre une autre arrête la pre
 });
 
 test("analyse au défilement : seules les annonces demandées sont analysées, une fois ; une colocation repérée par l'IA disparaît", async () => {
-  market = makeMarket(30, 2, 7000);
-  market[15] = { ...market[15], title: "Studio privatif en résidence Coliving" };
-  const { createSearch, getSearch, requestAnalysis } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  market = makeMarket(60, 1, 7000);
+  market[55] = { ...market[55], title: "Studio privatif en résidence Coliving" };
+  const id = await followed();
   await settle(id);
+  const { getSearch, requestAnalysis } = await import("./store");
   const before = (await getSearch(id))!;
   const pending = before.listings.filter(listing => !listing.analyzed);
-  assert.equal(pending.length, 20);
+  assert.equal(pending.length, 25, "60 lues : 15 + 20 analysées d'emblée");
+  const coliving = pending.find(listing => listing.title.includes("Coliving"))!;
+  assert.ok(coliving, "la résidence coliving fait partie des annonces pas encore analysées");
   llmListings = 0;
-  assert.equal(await requestAnalysis(id, [...pending.slice(0, 8).map(listing => listing.id), before.listings[0].id, 999_999]), 8, "déjà analysée ou étrangère : ignorée");
+  const asked = [...pending.filter(listing => listing !== coliving).slice(0, 7).map(listing => listing.id), coliving.id];
+  assert.equal(await requestAnalysis(id, [...asked, before.listings[0].id, 999_999]), 8, "déjà analysée ou étrangère : ignorée");
   assert.equal((await row(id)).task, "analyze");
   await settle(id);
   const after = (await getSearch(id))!;
   assert.equal(llmListings, 8);
-  // Les 8 demandées (dont la résidence coliving, 16e annonce) : 7 gardées et analysées, 1 masquée.
-  assert.equal(after.listings.filter(listing => listing.analyzed).length, 17);
+  assert.equal(after.listings.filter(listing => listing.analyzed).length, 35 + 7);
   assert.equal(after.listings.find(listing => listing.title.includes("Coliving")), undefined, "masquée après analyse");
-  assert.equal(after.count, 29);
+  assert.equal(after.count, 59);
 });
 
-test("« Étendre » : une seule page, la suivante (plus ancienne)", async () => {
+test("« Étendre » sur une recherche ponctuelle : la page 1 en entier, puis la page 2", async () => {
   market = makeMarket(120, 2, 8000);
   const { createSearch, getSearch, requestExtend } = await import("./store");
-  const id = await createSearch("Un T2 à Lille, 900 € max");
+  const id = await createSearch("Un T2 à Lille, 900 € max", owner);
   await settle(id);
   reads = [];
   assert.ok(await requestExtend(id));
   assert.equal(await requestExtend(id), false, "pas deux lectures à la fois");
   await settle(id);
-  assert.deepEqual(reads, [{ page: 3, limit: 35 }]);
-  assert.equal((await getSearch(id))!.listings.length, 105);
-  assert.equal((await row(id)).pagesRead, 3);
+  assert.ok(await requestExtend(id));
+  await settle(id);
+  assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 35 }]);
+  assert.equal((await getSearch(id))!.listings.length, 70);
+  assert.equal((await row(id)).pagesRead, 2);
 });

@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HousingListing } from '@workspace/api-client-react';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
-import SearchDetail from '@/pages/search-detail';
+import SearchDetail, { RotatingMessage } from '@/pages/search-detail';
 import { resetListingInteractionsCache } from '@/lib/listing-interactions';
 import { checks, listing, mockFetch, search, type Route as FetchRoute } from '@/test/fixtures';
 
@@ -39,7 +39,7 @@ const favoriteRoutes = (initial: object[] = []): FetchRoute[] => [
 
 function renderPage(path = '/searches/1') {
   const { hook } = memoryLocation({ path });
-  render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Router hook={hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider>);
+  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Router hook={hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider>);
 }
 const cardOrder = () => screen.getAllByTestId(/^card-listing-\d+$/).map(card => card.getAttribute('data-testid')!.replace('card-listing-', ''));
 
@@ -211,11 +211,11 @@ describe('Page résultats : mode debug', () => {
 });
 
 describe('Page résultats : tri et consultation', () => {
-  it('trie par pertinence par défaut, puis par prix croissant sur demande', async () => {
+  it('tri par défaut « Plus récentes » (sans date : la pertinence), puis par prix croissant sur demande', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [listing(1, { score: 60, price: 900 }), listing(2, { score: 90, price: 700 }), listing(3, { score: 75, price: 500 })] });
     renderPage();
-    expect(cardOrder()).toEqual(['2', '3', '1']);
+    expect(cardOrder()).toEqual(['2', '3', '1']); // sans date (anciennes recherches) : « Plus récentes » suit la pertinence
     await user.selectOptions(screen.getByTestId('select-sort'), 'price');
     expect(cardOrder()).toEqual(['3', '2', '1']);
   });
@@ -488,23 +488,52 @@ describe('Page résultats : fiche détaillée', () => {
 });
 
 describe('Page résultats : chargement progressif', () => {
-  const many = (n: number) => search({ count: n, listings: Array.from({ length: n }, (_, i) => listing(i + 1, { score: 99 - i })) });
+  const many = (n: number, overrides: (i: number) => Partial<HousingListing> = () => ({})) =>
+    search({ count: n, listings: Array.from({ length: n }, (_, i) => listing(i + 1, { score: 99 - i, ...overrides(i) })) });
   const cards = () => screen.getAllByTestId(/^card-listing-\d+$/).length;
 
-  it('5 annonces d’abord ; en bas, l’indicateur rose puis les 5 suivantes, jusqu’à la dernière', async () => {
+  it('20 annonces d’abord ; en bas, l’indicateur rose puis les 20 suivantes, jusqu’à la dernière', async () => {
     const user = userEvent.setup();
-    api.state.data = many(12);
+    api.state.data = many(45);
     renderPage();
-    expect(cards()).toBe(5);
-    expect(screen.getByTestId('text-listing-count')).toHaveTextContent('12 annonces');
+    expect(cards()).toBe(20);
+    expect(screen.getByTestId('text-listing-count')).toHaveTextContent('45 annonces');
     await user.click(screen.getByTestId('button-load-more'));
-    expect(screen.getByTestId('results-loader')).toHaveTextContent('Chargement des annonces suivantes');
+    expect(screen.getByTestId('results-loader-message')).toHaveTextContent('Nous chargeons les annonces suivantes pour vous');
     expect(screen.getByTestId('results-loader').querySelector('.spin-arc')?.className).toContain('border-t-brand');
-    await waitFor(() => expect(cards()).toBe(10));
-    expect(screen.getByTestId('button-load-more')).toHaveTextContent('Afficher 2 annonces de plus');
+    await waitFor(() => expect(cards()).toBe(40));
+    expect(screen.getByTestId('button-load-more')).toHaveTextContent('Afficher 5 annonces de plus');
     await user.click(screen.getByTestId('button-load-more'));
-    await waitFor(() => expect(cards()).toBe(12));
+    await waitFor(() => expect(cards()).toBe(45));
     expect(screen.queryByTestId('results-load-more')).not.toBeInTheDocument();
+  });
+
+  it('les 20 suivantes pas encore lues par l’IA : analyse demandée, indicateur jusqu’à ce qu’elles soient prêtes', async () => {
+    const user = userEvent.setup();
+    const calls = mockFetch([...favoriteRoutes(), { method: 'POST', match: /\/analyze$/, respond: () => ({ status: 202, body: search() }) }]);
+    api.state.data = many(30, i => ({ analyzed: i < 20, aiSummary: i < 20 ? 'Lu.' : null }));
+    const view = renderPage();
+    await user.click(screen.getByTestId('button-load-more'));
+    await waitFor(() => expect(calls.find(call => call.url.endsWith('/analyze'))?.body).toEqual({ listingIds: [21, 22, 23, 24, 25, 26, 27, 28, 29, 30] }));
+    await new Promise(resolve => setTimeout(resolve, 800));
+    expect(cards()).toBe(20);
+    expect(screen.getByTestId('results-loader')).toBeInTheDocument();
+    // L'IA a fini : la page relue les montre.
+    api.state.data = many(30);
+    view.rerender(view.container.firstChild ? <QueryClientProvider client={new QueryClient()}><Router hook={memoryLocation({ path: '/searches/1' }).hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider> : <></>);
+    await waitFor(() => expect(cards()).toBe(30));
+  });
+
+  it('le message de l’indicateur change toutes les 3 à 4 secondes', () => {
+    vi.useFakeTimers();
+    try {
+      render(<RotatingMessage messages={['un', 'deux', 'trois']} testId="m"/>);
+      expect(screen.getByTestId('m')).toHaveTextContent('un');
+      act(() => { vi.advanceTimersByTime(3_500); });
+      expect(screen.getByTestId('m')).toHaveTextContent('deux');
+      act(() => { vi.advanceTimersByTime(7_000); });
+      expect(screen.getByTestId('m')).toHaveTextContent('un');
+    } finally { vi.useRealTimers(); }
   });
 
   it('le bas de liste qui devient visible déclenche le chargement, sans clic', async () => {
@@ -514,30 +543,30 @@ describe('Page résultats : chargement progressif', () => {
       observe() {} disconnect() {}
     });
     try {
-      api.state.data = many(8);
+      api.state.data = many(28);
       renderPage();
-      expect(cards()).toBe(5);
-      trigger(true);
-      await waitFor(() => expect(cards()).toBe(8));
+      expect(cards()).toBe(20);
+      act(() => trigger(true));
+      await waitFor(() => expect(cards()).toBe(28));
     } finally { vi.unstubAllGlobals(); }
   });
 
   it('peu d’annonces : ni indicateur ni bouton', () => {
-    api.state.data = many(4);
+    api.state.data = many(15);
     renderPage();
-    expect(cards()).toBe(4);
+    expect(cards()).toBe(15);
     expect(screen.queryByTestId('results-load-more')).not.toBeInTheDocument();
   });
 
   it('une annonce pas encore affichée choisie sur la carte apparaît dans la liste et sa fiche s’ouvre', async () => {
     const user = userEvent.setup();
-    api.state.data = search({ count: 12, listings: Array.from({ length: 12 }, (_, i) => listing(i + 1, { score: 99 - i, lat: 50.63 + i / 1000, lng: 3.06, geoPrecision: 'streetNumber' })) });
+    api.state.data = many(30, i => ({ lat: 50.63 + i / 1000, lng: 3.06, geoPrecision: 'streetNumber' }));
     renderPage();
-    expect(screen.queryByTestId('card-listing-12')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('card-listing-27')).not.toBeInTheDocument();
     await user.click(screen.getByTestId('button-open-results-map'));
-    await user.click(await screen.findByTestId('results-marker-12'));
-    expect(await screen.findByTestId('dialog-listing-12')).toBeInTheDocument();
-    expect(screen.getByTestId('card-listing-12')).toBeInTheDocument();
+    await user.click(await screen.findByTestId('results-marker-27'));
+    expect(await screen.findByTestId('dialog-listing-27')).toBeInTheDocument();
+    expect(screen.getByTestId('card-listing-27')).toBeInTheDocument();
   });
 });
 
@@ -551,28 +580,47 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     { method: 'POST', match: /\/api\/housing\/searches\/1\/analyze$/, respond: () => ({ status: 202, body: search() }) },
   ];
 
-  it('« Créer une alerte » : 8 h et 18 h proposés, envoyés au serveur ; un seul horaire possible', async () => {
+  it('recherche ponctuelle : « Créer une recherche suivie » ouvre une fenêtre qui explique, puis l’active à 8 h et 18 h', async () => {
     const user = userEvent.setup();
     const calls = mockFetch(watchRoutes());
     renderPage();
-    const panel = screen.getByTestId('card-watch');
-    expect(panel).toHaveTextContent('Créer une alerte');
-    expect(screen.getByTestId('input-watch-time-0')).toHaveValue('08:00');
-    expect(screen.getByTestId('input-watch-time-1')).toHaveValue('18:00');
-    expect(within(screen.getByTestId('input-watch-time-0')).getByRole('option', { name: '8 h 30' })).toBeInTheDocument();
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche ponctuelle');
     await user.click(screen.getByTestId('button-watch'));
+    const dialog = await screen.findByTestId('dialog-watch');
+    const explanation = within(dialog).getByTestId('watch-explanation');
+    for (const point of ['4 derniers jours', 'seulement les nouvelles annonces', 'pastille rose', 'remontée ou republiée', '7 jours']) expect(explanation).toHaveTextContent(point);
+    expect(within(dialog).getByTestId('input-watch-time-0')).toHaveValue('08:00');
+    expect(within(dialog).getByTestId('input-watch-time-1')).toHaveValue('18:00');
+    expect(calls.some(call => call.method === 'PUT')).toBe(false);
+    await user.click(within(dialog).getByTestId('button-confirm-watch'));
     await waitFor(() => expect(calls.find(call => call.method === 'PUT')?.body).toEqual({ times: ['08:00', '18:00'] }));
-    await user.selectOptions(screen.getByTestId('input-watch-time-1'), '');
-    await user.selectOptions(screen.getByTestId('input-watch-time-0'), '07:30');
-    await user.click(screen.getByTestId('button-watch'));
-    await waitFor(() => expect(calls.filter(call => call.method === 'PUT').at(-1)?.body).toEqual({ times: ['07:30'] }));
+    await waitFor(() => expect(screen.queryByTestId('dialog-watch')).not.toBeInTheDocument());
   });
 
-  it('une autre recherche est déjà suivie : le bouton dit qu’elle sera remplacée', async () => {
+  it('un seul horaire possible ; « Annuler » ne change rien', async () => {
+    const user = userEvent.setup();
+    const calls = mockFetch(watchRoutes());
+    renderPage();
+    await user.click(screen.getByTestId('button-watch'));
+    await user.click(within(await screen.findByTestId('dialog-watch')).getByRole('button', { name: 'Annuler' }));
+    expect(calls.some(call => call.method === 'PUT')).toBe(false);
+    await user.click(screen.getByTestId('button-watch'));
+    const dialog = await screen.findByTestId('dialog-watch');
+    await user.selectOptions(within(dialog).getByTestId('input-watch-time-1'), '');
+    await user.selectOptions(within(dialog).getByTestId('input-watch-time-0'), '07:30');
+    await user.click(within(dialog).getByTestId('button-confirm-watch'));
+    await waitFor(() => expect(calls.find(call => call.method === 'PUT')?.body).toEqual({ times: ['07:30'] }));
+  });
+
+  it('une autre recherche est déjà suivie : la fenêtre dit qu’elle sera remplacée', async () => {
+    const user = userEvent.setup();
     mockFetch(watchRoutes({ ...search({ id: 9 }), criteria: { ...search().criteria, location: 'Lyon' }, watch: 'active', watchTimes: ['08:00'] }));
     renderPage();
-    expect(await screen.findByTestId('text-watch-replace')).toHaveTextContent('« Lyon » sera remplacée');
-    expect(screen.getByTestId('button-watch')).toHaveTextContent('Remplacer mon alerte');
+    await waitFor(async () => {
+      await user.click(screen.getByTestId('button-watch'));
+      expect(await screen.findByTestId('text-watch-replace')).toHaveTextContent('« Lyon » s’arrêtera et redeviendra une recherche ponctuelle');
+    });
+    expect(screen.getByTestId('button-confirm-watch')).toHaveTextContent('Remplacer et suivre celle-ci');
   });
 
   it('recherche suivie : ligne discrète (heures, prochain passage, Arrêter) ; la visite est notée ; les nouvelles sont marquées', async () => {
@@ -599,14 +647,14 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     expect(calls.some(call => call.url.endsWith('/visit'))).toBe(false);
   });
 
-  it('analyse au défilement : les annonces affichées et les 5 suivantes pas encore lues par l’IA sont demandées, une seule fois', async () => {
+  it('annonces affichées mais pas encore lues par l’IA (arrivées par un passage) : analyse demandée, une seule fois', async () => {
     const calls = mockFetch(watchRoutes());
     api.state.data = search({ count: 14, listings: Array.from({ length: 14 }, (_, i) => listing(i + 1, { score: 99 - i, analyzed: i < 3, aiSummary: i < 3 ? 'Lu.' : null })) });
     renderPage();
     expect(screen.getByTestId('card-analyzing-4')).toHaveTextContent('Lecture de l’annonce par l’IA');
     expect(screen.queryByTestId('card-analyzing-1')).not.toBeInTheDocument();
     await waitFor(() => expect(calls.filter(call => call.url.endsWith('/analyze'))).toHaveLength(1));
-    expect(calls.find(call => call.url.endsWith('/analyze'))?.body).toEqual({ listingIds: [4, 5, 6, 7, 8, 9, 10] });
+    expect(calls.find(call => call.url.endsWith('/analyze'))?.body).toEqual({ listingIds: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14] });
   });
 
   it('dates : « Publiée il y a… », et une annonce remontée le dit ; tri par défaut : les plus récentes', () => {
@@ -619,10 +667,10 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     ] });
     renderPage();
     expect(screen.getByTestId('select-sort')).toHaveValue('recent');
-    expect(cardOrder()).toEqual(['2', '3', '1']);
+    expect(cardOrder()).toEqual(['3', '1', '2']); // publiée récemment d’abord ; l’ancienne remontée ne repasse pas devant
     expect(screen.getByTestId('text-listing-date-1')).toHaveTextContent('Publiée il y a 5 h');
     expect(screen.getByTestId('text-listing-date-2')).toHaveTextContent(/^Remontée il y a 1 h · publiée le /);
-    expect(screen.getByTestId('text-live-window')).toHaveTextContent('Annonces mises à jour ces 4 derniers jours');
+    expect(screen.getByTestId('text-live-window')).toHaveTextContent('Recherche ponctuelle : les annonces les plus récentes');
   });
 
   it('« Étendre » en cours : indicateur en bas de liste, bouton désactivé', () => {

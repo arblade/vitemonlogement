@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { ErrorNotice, formatDate } from '@/components/site-shell';
-import { WatchedSearchCard } from '@/components/watched-search';
+import { NewListingsHero, WatchedSearchCard } from '@/components/watched-search';
 import { useWatchedSearch } from '@/lib/watch';
 
 const suggestions = [
@@ -53,7 +53,7 @@ export default function Home() {
 
   return <main>
     <section className="mx-auto max-w-3xl px-5 pb-10 pt-14 text-center md:pt-24">
-      {watched && <div className="mb-9 md:-mt-10"><WatchedSearchCard search={watched}/></div>}
+      {watched && <div className="mb-9 md:-mt-10">{watched.unseenCount > 0 ? <NewListingsHero search={watched}/> : <WatchedSearchCard search={watched}/>}</div>}
       <h1 className="text-balance text-[clamp(1.9rem,4.6vw,3rem)] font-semibold leading-[1.1] tracking-[-.03em]">Trouvez votre prochain chez-vous</h1>
       <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-stone">Racontez-nous le logement idéal. On lit les annonces à votre place et on vous montre lesquelles correspondent vraiment.</p>
       <Form {...promptForm}>

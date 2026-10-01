@@ -19,7 +19,7 @@ export function blockingFailure(error: unknown): string | null {
 }
 
 /** Annonces analysées par étape quand le navigateur en demande (en faisant défiler). */
-const ANALYSIS_STEP = 10;
+const ANALYSIS_STEP = 20;
 
 /**
  * Fait avancer une recherche d'une étape, sous bail (voir worker.ts). Recherche « running » : interprétation de la
@@ -70,7 +70,7 @@ export async function advanceSearch(id: number): Promise<number> {
     const blocking = blockingFailure(error);
     if (blocking) {
       logger.error({ err: error, searchId: id }, "Housing search blocked by the AI service");
-      if (isTask) await clearTask(id, row.task === "watch" ? null : blocking);
+      if (isTask) await clearTask(id, row.task === "watch" || row.task === "backfill" ? null : blocking);
       else await setFailure(id, blocking);
       return 0;
     }
@@ -78,7 +78,7 @@ export async function advanceSearch(id: number): Promise<number> {
     const attempts = await recordAttemptFailure(id, message);
     logger.error({ err: error, searchId: id, attempts, task: row.task }, "Housing search step failed");
     if (attempts >= MAX_STEP_ATTEMPTS) {
-      if (isTask) await clearTask(id, row.task === "watch" ? null : FAILURE_MESSAGE);
+      if (isTask) await clearTask(id, row.task === "watch" || row.task === "backfill" ? null : FAILURE_MESSAGE);
       else await setFailure(id, FAILURE_MESSAGE);
       return 0;
     }
@@ -86,4 +86,5 @@ export async function advanceSearch(id: number): Promise<number> {
   }
 }
 
-const passMode = (row: SearchRow): PassMode => row.status === "running" ? "initial" : row.task === "watch" ? "watch" : "extend";
+const passMode = (row: SearchRow): PassMode =>
+  row.status === "running" ? "initial" : row.task === "watch" || row.task === "backfill" ? row.task : "extend";

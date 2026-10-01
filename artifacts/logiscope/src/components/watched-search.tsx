@@ -28,3 +28,20 @@ export function WatchedSearchCard({ search }: { search: HousingSearchSummary }) 
     <ChevronRight size={18} aria-hidden="true" className="hidden shrink-0 text-[#b0b0b0] transition-transform group-hover:translate-x-1 sm:block"/>
   </Link>;
 }
+
+/**
+ * Accueil, quand la recherche suivie a trouvé des logements pas encore vus : un bloc qui saute aux yeux, avec un seul
+ * geste (« Voir les nouveautés »).
+ */
+export function NewListingsHero({ search }: { search: HousingSearchSummary }) {
+  const count = search.unseenCount;
+  return <section data-testid="hero-new-listings" aria-labelledby="hero-new-title" className="overflow-hidden rounded-[24px] bg-[linear-gradient(150deg,#ff385c,#e31c5f)] p-5 text-left text-white shadow-[0_14px_34px_rgba(227,28,95,.25)] md:p-7">
+    <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold"><BellRing size={14} aria-hidden="true"/>Votre recherche suivie</span>
+    <h2 id="hero-new-title" className="mt-3 text-[clamp(1.4rem,3.6vw,2rem)] font-semibold leading-tight tracking-[-.02em]">
+      {count} nouveau{count > 1 ? 'x' : ''} logement{count > 1 ? 's' : ''} à {search.criteria?.location || 'découvrir'}
+    </h2>
+    <p className="mt-1.5 text-sm text-white/90">Trouvé{count > 1 ? 's' : ''} pour vous depuis votre dernière visite. Soyez parmi les premiers à les voir.</p>
+    <Link href={`/searches/${search.id}`} data-testid="link-hero-new-listings" className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-sm font-semibold text-brand-dark transition-transform hover:translate-x-0.5">
+      Voir les nouveautés <ChevronRight size={17} aria-hidden="true"/></Link>
+  </section>;
+}

@@ -98,15 +98,25 @@ describe('Accueil', () => {
     expect(api.history.refetch).toHaveBeenCalled();
   });
 
-  it('une recherche suivie : carte en haut de l’accueil, avec ses nouvelles annonces et un lien direct', () => {
+  it('recherche suivie avec des nouveautés : un bloc bien visible en haut de l’accueil, un seul bouton pour les voir', () => {
     api.watched = { ...search({ id: 12 }), watch: 'active', watchTimes: ['08:00', '18:00'], unseenCount: 4 };
     renderHome();
-    expect(screen.getByTestId('card-watched-search')).toHaveAttribute('href', '/searches/12');
-    expect(screen.getByTestId('text-watched-unseen')).toHaveTextContent('4 nouvelles');
+    expect(screen.getByTestId('hero-new-listings')).toHaveTextContent('4 nouveaux logements à Lille');
+    expect(screen.getByTestId('link-hero-new-listings')).toHaveAttribute('href', '/searches/12');
+    expect(screen.getByTestId('link-hero-new-listings')).toHaveTextContent('Voir les nouveautés');
+    expect(screen.queryByTestId('card-watched-search')).not.toBeInTheDocument();
+  });
+
+  it('recherche suivie à jour : une carte discrète (rien de nouveau)', () => {
+    api.watched = { ...search({ id: 12 }), watch: 'active', watchTimes: ['08:00'], unseenCount: 0 };
+    renderHome();
+    expect(screen.queryByTestId('hero-new-listings')).not.toBeInTheDocument();
+    expect(screen.getByTestId('text-watched-unseen')).toHaveTextContent('À jour');
   });
 
   it('sans recherche suivie : pas de carte', () => {
     renderHome();
     expect(screen.queryByTestId('card-watched-search')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hero-new-listings')).not.toBeInTheDocument();
   });
 });

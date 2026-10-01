@@ -1,8 +1,8 @@
 /**
  * Lecture des annonces page par page, de la plus récemment mise à jour à la plus ancienne (ordre de Le Bon Coin,
- * vérifié le 01/10/2026). On ne paie que ce qu'on lit : une page de 35 annonces, puis la suivante seulement si on n'a pas
- * encore atteint la borne :
- *  - première recherche (« initial ») : 4 jours en arrière ;
+ * vérifié le 01/10/2026). On ne paie que ce qu'on lit :
+ *  - recherche ponctuelle (« initial ») : les 15 plus récentes, une seule lecture ;
+ *  - recherche suivie, à sa création (« backfill ») : pages de 35, la suivante tant que 4 jours ne sont pas atteints ;
  *  - passage de la recherche suivie (« watch ») : la mise à jour la plus récente lue au passage précédent (curseur) ;
  *    la date, pas « une annonce déjà vue » : une annonce remontée réapparaît en tête et ferait s'arrêter trop tôt ;
  *  - « Étendre » (« extend ») : une seule page, la suivante, plus ancienne.
@@ -26,10 +26,12 @@ const HOUR = 3_600_000;
 export const maxPages = () => intEnv("READ_MAX_PAGES", 3);
 /** Première recherche : annonces mises à jour depuis ce nombre de jours. */
 export const liveDays = () => intEnv("LIVE_SEARCH_DAYS", 4);
-/** Annonces analysées dès la fin de la lecture ; les suivantes le sont quand elles s'affichent. */
-export const firstAnalysis = () => intEnv("FIRST_ANALYSIS", 10);
+/** Annonces analysées dès la fin de la lecture ; les suivantes le sont quand elles s'affichent, 20 par 20. */
+export const firstAnalysis = () => intEnv("FIRST_ANALYSIS", 20);
+/** Recherche ponctuelle : les annonces les plus récentes, en une lecture. */
+export const oneShotLimit = () => Math.min(PAGE_SIZE, intEnv("ONE_SHOT_LIMIT", 15));
 
-export type PassMode = "initial" | "watch" | "extend";
+export type PassMode = "initial" | "backfill" | "watch" | "extend";
 export type PassState = {
   mode: PassMode;
   page: number;
@@ -52,7 +54,8 @@ const clamp = (value: number, low: number, high: number) => Math.max(low, Math.m
 export function firstState(mode: PassMode, row: Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate">, now = Date.now()): PassState {
   const base = { pagesRead: 0, newest: null, oldest: null, reads: 0, fresh: 0, sinceCursor: 0, startedAt: now };
   if (mode === "extend") return { ...base, mode, page: Math.max(1, row.pagesRead + 1), limit: PAGE_SIZE, stopAt: null };
-  if (mode === "initial") return { ...base, mode, page: 1, limit: PAGE_SIZE, stopAt: now - liveDays() * 24 * HOUR };
+  if (mode === "initial") return { ...base, mode, page: 1, limit: oneShotLimit(), stopAt: null };
+  if (mode === "backfill") return { ...base, mode, page: 1, limit: PAGE_SIZE, stopAt: now - liveDays() * 24 * HOUR };
   const cursor = row.cursorAt ?? now - 12 * HOUR;
   const expected = (row.watchRate ?? PAGE_SIZE / 12) * Math.max(0, now - cursor) / HOUR * 1.3;
   return { ...base, mode, page: 1, limit: clamp(Math.ceil(expected), 10, PAGE_SIZE), stopAt: cursor };
@@ -66,7 +69,7 @@ export async function startPage(id: number, criteria: Criteria, state: PassState
   const response = object(await apify(request.path, { method: "POST", headers: { "Content-Type": "application/json" }, body: request.input }));
   const runId = text(object(response.data).id);
   if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
-  const withSources = state.mode === "initial" && state.pagesRead === 0;
+  const withSources = (state.mode === "initial" || state.mode === "backfill") && state.pagesRead === 0;
   const sourceRuns = withSources ? await startExtraSources(criteria, chargeCap, timeout) : null;
   await setPass(id, {
     runId, passState: JSON.stringify(state), focusedRequest: JSON.stringify(request), stage: "searching", attempts: 0,
@@ -92,7 +95,7 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
     await finish(row, criteria, state, false); // les pages déjà lues restent valables
     return "done";
   }
-  const extra = state.mode === "initial" && state.pagesRead === 0 ? await extraSourceItems(row.sourceRuns, PAGE_SIZE) : [];
+  const extra = (state.mode === "initial" || state.mode === "backfill") && state.pagesRead === 0 ? await extraSourceItems(row.sourceRuns, PAGE_SIZE) : [];
   if (extra === "pending") return "pending";
   const datasetId = text(run.defaultDatasetId);
   if (!datasetId) throw new Error("L'exécution Apify n'a pas de jeu de résultats.");
@@ -110,7 +113,8 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
     ...extra.map(({ source, items: sourceItems }) =>
       sourceItems.map(item => normalizeExtra(source, item, criteria, "focused", listing => scoreListing(listing, criteria))).filter(keep)),
   ]);
-  const fresh = await saveRead(row.id, listings);
+  // Même date de première lecture pour tout le passage : ses pages restent groupées dans l'ordre d'affichage.
+  const fresh = await saveRead(row.id, listings, state.startedAt);
 
   const dates = items.map(itemRefreshedAt).filter((value): value is number => value != null);
   const oldest = dates.length ? Math.min(...dates) : null;
@@ -142,11 +146,14 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
   const hours = (from: number | null, to: number | null) => from != null && to != null && to > from ? (to - from) / HOUR : null;
   const span = state.mode === "watch" ? hours(state.stopAt, now) : hours(state.oldest, state.newest);
   const count = state.mode === "watch" ? state.sinceCursor : state.reads;
-  const rate = span && span >= 1 && state.mode !== "extend" ? count / span : row.watchRate;
+  const rate = span && span >= 1 && state.mode !== "extend" && state.limit === PAGE_SIZE ? count / span : row.watchRate;
   const times = row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [];
   await finishPass(row.id, {
     cursorAt: Math.max(row.cursorAt ?? 0, state.newest ?? 0) || null,
-    pagesRead: state.mode === "watch" ? row.pagesRead : Math.max(row.pagesRead, state.page),
+    // Une page lue en partie (recherche ponctuelle, 15 sur 35) ne compte pas : « Étendre » la relira en entier.
+    pagesRead: state.mode === "watch" || state.limit < PAGE_SIZE ? row.pagesRead : Math.max(row.pagesRead, state.page),
+    // Création de la recherche suivie : ce qu'elle trouve sur 4 jours n'est pas « nouveau » (l'utilisateur est là).
+    ...(state.mode === "backfill" ? { lastVisitedAt: now } : {}),
     watchRate: rate,
     ...(state.mode === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, now) } : {}),
   });

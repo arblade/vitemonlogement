@@ -48,19 +48,41 @@ function dateLine(listing: HousingListing) {
   return `Publiée ${ago(listing.postedAt ?? listing.refreshedAt)}`;
 }
 
-const PAGE_SIZE = 5; // annonces affichées d'un coup ; les suivantes arrivent en faisant défiler
+const PAGE_SIZE = 20; // annonces affichées (et analysées) d'un coup ; les suivantes arrivent en faisant défiler
 
-/** Bas de liste : dès qu'il devient visible, un indicateur rose tourne puis les 5 annonces suivantes s'affichent.
- * Le bouton reste là pour le clavier et les navigateurs sans IntersectionObserver. */
-function LoadMore({ remaining, onLoad }: { remaining: number; onLoad: () => void }) {
-  const [loading, setLoading] = useState(false);
+/** Message qui change toutes les 3,5 s pendant une attente un peu longue (lecture des annonces par l'IA). */
+export function RotatingMessage({ messages, testId }: { messages: string[]; testId?: string }) {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setIndex(value => (value + 1) % messages.length), 3_500);
+    return () => window.clearInterval(timer);
+  }, [messages.length]);
+  return <span data-testid={testId} aria-live="polite">{messages[index]}</span>;
+}
+
+const MORE_MESSAGES = [
+  'Nous chargeons les annonces suivantes pour vous…',
+  'L’IA lit les descriptions, une par une…',
+  'Nous vérifions vos critères dans chaque annonce…',
+  'Encore quelques secondes, presque prêt…',
+];
+const BACKFILL_MESSAGES = [
+  'Nous rassemblons les annonces des 4 derniers jours…',
+  'Nous remontons dans le temps, page après page…',
+  'L’IA lit les premières descriptions pour vous…',
+  'Encore un instant, votre recherche suivie se met en place…',
+];
+
+const Spinner = () => <span aria-hidden="true" className="spin-arc size-8 rounded-full border-[3px] border-[#ffe3e8] border-t-brand"/>;
+
+/**
+ * Bas de liste : dès qu'il devient visible (ou au clic, pour le clavier), les 20 annonces suivantes sont demandées ;
+ * l'indicateur rose tourne, avec un message qui change, jusqu'à ce qu'elles soient lues par l'IA.
+ */
+function LoadMore({ remaining, loading, onLoad }: { remaining: number; loading: boolean; onLoad: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const load = useRef(() => {});
-  load.current = () => {
-    if (loading) return;
-    setLoading(true);
-    window.setTimeout(() => { onLoad(); setLoading(false); }, 450); // le temps de voir l'indicateur, sans attendre
-  };
+  const load = useRef(onLoad);
+  load.current = onLoad;
   useEffect(() => {
     const element = ref.current;
     if (!element || typeof IntersectionObserver === 'undefined') return;
@@ -68,10 +90,11 @@ function LoadMore({ remaining, onLoad }: { remaining: number; onLoad: () => void
     observer.observe(element);
     return () => observer.disconnect();
   }, [remaining]);
-  return <div ref={ref} data-testid="results-load-more" className="flex flex-col items-center gap-3 py-6">
+  const next = Math.min(PAGE_SIZE, remaining);
+  return <div ref={ref} data-testid="results-load-more" className="flex flex-col items-center gap-3 py-8">
     {loading
-      ? <span role="status" data-testid="results-loader" className="flex flex-col items-center gap-2 text-xs text-stone"><span aria-hidden="true" className="spin-arc size-8 rounded-full border-[3px] border-[#ffe3e8] border-t-brand"/>Chargement des annonces suivantes…</span>
-      : <button type="button" data-testid="button-load-more" onClick={() => load.current()} className="inline-flex h-10 items-center rounded-lg border border-[#dddddd] bg-white px-4 text-xs font-semibold transition-colors hover:border-ink">Afficher {Math.min(PAGE_SIZE, remaining)} annonce{Math.min(PAGE_SIZE, remaining) > 1 ? 's' : ''} de plus</button>}
+      ? <span role="status" data-testid="results-loader" className="flex flex-col items-center gap-3 text-center text-sm text-stone"><Spinner/><RotatingMessage messages={MORE_MESSAGES} testId="results-loader-message"/></span>
+      : <button type="button" data-testid="button-load-more" onClick={() => load.current()} className="inline-flex h-10 items-center rounded-lg border border-[#dddddd] bg-white px-4 text-xs font-semibold transition-colors hover:border-ink">Afficher {next} annonce{next > 1 ? 's' : ''} de plus</button>}
   </div>;
 }
 
@@ -172,6 +195,8 @@ export default function SearchDetail() {
   const analyzeMore = useAnalyzeHousingSearch();
   const visit = useVisitHousingSearch();
   const [waitingAnalysis, setWaitingAnalysis] = useState(false);
+  // Tranche suivante demandée : ses annonces, et l'heure de la demande (au-delà d'une minute, on les montre quand même).
+  const [nextBatch, setNextBatch] = useState<{ ids: number[]; since: number } | null>(null);
   const search = useGetHousingSearch(id, { query: { queryKey: getGetHousingSearchQueryKey(id), enabled: validId, refetchInterval: query => query.state.data?.status === 'running' || query.state.data?.task || waitingAnalysis ? 3500 : false } });
   const refresh = useRefreshHousingSearch();
   const create = useCreateHousingSearch();
@@ -179,7 +204,8 @@ export default function SearchDetail() {
   const time = (value: string | null | undefined) => value ? Date.parse(value) : -Infinity;
   const listings = useMemo(() => [...(data?.listings || [])].sort((a,b)=>
     sort==='price'?(a.price ?? Infinity)-(b.price ?? Infinity):sort==='area'?(b.area ?? -1)-(a.area ?? -1):sort==='score'?b.score-a.score:
-      (time(b.refreshedAt) - time(a.refreshedAt)) || b.score-a.score), [data?.listings, sort]);
+      // Le dernier passage d'abord, puis la date de publication : une annonce remontée ne repasse pas devant les nouvelles.
+      (time(b.firstSeenAt) - time(a.firstSeenAt)) || (time(b.postedAt ?? b.refreshedAt) - time(a.postedAt ?? a.refreshedAt)) || b.score-a.score), [data?.listings, sort]);
   const isNew = (listing: HousingListing) => data?.watch != null && newSince != null && time(listing.firstSeenAt) > newSince;
   const newCount = listings.filter(isNew).length;
   // Ouverture d'une recherche suivie : on retient la visite précédente (pour marquer les nouvelles), puis on la note.
@@ -191,16 +217,34 @@ export default function SearchDetail() {
       void queryClient.invalidateQueries({ queryKey: getListHousingSearchesQueryKey() });
     } });
   }, [data, newSince, visit.mutate, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Analyse IA au fil du défilement : les annonces affichées et les 5 suivantes, une seule demande par annonce.
+  const askAnalysis = (ids: number[]) => {
+    const fresh = ids.filter(listingId => !requested.current.has(listingId));
+    if (!data || !fresh.length) return;
+    fresh.forEach(listingId => requested.current.add(listingId));
+    analyzeMore.mutate({ id: data.id, data: { listingIds: fresh } }, { onError: () => fresh.forEach(listingId => requested.current.delete(listingId)) });
+  };
+  // Annonces affichées sans analyse (arrivées par un passage, ou ouvertes depuis la carte) : analyse demandée.
   useEffect(() => {
     if (!data || data.status !== 'completed') return;
-    const ahead = listings.slice(0, shown + PAGE_SIZE).filter(item => !item.analyzed);
-    setWaitingAnalysis(ahead.length > 0);
-    const ids = ahead.map(item => item.id).filter(listingId => !requested.current.has(listingId));
-    if (!ids.length) return;
-    ids.forEach(listingId => requested.current.add(listingId));
-    analyzeMore.mutate({ id: data.id, data: { listingIds: ids } }, { onError: () => ids.forEach(listingId => requested.current.delete(listingId)) });
-  }, [data, listings, shown, analyzeMore.mutate]); // eslint-disable-line react-hooks/exhaustive-deps
+    const visible = listings.slice(0, shown).filter(item => !item.analyzed);
+    setWaitingAnalysis(visible.length > 0 || nextBatch !== null);
+    askAnalysis(visible.map(item => item.id));
+  }, [data, listings, shown, nextBatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Faire défiler : les 20 suivantes sont analysées avant d'être montrées (indicateur et messages en attendant).
+  const loadMore = () => {
+    if (nextBatch) return;
+    const batch = listings.slice(shown, shown + PAGE_SIZE);
+    askAnalysis(batch.filter(item => !item.analyzed).map(item => item.id));
+    setNextBatch({ ids: batch.map(item => item.id), since: Date.now() });
+  };
+  useEffect(() => {
+    if (!nextBatch) return;
+    const done = () => { setShown(count => count + PAGE_SIZE); setNextBatch(null); };
+    const ready = nextBatch.ids.every(listingId => listings.find(item => item.id === listingId)?.analyzed !== false);
+    if (ready) { const timer = window.setTimeout(done, Math.max(0, 600 - (Date.now() - nextBatch.since))); return () => window.clearTimeout(timer); }
+    const timer = window.setTimeout(done, Math.max(0, 60_000 - (Date.now() - nextBatch.since)));
+    return () => window.clearTimeout(timer);
+  }, [nextBatch, listings]);
   const mappableCount = useMemo(() => mappedListings(listings).length, [listings]);
   const viewedIds = useMemo(() => new Set(listings.filter(item => interactions.viewed.includes(listingKey(item.url))).map(item => item.id)), [listings, interactions.viewed]);
   const setFiche = (listingId: number, value: boolean) => {
@@ -225,6 +269,7 @@ export default function SearchDetail() {
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
     <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
     <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
+    {data?.task === 'backfill' && <div role="status" data-testid="results-backfill" className="mb-6 flex items-center gap-4 rounded-2xl bg-lime-wash px-4 py-4 text-sm text-moss"><Spinner/><RotatingMessage messages={BACKFILL_MESSAGES}/></div>}
     {newCount > 0 && <p data-testid="text-new-count" className="mb-5 inline-flex items-center gap-2 rounded-lg bg-lime-wash px-3 py-2 text-sm font-semibold text-moss"><BellRing size={15} aria-hidden="true"/>{newCount} nouvelle{newCount > 1 ? 's' : ''} annonce{newCount > 1 ? 's' : ''} depuis votre dernière visite</p>}
     <div className="space-y-5">{listings.slice(0, shown).map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} open={openId === listing.id} setOpen={value => setFiche(listing.id, value)} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
       liked={Boolean(interactions.favorites[listingKey(listing.url)])} viewed={viewedUrls.has(listingKey(listing.url))} isNew={isNew(listing)}
@@ -232,8 +277,8 @@ export default function SearchDetail() {
       onViewed={()=>{ if (!markListingViewed(listing.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }}
       onFavorite={()=>{ void favoriteActions.toggle(listing, id).then(ok => setInteractionError(ok ? '' : 'Impossible d’enregistrer vos favoris pour le moment. Réessayez.')); }}
     />)}</div>
-    {shown < listings.length && <LoadMore remaining={listings.length - shown} onLoad={() => setShown(count => count + PAGE_SIZE)}/>}
-    {shown >= listings.length && data?.task === 'extend' && <div role="status" data-testid="results-extending" className="flex flex-col items-center gap-2 py-6 text-xs text-stone"><span aria-hidden="true" className="spin-arc size-8 rounded-full border-[3px] border-[#ffe3e8] border-t-brand"/>Recherche d’annonces plus anciennes…</div>}
+    {shown < listings.length && <LoadMore remaining={listings.length - shown} loading={nextBatch !== null} onLoad={loadMore}/>}
+    {shown >= listings.length && data?.task === 'extend' && <div role="status" data-testid="results-extending" className="flex flex-col items-center gap-3 py-8 text-sm text-stone"><Spinner/>Recherche d’annonces plus anciennes…</div>}
   </section>;
   const onRelaunch = async (prompt: string) => {
     if (create.isPending) return;
@@ -279,7 +324,7 @@ export default function SearchDetail() {
         {interactionError && <p role="alert" className="mb-5 text-sm text-brick">{interactionError}</p>}
         {data.status !== 'running' && !refresh.isPending &&
         <div className="mb-9 flex flex-col justify-between gap-6 border-b border-line pb-8 md:flex-row md:items-end">
-           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-3xl font-semibold leading-tight tracking-[-.03em] md:text-4xl">{`${data.count} annonce${data.count>1?'s':''} à explorer`}</h2><p data-testid="text-live-window" className="mt-2 text-xs text-stone">Annonces mises à jour ces {liveDays} derniers jours, les plus récentes d’abord. « Étendre » remonte plus loin.</p></div>
+           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-3xl font-semibold leading-tight tracking-[-.03em] md:text-4xl">{`${data.count} annonce${data.count>1?'s':''} à explorer`}</h2><p data-testid="text-live-window" className="mt-2 text-xs text-stone">{data.watch ? `Recherche suivie : les annonces des ${liveDays} derniers jours, puis les nouvelles à chaque passage.` : 'Recherche ponctuelle : les annonces les plus récentes.'} « Étendre » remonte plus loin.</p></div>
            <div className="flex flex-wrap items-center gap-3">{!editingPrompt && <EditPromptButton onClick={() => setEditingPrompt(true)}/>}{data.status==='completed' && <><Button type="button" variant="outline" data-testid="button-refresh" title="Étendre : remonter plus loin dans le temps (annonces plus anciennes)" disabled={data.task === 'extend'} onClick={onRefresh} className="h-10 rounded-lg border-[#dddddd] bg-white px-4 text-xs font-semibold hover:border-ink"><RefreshCw size={15} className="mr-2"/> Étendre</Button>{listings.length>0 && <><span className="flex items-center gap-2"><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="recent">Plus récentes</option><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></span></>}{mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#b0b0b0] bg-cream px-4 text-xs font-semibold transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><MapIcon size={15} aria-hidden="true"/> Voir la carte <span className="rounded-full bg-sage px-2 py-0.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}</>}</div>
         </div>}
          {data.status==='completed' && !refresh.isPending && <WatchPanel key={`${data.id}-${data.watch}`} search={data} other={watchedOther}/>}

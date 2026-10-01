@@ -238,6 +238,7 @@ export type HousingSearchSummaryTask = typeof HousingSearchSummaryTask[keyof typ
 
 export const HousingSearchSummaryTask = {
   watch: 'watch',
+  backfill: 'backfill',
   extend: 'extend',
   analyze: 'analyze',
 } as const;

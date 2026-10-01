@@ -382,7 +382,7 @@ components:
         task:
           description: Background work on a completed search
           type: ["string", "null"]
-          enum: [watch, extend, analyze, null]
+          enum: [watch, backfill, extend, analyze, null]
         watch:
           description: Followed search (« active »), paused for lack of visits (« paused »), or not followed
           type: ["string", "null"]

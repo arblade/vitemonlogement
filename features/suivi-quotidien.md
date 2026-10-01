@@ -184,6 +184,27 @@ curseur et remontées, relecture, pause, rattrapage, une par compte, analyse dem
 analyse au défilement, dates, Étendre) ; navigateur mobile puis ordinateur (créer l'alerte, pastille, titre, arrêter).
 Captures : `maquettes/suivi-*.png`.
 
+## Ajustements du 01/10 (2e passe, sur `develop`)
+- **Recherche ponctuelle** : les **15 annonces les plus récentes**, en une lecture, toutes analysées (`ONE_SHOT_LIMIT`).
+- **Créer une recherche suivie** : bouton avec cloche et texte (« Créer une recherche suivie ») à côté de la mention
+  « Recherche ponctuelle » ; il ouvre une **fenêtre qui explique** (tout de suite les 4 derniers jours jusqu'à 105
+  annonces, puis seulement les nouvelles aux heures choisies, pastille rose, remontées et republications jamais
+  comptées, pause après 7 jours) et prévient quand une autre recherche suivie sera remplacée ; rien n'est activé sans
+  confirmation. À l'activation, la recherche **remonte 4 jours** (pages de 35, 105 au plus) ; ces annonces ne sont pas
+  comptées comme nouvelles (l'utilisateur est là). Puis passages à 8 h et 18 h.
+- **Affichage et analyse par 20** (`FIRST_ANALYSIS` 20) : en bas de liste, les 20 suivantes sont analysées avant d'être
+  montrées ; l'indicateur rose affiche un message qui change toutes les 3,5 s (« Nous chargeons les annonces suivantes
+  pour vous… », « L'IA lit les descriptions, une par une… »…). Les lots de 5 partent 4 à la fois : 20 annonces ≈ le
+  temps d'un lot. Remontée de 4 jours : même indicateur, messages dédiés.
+- **Accueil** : quand la recherche suivie a des logements pas encore vus, un **bloc rose** en haut (« 3 nouveaux
+  logements à Lille », « Voir les nouveautés ») ; sinon la carte discrète « À jour ».
+- **Jamais « nouvelle »** : une annonce **remontée** (même adresse, date de mise à jour plus récente) ni une annonce
+  **supprimée puis republiée** (nouvelle adresse, même titre, loyer, surface, pièces et début de description ; le lien
+  suit la nouvelle adresse). Deux studios identiques lus ensemble restent deux annonces. Ordre « Plus récentes » : le
+  dernier passage d'abord, puis la date de publication, si bien qu'une remontée ne repasse pas devant les nouvelles.
+Captures : `maquettes/suivi-1-accueil-nouveautes-*`, `suivi-2-recherche-ponctuelle-mobile`, `suivi-3-fenetre-*`,
+`suivi-4-chargement-mobile`, `suivi-5-remontee-4-jours-desktop`.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de recherches suivies par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).

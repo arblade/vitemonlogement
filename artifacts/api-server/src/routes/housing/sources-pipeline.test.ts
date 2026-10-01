@@ -121,14 +121,14 @@ test("trois sources : lancées ensemble, PAP attendu, annonces alternées, aucun
   const id = await createSearch("Un T1 ou T2 à Lille, 900 € max");
   assert.equal((await runToCompletion(id)).status, "completed");
   assert.deepEqual(started.sort(), ["abotapi~seloger-france-scraper", "clearpath~pap-scraper", "fatihtahta~leboncoin-fr-scraper", "silentflow~seloger-scraper-ppr"]);
-  // Annonces lues (et payées) par source : Le Bon Coin une page (35), SeLoger 6, PAP 4.
-  assert.equal(inputs["fatihtahta~leboncoin-fr-scraper"].limit, 35, "une page Le Bon Coin");
+  // Annonces lues (et payées) par source : Le Bon Coin 15 (recherche ponctuelle), SeLoger 6, PAP 4.
+  assert.equal(inputs["fatihtahta~leboncoin-fr-scraper"].limit, 15, "recherche ponctuelle : les 15 plus récentes");
   assert.equal(inputs["silentflow~seloger-scraper-ppr"].maxItems, 6);
   assert.equal(inputs["clearpath~pap-scraper"].maxResults, 4);
 
   const search = await getSearch(id);
   const listings = search?.listings ?? [];
-  // Toutes les annonces valides sont gardées (plus de plafond à 5 ou 9) : l'IA n'analyse que les 10 premières d'emblée.
+  // Toutes les annonces valides sont gardées (plus de plafond à 5 ou 9) : l'IA analyse les 20 premières d'emblée.
   assert.equal(listings.length, 11);
   const bySource = (source: string) => listings.filter(listing => listing.source === source).length;
   assert.deepEqual([bySource("leboncoin"), bySource("seloger"), bySource("pap")], [3, 5, 3]);

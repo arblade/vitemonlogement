@@ -235,7 +235,7 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
   }
 });
 
-test("chargement progressif (mobile puis desktop) : 5 annonces, puis en faisant défiler l'indicateur rose et les 5 suivantes", async () => {
+test("chargement progressif (mobile puis desktop) : 20 annonces, puis en faisant défiler l'indicateur rose et les 20 suivantes", async () => {
   const wide = await newContext("desktop");
   try {
     const login = await wide.newPage();
@@ -247,22 +247,22 @@ test("chargement progressif (mobile puis desktop) : 5 annonces, puis en faisant 
     await login.waitForSelector("[data-testid=button-start-search]");
     for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
       const page = await context.newPage();
-      // 12 annonces pour ce test seulement : on complète la vraie réponse de l'API avec des copies de la première.
+      // 45 annonces pour ce test seulement : on complète la vraie réponse de l'API avec des copies de la première.
       await page.route(/\/api\/housing\/searches\/1$/, async route => {
         const data = await (await route.fetch()).json();
-        const extra = Array.from({ length: 9 }, (_, i) => ({ ...data.listings[0], id: 100 + i, title: `Studio copie ${i + 1}`, url: `https://www.leboncoin.fr/ad/locations/80${i}`, score: 10 - i }));
-        await route.fulfill({ json: { ...data, count: 12, listings: [...data.listings, ...extra] } });
+        const extra = Array.from({ length: 42 }, (_, i) => ({ ...data.listings[0], id: 100 + i, title: `Studio copie ${i + 1}`, url: `https://www.leboncoin.fr/ad/locations/80${i}`, score: 10 - i }));
+        await route.fulfill({ json: { ...data, count: 45, listings: [...data.listings, ...extra] } });
       });
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid^=card-listing-]");
       const cards = () => page.locator("[data-testid^=card-listing-]").count();
-      assert.equal(await cards(), 5, name);
+      assert.equal(await cards(), 20, name);
       await page.locator("[data-testid=results-load-more]").scrollIntoViewIfNeeded();
       await page.waitForSelector("[data-testid=results-loader]");
-      assert.match(await text(page, "[data-testid=results-loader]"), /Chargement des annonces suivantes/, name);
-      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 10);
+      assert.match(await text(page, "[data-testid=results-loader]"), /Nous chargeons les annonces suivantes pour vous/, name);
+      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 40);
       await page.locator("[data-testid=results-load-more]").scrollIntoViewIfNeeded();
-      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 12);
+      await page.waitForFunction(() => document.querySelectorAll("[data-testid^=card-listing-]").length === 45);
       assert.equal(await page.locator("[data-testid=results-load-more]").count(), 0, `${name} : plus rien à charger`);
       await page.close();
     }
@@ -271,7 +271,7 @@ test("chargement progressif (mobile puis desktop) : 5 annonces, puis en faisant 
   }
 });
 
-test("recherche suivie (mobile puis desktop) : créer l'alerte à 8 h et 18 h, pastille et titre d'onglet, puis l'arrêter", async () => {
+test("recherche suivie (mobile puis desktop) : la fenêtre explique, on la crée à 8 h et 18 h, bloc de nouveautés, pastille et titre d'onglet, puis on l'arrête", async () => {
   const wide = await newContext("desktop");
   try {
     const login = await wide.newPage();
@@ -285,9 +285,13 @@ test("recherche suivie (mobile puis desktop) : créer l'alerte à 8 h et 18 h, p
       const page = await context.newPage();
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid=card-watch]");
-      assert.match(await text(page, "[data-testid=card-watch]"), /Créer une alerte/, name);
+      assert.match(await text(page, "[data-testid=card-watch]"), /Recherche ponctuelle/, name);
       await page.click("[data-testid=button-watch]");
-      await page.waitForSelector("[data-testid=text-watch-status]");
+      await page.waitForSelector("[data-testid=dialog-watch]");
+      assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose/, name);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-fenetre-${name}.png` });
+      await page.click("[data-testid=button-confirm-watch]");
+      await page.waitForSelector("[data-testid=text-watch-status]:has-text('Recherche suivie')");
       assert.match(await text(page, "[data-testid=text-watch-status]"), /Recherche suivie · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
       // La pastille vient du serveur ; on simule ici 2 annonces trouvées par un passage (le passage lui-même : tests serveur).
       await page.route(/\/api\/housing\/watch$/, async route => {
@@ -295,8 +299,9 @@ test("recherche suivie (mobile puis desktop) : créer l'alerte à 8 h et 18 h, p
         await route.fulfill({ json: { search: { ...data.search, unseenCount: 2 } } });
       });
       await page.goto(`${base}/`);
-      await page.waitForSelector("[data-testid=card-watched-search]");
-      assert.match(await text(page, "[data-testid=text-watched-unseen]"), /2 nouvelles/, name);
+      await page.waitForSelector("[data-testid=hero-new-listings]");
+      assert.match(await text(page, "[data-testid=hero-new-listings]"), /2 nouveaux logements à Lille/, name);
+      assert.equal(await page.getAttribute("[data-testid=link-hero-new-listings]", "href"), "/searches/1", name);
       await page.waitForSelector(name === "mobile" ? "[data-testid=badge-unseen-menu]" : "[data-testid=badge-unseen]");
       assert.equal(await page.title(), "(2) Vite mon logement", name);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-accueil-${name}.png` });
@@ -306,7 +311,7 @@ test("recherche suivie (mobile puis desktop) : créer l'alerte à 8 h et 18 h, p
       await page.waitForSelector("[data-testid=button-watch]");
       await page.goto(`${base}/`);
       await page.waitForSelector("[data-testid=button-start-search]");
-      assert.equal(await page.locator("[data-testid=card-watched-search]").count(), 0, `${name} : plus de recherche suivie`);
+      assert.equal(await page.locator("[data-testid=card-watched-search], [data-testid=hero-new-listings]").count(), 0, `${name} : plus de recherche suivie`);
       await page.close();
     }
   } finally {

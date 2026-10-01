@@ -180,7 +180,7 @@ async function summary(row: SearchRow) {
     createdAt: row.createdAt,
     analyzed: Boolean(row.analyzed),
     error: row.error,
-    task: (row.task as "watch" | "extend" | "analyze" | null) ?? null,
+    task: (row.task as "watch" | "backfill" | "extend" | "analyze" | null) ?? null,
     watch: watchState(row),
     watchTimes: row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [],
     nextWatchAt: row.watched === 1 ? iso(row.nextWatchAt) : null,
@@ -200,7 +200,9 @@ export async function getSearch(id: number) {
   if (!row) return null;
   const t = housingListings;
   const rows = await db().select().from(t).where(and(eq(t.searchId, id), isNull(t.hidden)))
-    .orderBy(sql`${t.refreshedAt} DESC NULLS LAST`, desc(t.score), asc(t.id));
+    // Les annonces du dernier passage d'abord, puis par date de publication : une annonce remontée ou republiée ne
+    // repasse pas devant les nouvelles.
+    .orderBy(desc(t.firstSeenAt), sql`COALESCE(${t.postedAt}, ${t.refreshedAt}) DESC NULLS LAST`, desc(t.score), asc(t.id));
   const listings: Listing[] = rows
     .filter(listing => isHousingListingUrl(listing.url))
     .map(listing => ({
@@ -275,16 +277,35 @@ export function publicListing(listing: Listing) {
   return { ...rest, postedAt: iso(postedAt), refreshedAt: iso(refreshedAt), firstSeenAt: iso(firstSeenAt), analyzed: analyzed !== false };
 }
 
+const squeeze = (value: string) => value.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+/** Empreinte du contenu d'une annonce : titre, loyer, surface, pièces et début de la description. */
+const contentKey = (item: Pick<Listing, "title" | "price" | "area" | "rooms" | "description">) =>
+  [squeeze(item.title), item.price ?? "", item.area ?? "", item.rooms ?? "", squeeze(item.description).slice(0, 300)].join("|");
+
 /**
  * Annonces lues lors d'un passage : les nouvelles sont enregistrées sans analyse (faite à l'affichage) ; celles déjà
  * connues gardent tout, seule leur date de mise à jour avance (annonce remontée). Renvoie les adresses nouvelles.
  */
 export async function saveRead(id: number, listings: Omit<Listing, "id">[], now = Date.now()) {
   const t = housingListings;
-  const known = new Set((await db().select({ url: t.url }).from(t).where(eq(t.searchId, id))).map(row => row.url));
+  const existing = await db().select({ id: t.id, url: t.url, title: t.title, price: t.price, area: t.area, rooms: t.rooms, description: t.description })
+    .from(t).where(eq(t.searchId, id));
+  const known = new Set(existing.map(row => row.url));
+  // Annonce supprimée puis republiée : nouvelle adresse, même contenu. Reconnue si l'ancienne adresse n'est plus dans la
+  // lecture (deux studios identiques d'une même résidence, lus ensemble, restent deux annonces).
+  const read = new Set(listings.map(item => item.url));
+  const reposts = new Map(existing.filter(row => !read.has(row.url)).map(row => [contentKey(row), row]));
   const fresh: string[] = [];
   await db().transaction(async tx => {
     for (const item of listings) {
+      const repost = known.has(item.url) ? undefined : reposts.get(contentKey(item));
+      if (repost) {
+        reposts.delete(contentKey(item));
+        known.add(item.url);
+        await tx.update(t).set({ url: item.url, refreshedAt: sql`GREATEST(COALESCE(${t.refreshedAt}, 0), ${item.refreshedAt ?? 0})` })
+          .where(eq(t.id, repost.id));
+        continue;
+      }
       if (known.has(item.url)) {
         await tx.update(t).set({
           refreshedAt: sql`GREATEST(COALESCE(${t.refreshedAt}, 0), ${item.refreshedAt ?? 0})`,
@@ -374,7 +395,7 @@ export async function setPass(id: number, fields: Partial<Pick<SearchRow, "passS
 }
 
 /** Fin d'une lecture (première recherche ou tâche) : la recherche est prête, la tâche suivante éventuelle est l'analyse demandée. */
-export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error">> = {}) {
+export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt">> = {}) {
   const next = await hasRequestedAnalysis(id) ? "analyze" : null;
   await db().update(housingSearches).set({
     status: "completed", stage: "ready", runId: null, passState: null, task: next, analyzed: 1, attempts: 0, nextCheckAt: 0, error: null, ...fields,
@@ -410,6 +431,10 @@ export async function startWatching(id: number, ownerId: number, times: string[]
       .where(and(eq(housingSearches.ownerId, ownerId), ne(housingSearches.id, id)));
     await tx.update(housingSearches).set({ watched: 1, watchTimes: JSON.stringify(times), nextWatchAt, lastVisitedAt: now })
       .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
+    // Une recherche ponctuelle n'a lu que les 15 plus récentes : la recherche suivie commence par remonter 4 jours.
+    await tx.update(housingSearches).set({ task: "backfill", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
+      .where(and(eq(housingSearches.id, id), eq(housingSearches.pagesRead, 0), eq(housingSearches.status, "completed"),
+        sql`(${housingSearches.task} IS NULL OR ${housingSearches.task} = 'analyze')`));
   });
 }
 

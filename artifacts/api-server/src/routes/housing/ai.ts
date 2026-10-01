@@ -165,6 +165,8 @@ function validVerdict(candidate: { status?: unknown; value?: unknown; evidence?:
   return { status: candidate.status, value: candidate.value.slice(0, 100), evidence: candidate.evidence };
 }
 
+const ANALYSIS_CONCURRENCY = 4;
+
 export async function analyze(listings: Listing[], criteria: Criteria, deps: AnalyzeDeps = {}) {
   if (!listings.length) return [];
   const llm = deps.llm ?? jsonResponse;
@@ -182,8 +184,10 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
   const toAsk = work.filter(entry => entry.missing.length || entry.wantGeneral);
   const fresh = new Map<string, { verdicts: Record<string, Verdict>; general: GeneralExtraction | null }>();
 
-  for (let offset = 0; offset < toAsk.length; offset += 5) {
-    const group = toAsk.slice(offset, offset + 5);
+  // Lots de 5 annonces, jusqu'à 4 en parallèle : 20 annonces analysées en ≈ le temps d'un lot.
+  const groups: (typeof toAsk)[] = [];
+  for (let offset = 0; offset < toAsk.length; offset += 5) groups.push(toAsk.slice(offset, offset + 5));
+  const askGroup = async (group: typeof toAsk) => {
     const payload = group.map(({ listing, missing, wantGeneral }) => ({
       id: listing.id, title: listing.title, description: listing.description.slice(0, 4000),
       price: listing.price, area: listing.area, rooms: listing.rooms, location: listing.location,
@@ -202,8 +206,14 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
       fresh.set(keyOf(listing).urlKey, { verdicts, general });
       entries.push({ ...keyOf(listing), ...(general ? { general } : {}), verdicts });
     }
-    await cache.save(entries, version); // dès maintenant : un échec plus loin ne fait pas repayer ce lot
+    await cache.save(entries, version); // dès maintenant : un échec ailleurs ne fait pas repayer ce lot
+  };
+  const failures: unknown[] = [];
+  for (let start = 0; start < groups.length; start += ANALYSIS_CONCURRENCY) {
+    const settled = await Promise.allSettled(groups.slice(start, start + ANALYSIS_CONCURRENCY).map(askGroup));
+    for (const outcome of settled) if (outcome.status === "rejected") failures.push(outcome.reason);
   }
+  if (failures.length) throw failures[0];
 
   return work.map(({ listing, known }) => {
     const key = keyOf(listing).urlKey;
