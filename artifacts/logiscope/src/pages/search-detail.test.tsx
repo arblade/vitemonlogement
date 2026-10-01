@@ -101,14 +101,14 @@ describe('Page résultats : contenu', () => {
     expect(await screen.findByTestId('dialog-listing-1')).toBeInTheDocument();
   });
 
-  it('vocabulaire : « Chercher d’autres annonces » (plus de « Refresh ») et « favoris » (plus de « aimées »)', async () => {
+  it('vocabulaire : « Étendre » (plus de « Refresh ») et « favoris » (plus de « aimées »)', async () => {
     renderPage();
-    expect(screen.getByTestId('button-refresh')).toHaveTextContent('Chercher d’autres annonces');
+    expect(screen.getByTestId('button-refresh')).toHaveTextContent('Étendre');
     expect(document.body).not.toHaveTextContent(/\bRefresh\b/);
     expect(screen.getByTestId('button-like-1')).toHaveAccessibleName(/Ajouter aux favoris/);
   });
 
-  it('plus de bloc « Affiner votre recherche » : « Modifier ma demande » est le bouton principal, à côté de « Chercher d’autres annonces » qui devient secondaire', () => {
+  it('plus de bloc « Affiner votre recherche » : « Modifier ma demande » est le bouton principal, à côté de « Étendre » qui devient secondaire', () => {
     renderPage();
     expect(document.body).not.toHaveTextContent('Affiner votre recherche');
     const edit = screen.getByTestId('button-edit-prompt'), refresh = screen.getByTestId('button-refresh');
@@ -120,7 +120,7 @@ describe('Page résultats : contenu', () => {
     expect(edit.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('recherche échouée : « Modifier ma demande » reste disponible, sans « Chercher d’autres annonces »', () => {
+  it('recherche échouée : « Modifier ma demande » reste disponible, sans « Étendre »', () => {
     api.state.data = search({ status: 'failed', error: 'Échec', listings: [], count: 0 });
     renderPage();
     expect(screen.getByTestId('button-edit-prompt')).toBeInTheDocument();
@@ -141,7 +141,7 @@ describe('Page résultats : contenu', () => {
     expect(api.create).toHaveBeenCalledWith({ data: { prompt: 'Un T2 à Lille, 800 € max, balcon' } });
   });
 
-  it('le bouton « Chercher d’autres annonces » relance la recherche sur le serveur', async () => {
+  it('le bouton « Étendre » relance la recherche sur le serveur', async () => {
     const user = userEvent.setup();
     api.refresh.mockResolvedValue(search());
     renderPage();

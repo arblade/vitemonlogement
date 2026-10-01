@@ -33,6 +33,27 @@ describe('Caractéristiques en mots simples', () => {
   });
 });
 
+describe('Pas de mots répétés entre libellé et valeur (cas réels signalés)', () => {
+  it('la valeur contient déjà le libellé : on garde la valeur', () => {
+    expect(text('Étage', '18e étage')).toBe('18e étage');
+    expect(text('Balcon', 'vue dégagée sur le balcon')).toBe('Vue dégagée sur le balcon');
+    expect(text('Eau froide', 'eau froide collective')).toBe('Eau froide collective');
+    expect(text('Chauffage', 'chauffage collectif gaz')).toBe('Chauffage collectif gaz');
+    expect(text('Balcons', 'balcon filant')).toBe('Balcon filant');
+  });
+  it('la valeur est déjà dans le libellé : on garde le libellé', () => {
+    expect(text('Chauffage collectif gaz', 'gaz')).toBe('Chauffage collectif gaz');
+    expect(text('Cuisine équipée', 'équipée')).toBe('Cuisine équipée');
+  });
+  it('mots communs à la jonction : fusionnés', () => {
+    expect(text('Chauffage collectif', 'collectif gaz')).toBe('Chauffage collectif gaz');
+  });
+  it('aucun mot commun : libellé puis valeur, comme avant', () => {
+    expect(text('Chauffage', 'individuel électrique')).toBe('Chauffage individuel électrique');
+    expect(text('Cave', 'privative')).toBe('Cave privative');
+  });
+});
+
 describe('Ordre des caractéristiques', () => {
   it('pièces et étage, équipements, énergie, charges, puis ce qui manque', () => {
     const labels = sortFeatures([

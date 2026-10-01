@@ -17,7 +17,7 @@ const ads = [1, 2].map(n => fatihRecord({
 }));
 const counts = { interpret: 0, analyze: 0, apifyRuns: 0, geocode: 0 };
 const actorStarts: string[] = []; // tous les acteurs Apify lancés, quels qu'ils soient
-const openaiBodies: { model?: string; reasoning_effort?: string; max_completion_tokens?: number }[] = [];
+const openaiBodies: { model?: string; reasoning_effort?: string; max_completion_tokens?: number; messages?: { content: string }[] }[] = [];
 let fake: Server;
 
 before(async () => {
@@ -158,6 +158,12 @@ test("sans lieu cité, aucun géocodage (et un géocodeur en panne ne bloque jam
   } finally {
     process.env.GEOCODER_BASE_URL = previous;
   }
+});
+
+test("OpenAI : la consigne d'analyse interdit de répéter le libellé dans la valeur d'une caractéristique (« Balcon » + « vue dégagée sur le balcon »)", () => {
+  const analysis = openaiBodies.find(body => body.messages?.[0].content.includes("Tu lis des annonces immobilières"));
+  assert.ok(analysis, "un appel d'analyse a eu lieu");
+  assert.match(analysis.messages![0].content, /sans jamais répéter les mots du label/);
 });
 
 test("OpenAI : gpt-5-mini en réflexion « faible » pour l'interprétation comme pour l'analyse (moitié prix, sans réponse coupée)", async () => {

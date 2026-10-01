@@ -71,6 +71,25 @@ export const isAbsent = (feature: Pick<HousingFeature, 'value'>) => ['non', 'auc
 
 const lower = (text: string) => text.charAt(0).toLocaleLowerCase('fr') + text.slice(1);
 
+const capitalize = (text: string) => text.charAt(0).toLocaleUpperCase('fr') + text.slice(1);
+const stem = (word: string) => word.replace(/[sx]$/, '');
+const words = (text: string) => normalize(text).split(' ').filter(Boolean).map(stem);
+
+/**
+ * Assemble libellé et valeur sans répéter de mots : l'IA renvoie parfois « Balcon » + « vue dégagée sur le balcon »,
+ * « Eau froide » + « eau froide collective » ou « Étage » + « 18e étage ». Valeur qui contient le libellé → la valeur ;
+ * valeur déjà dans le libellé → le libellé ; mots communs à la jonction → fusionnés ; sinon libellé puis valeur.
+ */
+function joinWithoutRepeat(label: string, value: string) {
+  const l = words(label), v = words(value);
+  if (l.length && l.every(word => v.includes(word))) return capitalize(value);
+  if (v.length && v.every(word => l.includes(word))) return label;
+  for (let k = Math.min(l.length, v.length) - 1; k >= 1; k--) {
+    if (l.slice(-k).join(' ') === v.slice(0, k).join(' ')) return `${label} ${value.split(/\s+/).slice(k).join(' ')}`;
+  }
+  return `${label} ${value}`.replace(/\s+/g, ' ');
+}
+
 /** Une caractéristique en mots simples, lisible d'un coup d'œil : « 3e étage », « Sans ascenseur », « DPE D », « 1 chambre ». */
 export function featureText(feature: Pick<HousingFeature, 'label' | 'value'>) {
   const label = feature.label.trim(), value = (feature.value || '').trim(), key = normalize(label), v = normalize(value);
@@ -79,13 +98,13 @@ export function featureText(feature: Pick<HousingFeature, 'label' | 'value'>) {
   if (key === 'etage') {
     if (/^(rdc|0|rez de chaussee)$/.test(v)) return 'Rez-de-chaussée';
     const floor = v.match(/^(\d+)(?: ?(?:e|er|eme))?(?: sur (\d+))?$/);
-    return floor ? `${floor[1] === '1' ? '1er' : `${floor[1]}e`} étage${floor[2] ? ` sur ${floor[2]}` : ''}` : `Étage ${value}`;
+    return floor ? `${floor[1] === '1' ? '1er' : `${floor[1]}e`} étage${floor[2] ? ` sur ${floor[2]}` : ''}` : joinWithoutRepeat(label, value);
   }
   if (key === 'chambres') { const n = parseInt(value, 10); return Number.isFinite(n) ? `${n} chambre${n > 1 ? 's' : ''}` : `Chambres : ${value}`; }
   if (key === 'salles de bain') { const n = parseInt(value, 10); return Number.isFinite(n) ? `${n} salle${n > 1 ? 's' : ''} de bain` : `Salles de bain : ${value}`; }
   if (key === 'classe energie') return `DPE ${value.toLocaleUpperCase('fr')}`;
   if (key === 'emissions ges') return `GES ${value.toLocaleUpperCase('fr')}`;
-  return `${label} ${value}`.replace(/\s+/g, ' ');
+  return joinWithoutRepeat(label, value);
 }
 
 const featureIcons: [RegExp, LucideIcon][] = [
