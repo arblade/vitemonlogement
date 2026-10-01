@@ -19,13 +19,10 @@ export function SearchPromptEditor({ prompt, pending, error, onSubmit }: {
   const { reset } = form;
   useEffect(() => { reset({ prompt }); setEditing(false); }, [prompt, reset]);
 
-  return <section aria-label="Modifier la recherche" className="mb-6 rounded-xl border border-line bg-cream p-4 md:px-6">
-    <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h2 className="text-base font-semibold">Affiner votre recherche</h2>
-        {editing && <p className="mt-1 text-xs leading-relaxed text-stone">Modifiez votre demande et lancez une nouvelle recherche. Celle-ci restera dans votre historique.</p>}</div>
-      {!editing && <Button type="button" data-testid="button-edit-prompt" onClick={() => setEditing(true)} className="h-10 rounded-lg bg-brand px-4 text-xs font-semibold text-lime-light hover:bg-brand-dark"><Pencil size={14} className="mr-2"/> Modifier ma demande</Button>}
-    </div>
-    {editing && <Form {...form}><form onSubmit={form.handleSubmit(({ prompt: value }) => onSubmit(value.trim()))} className="mt-5 space-y-3">
+  return <section aria-label="Modifier la recherche" className={editing ? 'mt-5 max-w-[700px] rounded-xl border border-line bg-cream p-4 md:p-5' : 'mt-4'}>
+    {!editing && <Button type="button" variant="outline" data-testid="button-edit-prompt" onClick={() => setEditing(true)} className="h-11 rounded-lg border-[#dddddd] bg-white px-4 text-xs font-semibold hover:border-ink"><Pencil size={14} className="mr-2"/> Modifier ma demande</Button>}
+    {editing && <p className="text-xs leading-relaxed text-stone">Modifiez votre demande et lancez une nouvelle recherche. Celle-ci restera dans votre historique.</p>}
+    {editing && <Form {...form}><form onSubmit={form.handleSubmit(({ prompt: value }) => onSubmit(value.trim()))} className="mt-3 space-y-3">
       <FormField control={form.control} name="prompt" rules={{
         required: 'Décrivez le logement recherché.',
         validate: value => value.trim().length >= 10 || 'Décrivez votre recherche en au moins 10 caractères.',

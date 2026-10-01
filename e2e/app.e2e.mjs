@@ -171,6 +171,14 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       assert.match(await text(page, "[data-testid=link-source-1]"), /Voir sur Le Bon Coin/, name);
       assert.match(await text(page, "[data-testid=link-source-2]"), /Voir sur PAP/, name);
       assert.equal(await page.getAttribute("[data-testid=link-source-2]", "href"), "https://www.pap.fr/annonces/-r442803002", name);
+      // En-tête des résultats : « Modifier ma demande » directement visible, pas de bloc « Affiner », « Chercher d'autres annonces » discret.
+      assert.doesNotMatch(await text(page, "body"), /Affiner votre recherche/, name);
+      for (const id of ["button-edit-prompt", "button-refresh"]) {
+        const box = await page.locator(`[data-testid=${id}]`).boundingBox();
+        assert.ok(box && box.height >= 32 && box.x >= 0 && box.x + box.width <= page.viewportSize().width, `${name} : ${id} (${JSON.stringify(box)})`);
+        assert.doesNotMatch(await page.getAttribute(`[data-testid=${id}]`, "class"), /bg-brand/, `${name} : ${id} en secondaire`);
+      }
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
       // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).

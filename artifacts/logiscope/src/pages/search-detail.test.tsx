@@ -108,6 +108,28 @@ describe('Page résultats : contenu', () => {
     expect(screen.getByTestId('button-like-1')).toHaveAccessibleName(/Ajouter aux favoris/);
   });
 
+  it('plus de bloc « Affiner votre recherche » : « Modifier ma demande » est un bouton direct, « Chercher d’autres annonces » est secondaire', () => {
+    renderPage();
+    expect(document.body).not.toHaveTextContent('Affiner votre recherche');
+    expect(screen.getByTestId('button-edit-prompt')).toHaveTextContent('Modifier ma demande');
+    expect(screen.getByTestId('button-edit-prompt').className).not.toContain('bg-brand');
+    expect(screen.getByTestId('button-refresh').className).not.toContain('bg-brand');
+    expect(screen.getByTestId('button-refresh').className).toContain('border');
+  });
+
+  it('« Modifier ma demande » ouvre le champ prérempli et relance une nouvelle recherche', async () => {
+    const user = userEvent.setup();
+    api.create.mockResolvedValue(search({ id: 2 }));
+    renderPage();
+    await user.click(screen.getByTestId('button-edit-prompt'));
+    const field = screen.getByTestId('input-edit-prompt');
+    expect(field).toHaveValue('Un studio à Lille, 700 € max, chat accepté');
+    await user.clear(field);
+    await user.type(field, 'Un T2 à Lille, 800 € max, balcon');
+    await user.click(screen.getByTestId('button-relaunch-search'));
+    expect(api.create).toHaveBeenCalledWith({ data: { prompt: 'Un T2 à Lille, 800 € max, balcon' } });
+  });
+
   it('le bouton « Chercher d’autres annonces » relance la recherche sur le serveur', async () => {
     const user = userEvent.setup();
     api.refresh.mockResolvedValue(search());
