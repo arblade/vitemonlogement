@@ -115,8 +115,9 @@ Les deux sources sont branchées, en plus de Le Bon Coin.
   élargie ne relance que Le Bon Coin. Une source qui ne démarre pas ou échoue est journalisée et ignorée : la recherche
   aboutit avec les autres. La recherche attend que toutes les sources aient fini avant de lire les résultats.
 - **Ville** : PAP et SeLoger seulement si la ville est une commune reconnue sans ambiguïté (sinon Le Bon Coin seul).
-  Code de lieu SeLoger résolu au premier usage (run `abotapi` sans annonce, coût nul mesuré, ≈ 5 s), vérifié par le
-  département, puis gardé dans la table `seloger_locations`.
+  Code de lieu SeLoger résolu au premier usage (run `abotapi`, ≈ 0,09 $ de démarrage, 7 à 45 s ; le « coût nul »
+  mesuré d'abord venait d'un plafond trop bas qui interrompait le run), vérifié par le département, puis gardé dans
+  la table `seloger_locations`.
 - **Location uniquement** : requête (`product: "location"`, `distributionTypes=Rent`) puis lecture (`product`,
   `transactionType`, chemin d'URL `/annonce/location/` ou `/annonces/locations/` pour SeLoger). Tests : une vente
   glissée dans les résultats de chaque source est écartée ; chaque verrou retiré fait échouer un test.

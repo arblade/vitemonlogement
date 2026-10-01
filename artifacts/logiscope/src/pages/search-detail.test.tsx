@@ -125,13 +125,14 @@ describe('Page résultats : mode debug', () => {
 
   it('avec ?debug=1, les appels PAP et SeLoger s’affichent à côté de ceux de Le Bon Coin', () => {
     window.history.replaceState(null, '', '/searches/1?debug=1');
-    const lbc = { batch: 'focused' as const, path: '/v2/actors/clearpath~leboncoin-api/runs', input: JSON.stringify({ searchUrl: 'https://www.leboncoin.fr/recherche?category=10&text=balcon' }) };
+    const lbc = { batch: 'focused' as const, path: '/v2/acts/fatihtahta~leboncoin-fr-scraper/runs', input: JSON.stringify({ startUrls: ['https://www.leboncoin.fr/recherche?category=10&text=balcon'], limit: 10 }) };
     api.state.data = search({ searchRequests: [lbc,
       { batch: 'focused', source: 'pap', path: '/v2/acts/clearpath~pap-scraper/runs', input: JSON.stringify({ product: 'location' }) },
       { batch: 'focused', source: 'seloger', path: '/v2/acts/silentflow~seloger-scraper-ppr/runs', input: JSON.stringify({ startUrls: ['https://www.seloger.com/classified-search?distributionTypes=Rent'] }) },
     ] });
     renderPage();
-    expect(screen.getByTestId('search-request-focused')).toHaveTextContent('leboncoin-api');
+    expect(screen.getByTestId('search-request-focused')).toHaveTextContent('fatihtahta~leboncoin-fr-scraper');
+    expect(screen.queryByTestId('search-request-broad')).not.toBeInTheDocument();
     expect(screen.getByTestId('search-request-pap')).toHaveTextContent('"product": "location"');
     expect(screen.getByTestId('search-request-seloger')).toHaveTextContent('distributionTypes=Rent');
   });

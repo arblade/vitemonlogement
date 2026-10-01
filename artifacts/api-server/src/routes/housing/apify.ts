@@ -5,17 +5,17 @@ import { first, getImages, number, object, text } from "./parse";
 import { apify } from "./apify-client";
 import { interleave, normalizeExtra, startExtraSources, type SourceRun } from "./sources";
 import { apiValue, checksFor, evaluateStructured, matchesKnownBasics } from "./criteria";
-import { actorRequest, focusedSearchTerm, isHousingListingUrl, shouldRunBroad, type SearchBatch } from "./housing-search";
+import { actorRequest, isHousingListingUrl, type SearchBatch } from "./housing-search";
 
 // Limites par appel Apify, identiques en développement et en production (protège le budget Apify).
 // Modifiables par variables d'environnement : APIFY_RESULT_LIMIT (annonces conservées, défaut 5),
-// APIFY_CANDIDATE_LIMIT (annonces examinées, défaut 10 : l'acteur exige adLimit >= 10).
+// APIFY_CANDIDATE_LIMIT (annonces Le Bon Coin examinées, défaut 10). SeLoger et PAP : voir sources.ts.
 function intEnv(name: string, fallback: number) {
   const value = Number.parseInt(process.env[name] ?? "", 10);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 export const RESULT_LIMIT = intEnv("APIFY_RESULT_LIMIT", 5);
-const CANDIDATE_LIMIT = Math.max(10, intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
+const CANDIDATE_LIMIT = Math.max(intEnv("APIFY_CANDIDATE_LIMIT", 10), RESULT_LIMIT);
 
 
 function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
@@ -62,6 +62,7 @@ function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Fe
     const raw = apiValue(data, key);
     if (typeof raw !== "string" && typeof raw !== "number" && typeof raw !== "boolean") continue;
     let value = String(raw).trim();
+    if ((spec.label === "Classe énergie" || spec.label === "Émissions GES") && /^[a-g]$/i.test(value)) value = value.toUpperCase();
     if (!value || value.length > 70) continue;
     if ("yesNo" in spec && spec.yesNo) {
       if (raw === true || raw === 1 || /^(oui|yes|true|1|meubl[eé])$/i.test(value)) value = "Oui";
@@ -104,9 +105,40 @@ export const isDwellingType = (data: Record<string, unknown>) =>
   !NOT_DWELLING.has(text(first(data, ["real_estate_type"])).trim().toLocaleLowerCase("fr")) &&
   !NOT_DWELLING.has(text(apiValue({ attributes: data.attributes }, "real_estate_type")).trim().toLocaleLowerCase("fr"));
 
+const parsed = (value: unknown) => {
+  if (typeof value !== "string") return object(value);
+  try { return object(JSON.parse(value)); } catch { return {}; }
+};
+
+/**
+ * Annonce de l'acteur `fatihtahta` (record « property_listing ») ramenée au format Le Bon Coin lu par `normalize`.
+ * Location seulement : `deal_type` doit valoir « rent ». Photos demandées en grande taille, comme avec `clearpath`.
+ */
+export function fromFatihRecord(record: Record<string, unknown>): Record<string, unknown> | null {
+  if (parsed(record.listing).deal_type !== "rent") return null;
+  const raw = parsed(record.source_data);
+  const property = parsed(record.property);
+  const urls = parsed(parsed(record.media).images).urls;
+  // clearpath recopie le libellé de chaque attribut au premier niveau (« Non meublé », « Non ») ; le code seul
+  // (« 2 ») ne serait pas compris par les critères meublé, ascenseur, parking.
+  const labels = Object.fromEntries((Array.isArray(raw.attributes) ? raw.attributes : []).map(object)
+    .filter(attribute => typeof attribute.key === "string" && typeof attribute.value_label === "string")
+    .map(attribute => [attribute.key as string, attribute.value_label]));
+  return {
+    ...labels,
+    url: record.url, subject: record.title, body: record.description,
+    price_euros: object(record.pricing).amount_eur,
+    square: property.surface_m2, rooms: property.rooms,
+    location: raw.location, attributes: raw.attributes,
+    images: { urls_large: Array.isArray(urls) ? urls.map(url => String(url).replace("rule=ad-image", "rule=ad-large")) : [] },
+  };
+}
+
 export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch = "focused"): Omit<Listing, "id"> | null {
   const source = object(raw);
-  const data = Object.keys(object(source.ad)).length ? object(source.ad) : source;
+  const fatih = source.record_type === "property_listing" ? fromFatihRecord(source) : undefined;
+  if (fatih === null) return null;
+  const data = fatih ?? (Object.keys(object(source.ad)).length ? object(source.ad) : source);
   const url = text(first(data, ["url", "link", "adUrl", "ad_url", "listingUrl"]));
   if (!isHousingListingUrl(url)) return null;
   // Filet de sécurité : la recherche demande déjà « appartement ou maison », mais la requête de repli (ville non
@@ -129,11 +161,11 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   return { ...listing, criterionResults, score: scoreListing(listing, criteria) };
 }
 
-export async function startSearch(criteria: Criteria, batch: SearchBatch = "focused") {
-  // The actor requires adLimit >= 10: inspect CANDIDATE_LIMIT (10) candidates, retain RESULT_LIMIT (5).
+export async function startSearch(criteria: Criteria) {
+  // Inspect CANDIDATE_LIMIT (10) Le Bon Coin candidates, retain RESULT_LIMIT (5) across all sources.
   const chargeCap = process.env.APIFY_MAX_CHARGE_USD || "0.10";
   const timeout = intEnv("APIFY_TIMEOUT_SECONDS", 120);
-  const request = actorRequest(criteria, batch, CANDIDATE_LIMIT, chargeCap, timeout);
+  const request = actorRequest(criteria, CANDIDATE_LIMIT, chargeCap, timeout);
   const response = object(await apify(request.path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -141,8 +173,8 @@ export async function startSearch(criteria: Criteria, batch: SearchBatch = "focu
   }));
   const runId = text(object(response.data).id);
   if (!runId) throw new Error("Apify n'a pas retourné d'identifiant d'exécution.");
-  // PAP et SeLoger en parallèle, seulement pour la recherche ciblée (la phase élargie ne concerne que Le Bon Coin).
-  const sourceRuns = batch === "focused" ? await startExtraSources(criteria, CANDIDATE_LIMIT, chargeCap, timeout) : [];
+  // PAP et SeLoger en parallèle.
+  const sourceRuns = await startExtraSources(criteria, chargeCap, timeout);
   return { runId, request, sourceRuns };
 }
 
@@ -185,13 +217,13 @@ async function extraSourceItems(raw: string | null): Promise<"pending" | { sourc
 export async function syncSearch(id: number, criteria: Criteria) {
   const row = await getSearchRow(id);
   if (!row || row.status !== "running" || !row.runId) return;
-  const phase: SearchBatch = row.phase === "broad" ? "broad" : "focused";
+  const phase: SearchBatch = "focused";
   try {
     const result = object(await apify(`/v2/actor-runs/${encodeURIComponent(row.runId)}`));
     const run = object(result.data);
     const status = text(run.status);
     if (status === "SUCCEEDED") {
-      const extra = phase === "focused" ? await extraSourceItems(row.sourceRuns) : [];
+      const extra = await extraSourceItems(row.sourceRuns);
       if (extra === "pending") return; // une autre source tourne encore : le worker repasse au prochain contrôle
       const datasetId = text(run.defaultDatasetId);
       if (!datasetId) throw new Error("L'exécution Apify n'a pas de jeu de résultats.");
@@ -210,7 +242,6 @@ export async function syncSearch(id: number, criteria: Criteria) {
         ...extra.map(({ source, items: sourceItems }) =>
           sourceItems.map(item => normalizeExtra(source, item, criteria, phase, listing => scoreListing(listing, criteria))).filter(keep)),
       ]);
-      let runBroad = false;
       await setAnalyzing(id);
       try {
         // Prefer new ads to ones already saved during a refresh or the focused
@@ -255,19 +286,14 @@ export async function syncSearch(id: number, criteria: Criteria) {
           }
         }
         if (setAside.length) logger.info({ searchId: id, setAside }, "Listings set aside: not an entire dwelling");
-        // Count only homes that survived all checks, including description-based
-        // contradictions. A large raw dataset is not 40 usable matches.
-        runBroad = phase === "focused" && shouldRunBroad(saved.length, Boolean(focusedSearchTerm(criteria)));
-        await completeSearch(id, saved, phase, runBroad, RESULT_LIMIT);
-        // Si la phase élargie est nécessaire, completeSearch a laissé la recherche « running » sans run :
-        // le worker la reprend au prochain passage, même après un redémarrage du serveur.
+        await completeSearch(id, saved, phase, RESULT_LIMIT);
       } catch (error) {
         // Pas d'échec définitif ici : le worker réessaie (l'analyse déjà payée est en cache) puis abandonne.
         throw error;
       }
     } else if (["FAILED", "TIMED-OUT", "TIMING-OUT", "ABORTED", "ABORTING"].includes(status)) {
       logger.error({ searchId: id, status, statusMessage: text(run.statusMessage) }, "Apify run did not succeed");
-      await setFailure(id, FAILURE_MESSAGE, Boolean(row.analyzed) || phase === "broad");
+      await setFailure(id, FAILURE_MESSAGE, Boolean(row.analyzed));
     }
   } catch (error) {
     logger.error({ err: error, searchId: id }, "Unable to synchronize Apify run");

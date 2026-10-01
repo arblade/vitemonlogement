@@ -5,15 +5,16 @@ import type { AddressInfo } from "node:net";
 import test, { after, before, beforeEach } from "node:test";
 import { eq } from "drizzle-orm";
 import { housingSearches } from "@workspace/db";
+import { fatihRecord } from "../../test/fatih";
 
 // Bout en bout, piloté par le vrai worker : Le Bon Coin, SeLoger et PAP lancés ensemble, annonces mélangées,
 // location uniquement. Faux serveurs Apify et OpenAI locaux.
 const sample = (name: string) => JSON.parse(readFileSync(new URL(`../../test/${name}`, import.meta.url), "utf8")) as Record<string, unknown>[];
 const pap = sample("pap-sample.json");
 const seloger = sample("seloger-sample.json");
-const lbc = [1, 2, 3].map(n => ({
-  url: `https://www.leboncoin.fr/ad/locations/77${n}`, subject: `Appartement T2 Lille ${n}`, body: `Appartement T2 ${n}, loyer charges comprises.`,
-  price_euros: 600 + n * 10, square: 40 + n, rooms: 2, real_estate_type: "Appartement", location: { city: "Lille" },
+const lbc = [1, 2, 3].map(n => fatihRecord({
+  url: `https://www.leboncoin.fr/ad/locations/77${n}`, title: `Appartement T2 Lille ${n}`, description: `Appartement T2 ${n}, loyer charges comprises.`,
+  price: 600 + n * 10, area: 40 + n, rooms: 2,
 }));
 
 const datasets: Record<string, unknown[]> = {
@@ -24,12 +25,15 @@ const datasets: Record<string, unknown[]> = {
 };
 let runStatus: Record<string, string[]> = {};
 let started: string[] = [];
+// Paramètres reçus par chaque acteur ; le faux Apify ne rend pas plus d'annonces que demandé (comme le vrai).
+let inputs: Record<string, Record<string, unknown>> = {};
 let datasetReads: string[] = [];
 let interpretation: Record<string, unknown> = {};
 let fake: Server;
 
 beforeEach(() => {
   started = [];
+  inputs = {};
   datasetReads = [];
   interpretation = { location: "Lille", intent: "rent", maxPrice: 900, minRooms: 1, maxRooms: 2, radius: 5, keywords: "", uncertainChecks: [], places: [] };
   // PAP : encore en cours au premier contrôle, la recherche doit l'attendre.
@@ -46,7 +50,8 @@ before(async () => {
       if (req.method === "POST" && url.startsWith("/v2/")) {
         const actor = url.match(/^\/v2\/acts?(?:ors)?\/([^/]+)\/runs/)?.[1] ?? url;
         started.push(actor);
-        if (actor === "clearpath~leboncoin-api") return json({ data: { id: "run-lbc" } });
+        inputs[actor] = JSON.parse(body || "{}");
+        if (actor === "fatihtahta~leboncoin-fr-scraper") return json({ data: { id: "run-lbc" } });
         if (actor === "clearpath~pap-scraper") return json({ data: { id: "run-pap" } });
         if (actor === "silentflow~seloger-scraper-ppr") return json({ data: { id: "run-seloger" } });
         if (actor === "abotapi~seloger-france-scraper") return json({ data: { id: "run-resolve" } });
@@ -62,7 +67,12 @@ before(async () => {
         return json({ data: { status, defaultDatasetId: `ds-${run.slice(4)}` } });
       }
       const dataset = url.match(/^\/v2\/datasets\/(ds-[a-z]+)\/items/)?.[1];
-      if (dataset) { datasetReads.push(dataset); return json(datasets[dataset]); }
+      if (dataset) {
+        datasetReads.push(dataset);
+        const asked = { "ds-lbc": inputs["fatihtahta~leboncoin-fr-scraper"]?.limit, "ds-pap": inputs["clearpath~pap-scraper"]?.maxResults,
+          "ds-seloger": inputs["silentflow~seloger-scraper-ppr"]?.maxItems }[dataset];
+        return json(datasets[dataset].slice(0, Number(asked) || undefined));
+      }
       if (url.endsWith("/chat/completions")) {
         const request = JSON.parse(body) as { messages: { content: string }[] };
         const content = request.messages[0].content.includes("Interprète une demande")
@@ -108,7 +118,11 @@ test("trois sources : lancées ensemble, PAP attendu, annonces alternées, aucun
   const { createSearch, getSearch } = await import("./store");
   const id = await createSearch("Un T1 ou T2 à Lille, 900 € max");
   assert.equal((await runToCompletion(id)).status, "completed");
-  assert.deepEqual(started.sort(), ["abotapi~seloger-france-scraper", "clearpath~leboncoin-api", "clearpath~pap-scraper", "silentflow~seloger-scraper-ppr"]);
+  assert.deepEqual(started.sort(), ["abotapi~seloger-france-scraper", "clearpath~pap-scraper", "fatihtahta~leboncoin-fr-scraper", "silentflow~seloger-scraper-ppr"]);
+  // Annonces lues (et payées) par source : Le Bon Coin 10, SeLoger 6, PAP 4.
+  assert.equal(inputs["fatihtahta~leboncoin-fr-scraper"].limit, 10);
+  assert.equal(inputs["silentflow~seloger-scraper-ppr"].maxItems, 6);
+  assert.equal(inputs["clearpath~pap-scraper"].maxResults, 4);
 
   const search = await getSearch(id);
   const listings = search?.listings ?? [];
@@ -137,24 +151,24 @@ test("LISTING_SOURCES=leboncoin : ni PAP ni SeLoger ne sont lancés", async () =
     const { createSearch, getSearch } = await import("./store");
     const id = await createSearch("Studio ou T2 à Lille, 900 € max");
     assert.equal((await runToCompletion(id)).status, "completed");
-    assert.deepEqual(started, ["clearpath~leboncoin-api"]);
+    assert.deepEqual(started, ["fatihtahta~leboncoin-fr-scraper"]);
     assert.ok((await getSearch(id))?.listings.every(listing => listing.source === "leboncoin"));
   } finally {
     delete process.env.LISTING_SOURCES;
   }
 });
 
-test("phase élargie (Le Bon Coin sans mot-clé) : PAP et SeLoger ne sont ni relancés ni relus, leurs requêtes restent au suivi", async () => {
+test("plus de recherche élargie : avec un souhait et peu d'annonces, Le Bon Coin n'est interrogé qu'une fois, avec le mot-clé", async () => {
   interpretation = { ...interpretation, uncertainChecks: [{ label: "balcon", availability: "description", apiField: null }] };
-  runStatus["run-lbc"] = ["SUCCEEDED"];
   const { createSearch, getSearch } = await import("./store");
   const id = await createSearch("T2 à Lille avec balcon, 900 € max");
   assert.equal((await runToCompletion(id)).status, "completed");
   const search = await getSearch(id);
-  assert.equal(search?.phase, "broad", "moins de 40 annonces : la recherche élargie a eu lieu");
-  assert.equal(started.filter(actor => actor === "clearpath~leboncoin-api").length, 2);
-  assert.equal(started.filter(actor => actor === "clearpath~pap-scraper").length, 1);
+  assert.equal(search?.phase, "focused");
+  assert.deepEqual(started.filter(actor => actor.includes("leboncoin")), ["fatihtahta~leboncoin-fr-scraper"], "un seul run Le Bon Coin");
+  assert.equal(new URL((inputs["fatihtahta~leboncoin-fr-scraper"].startUrls as string[])[0]).searchParams.get("text"), "balcon");
   assert.deepEqual([datasetReads.filter(d => d === "ds-pap").length, datasetReads.filter(d => d === "ds-seloger").length], [1, 1]);
   assert.deepEqual(search?.searchRequests?.map(request => `${request.source ?? "leboncoin"}/${request.batch}`).sort(),
-    ["leboncoin/broad", "leboncoin/focused", "pap/focused", "seloger/focused"]);
+    ["leboncoin/focused", "pap/focused", "seloger/focused"]);
 });
+

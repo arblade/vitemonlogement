@@ -44,18 +44,4 @@ describe('SearchProgress', () => {
     render(<SearchProgress stage="n-importe-quoi"/>);
     expect(state('interpreting').current).toBe(true);
   });
-
-  it('phase élargie : tout est terminé, « Recherche élargie » est en cours, la barre ne recule pas, pas d’aperçu', () => {
-    render(<SearchProgress stage="searching" phase="broad"/>);
-    for (const key of ['interpreting', 'searching', 'analyzing']) expect(state(key).text).toBe('terminée');
-    expect(screen.getByTestId('stage-broad')).toHaveAttribute('aria-current', 'step');
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '85');
-    expect(screen.getByText(/premières annonces sont disponibles/)).toBeInTheDocument();
-    expect(screen.queryByTestId('progress-preview')).not.toBeInTheDocument();
-  });
-
-  it('phase élargie, vérification : la barre avance un peu', () => {
-    render(<SearchProgress stage="analyzing" phase="broad"/>);
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '92');
-  });
 });

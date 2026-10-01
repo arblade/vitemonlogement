@@ -4,18 +4,20 @@ import type { AddressInfo } from "node:net";
 import test, { after, before } from "node:test";
 import { eq } from "drizzle-orm";
 import { housingSearches } from "@workspace/db";
+import { fatihRecord } from "../../test/fatih";
 
 // Cas signalé en production : « T1 ou T2 à Lille » renvoyait des parkings et des chambres en colocation.
 // Les annonces imitent celles relevées le 01/10/2026 (features/enquete-parkings-colocations.md).
-const ad = (n: number, title: string, extra: Record<string, unknown> = {}) => ({
-  url: `https://www.leboncoin.fr/ad/locations/90${n}`, subject: title, body: `${title}. Loyer charges comprises.`,
-  price_euros: 600, square: 30, rooms: 2, real_estate_type: "Appartement", location: { city: "Lille" }, ...extra,
+const ad = (n: number, title: string, extra: Partial<Parameters<typeof fatihRecord>[0]> = {}) => fatihRecord({
+  url: `https://www.leboncoin.fr/ad/locations/90${n}`, title, description: `${title}. Loyer charges comprises.`,
+  price: 600, area: 30, rooms: 2, ...extra,
 });
 const dataset = [
-  ad(1, "Parking 10 m² Lille", { real_estate_type: "Parking", rooms: undefined, price_euros: 51 }),
+  ad(1, "Parking 10 m² Lille", { realEstateType: "4", rooms: undefined, price: 51 }),
   ad(2, "Chambre avec SDB privée - Coliving - Lille Centre"),
   ad(3, "Appartement T2 Gambetta"),
-  ad(4, "Garage box fermé", { real_estate_type: undefined, rooms: undefined, attributes: [{ key: "real_estate_type", value: "4", value_label: "Parking" }] }),
+  // Vente glissée dans les résultats : écartée par deal_type, même avec une URL de location.
+  ad(4, "Appartement T2 à vendre Lille", { dealType: "sale" }),
   ad(5, "Appartement 3 pièces Fives", { rooms: 3 }),
   ad(6, "Studio lumineux Wazemmes", { rooms: 1 }),
   ad(7, "T2 Vieux-Lille"),
@@ -35,7 +37,7 @@ before(async () => {
     req.on("end", () => {
       const json = (value: unknown) => { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(value)); };
       const url = req.url ?? "";
-      if (req.method === "POST" && url.startsWith("/v2/actors/")) { actorInputs.push(JSON.parse(body)); return json({ data: { id: "run-1" } }); }
+      if (req.method === "POST" && url.startsWith("/v2/acts/fatihtahta~leboncoin-fr-scraper/runs")) { actorInputs.push(JSON.parse(body)); return json({ data: { id: "run-1" } }); }
       if (url.startsWith("/v2/actor-runs/")) return json({ data: { status: "SUCCEEDED", defaultDatasetId: "ds-1" } });
       if (url.startsWith("/v2/datasets/")) return json(dataset);
       if (url.endsWith("/chat/completions")) {
@@ -102,7 +104,7 @@ test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demand
   assert.deepEqual(search?.criteria.checks?.map(check => check.label), ["Lieu : Lille", "Budget : 0 à 700 €", "1 à 2 pièces"],
     "pas de critère « souhait exact de l'utilisateur »");
 
-  const params = new URL(String(actorInputs[0].searchUrl)).searchParams;
+  const params = new URL(String((actorInputs[0].startUrls as string[])[0])).searchParams;
   assert.equal(params.get("real_estate_type"), "1,2");
   assert.equal(params.get("rooms"), "1-2");
   assert.equal(params.get("price"), "min-700");

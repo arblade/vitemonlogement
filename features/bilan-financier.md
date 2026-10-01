@@ -4,6 +4,25 @@ Sources : facturation réelle lue sur chaque run Apify (`chargedEventCounts`), t
 appels, tarifs publics vérifiés le 01/10/2026, configuration Render lue sur le service. 1 $ ≈ 0,85 €.
 « prod » = branche `main` (Le Bon Coin seul) ; « develop » = 3 sources (Le Bon Coin, SeLoger, PAP), non déployé.
 
+## Mise à jour du 01/10/2026 (après optimisation, branche develop)
+Recherche élargie supprimée, Le Bon Coin lu par l'acteur `fatihtahta`, 6 annonces lues sur SeLoger et 4 sur PAP.
+Mesuré en réel sur 3 recherches (Lille, Rennes avec « balcon », Nantes) :
+
+| Poste | Avant | Maintenant |
+|---|---|---|
+| Le Bon Coin (10 annonces) | 0,0239 $, et 0,0478 $ avec un souhait (recherche élargie) | **0,010 $** (0,001 $ l'annonce, sans démarrage) |
+| SeLoger | 0,038 $ (10 annonces) | **0,0244 $** (6 annonces) |
+| PAP | 0,045 $ (10 annonces) | **0,013 à 0,021 $** (4 annonces au plus) |
+| **Apify par recherche, 3 sources** | 0,107 à 0,131 $ | **≈ 0,055 $** |
+| OpenAI | 0,014 à 0,04 $ | inchangé (réglage de l'effort de raisonnement pas encore appliqué) |
+| **Total par recherche** | 0,12 à 0,17 $ | **≈ 0,07 à 0,10 $** ; 10 recherches ≈ 0,7 à 1 $ (≈ 0,6 à 0,85 €) |
+
+**Correction** : le code de ville SeLoger n'est pas gratuit. L'acteur qui le donne facture **0,09 $ de démarrage**
+par run ; le « 0 $ » mesuré plus tôt venait d'un plafond trop bas (0,02 $) qui interrompait le run, parfois avant
+qu'il ait trouvé la ville (cas de Lille dans un essai). Plafond relevé à 0,10 $ : résolution fiable, **≈ 0,09 $ une
+seule fois par ville** (gardée en base), 7 à 45 secondes de plus à la toute première recherche de la ville.
+Les tableaux ci-dessous décrivent la situation avant optimisation.
+
 ## 1. Les services et leur tarif unitaire
 
 | Service | Rôle | Offre actuelle | Tarif unitaire |

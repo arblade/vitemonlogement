@@ -1,0 +1,1179 @@
+[
+ {
+  "record_type": "property_listing",
+  "id": "3280173364",
+  "url": "https://www.leboncoin.fr/ad/locations/3280173364",
+  "title": "Appartement t2",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Je propose en location ce meublé T2 de 25 m² situé au 2ème étage d'un immeuble de 2 étages, à Lille dans le quartier de Fives secteur \" mont de terre \" Cet appartement meublé comprend 1 chambre en mezzanine et dispose d'une cuisine équipée et ouverte sur le séjour. L'espace bénéficie d'une belle luminosité naturelle. - Cuisine équipée et ouverte - Salle d'eau avec douche - Meublé Le quartier de Fives offre un cadre de vie agréable avec accès aux commodités locales. Chauffage collectif au gaz. Classe énergie B - Classe climat B. N'hésitez pas à me contacter pour plus d'informations ou pour organiser une visite de ce petit appartement meublé.",
+  "listing": {
+   "listing_id": "3280173364",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T14:39:11.000Z",
+   "updated_at": "2026-10-01T14:39:11.000Z",
+   "professional_listing": false
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 25,
+   "floor_area": 25,
+   "area_unit": "sqm",
+   "rooms": 2,
+   "bedrooms": 1,
+   "floor": {
+    "number": 2,
+    "description": [
+     "Pas de rez-de-chaussée",
+     "Dernier étage"
+    ]
+   },
+   "floors_in_building": 2,
+   "amenities": [
+    "Cuisine équipée",
+    "Cuisine ouverte"
+   ],
+   "heating": {
+    "type": "Collectif",
+    "mode": "Gaz"
+   },
+   "energy": {
+    "rating": "B",
+    "ges": "B"
+   },
+   "elevator": false
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59800 Fives",
+   "city": "Lille",
+   "zipcode": "59800",
+   "district": "Fives",
+   "lat": 50.62544,
+   "lng": 3.08994,
+   "source": "address",
+   "provider": "here",
+   "type": "street",
+   "origin_type": "street",
+   "is_shape": false,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.08994,
+      50.62544
+     ]
+    }
+   },
+   "postal_code": "59800",
+   "latitude": 50.62544,
+   "longitude": 3.08994,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000261",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 590,
+   "price": 590,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 59000
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/13/14/35/1314356e831f2a37f101f1dc34e414d5f5462ee7.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/0d/5a/f8/0d5af8e27a7dec5d79c3b5a426e39734c120e36b.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/b7/54/aa/b754aa286ca969ecf6ae2101d8879a666c9dbba3.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/13/14/35/1314356e831f2a37f101f1dc34e414d5f5462ee7.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/0d/5a/f8/0d5af8e27a7dec5d79c3b5a426e39734c120e36b.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/b7/54/aa/b754aa286ca969ecf6ae2101d8879a666c9dbba3.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/13/14/35/1314356e831f2a37f101f1dc34e414d5f5462ee7.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/0d/5a/f8/0d5af8e27a7dec5d79c3b5a426e39734c120e36b.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/b7/54/aa/b754aa286ca969ecf6ae2101d8879a666c9dbba3.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/13/14/35/1314356e831f2a37f101f1dc34e414d5f5462ee7.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/13/14/35/1314356e831f2a37f101f1dc34e414d5f5462ee7.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"25\", \"values\": [\"25\"], \"key_label\": \"Surface habitable\", \"value_label\": \"25 m²\", \"value_label_reader\": \"25 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"Classe énergie\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"equipped_kitchen\", \"american_kitchen\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Cuisine équipée, Cuisine ouverte\", \"value_label_reader\": \", \", \"values_label\": [\"Cuisine équipée\", \"Cuisine ouverte\"], \"values_label_reader\": [\"\", \"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"communal\", \"values\": [\"communal\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Collectif\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"gas\", \"values\": [\"gas\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Gaz\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\", \"last_stage\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\", \"Dernier étage\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Non\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"120\", \"values\": [\"120\"], \"key_label\": \"Charges locatives\", \"value_label\": \"120 €\", \"value_label_reader\": \"120 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"620\", \"values\": [\"620\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"620 €\", \"value_label_reader\": \"620 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"district_id\", \"value\": \"3000261\", \"values\": [\"3000261\"], \"value_label\": \"3000261\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"false\", \"values\": [\"false\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Non\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"470\", \"values\": [\"470\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"470\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 2/2\", \"value_label\": \"Étage 2/2\", \"value_label_reader\": \"Étage 2 sur 2\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59800 Fives\", \"city\": \"Lille\", \"zipcode\": \"59800\", \"district\": \"Fives\", \"lat\": 50.62544, \"lng\": 3.08994, \"source\": \"address\", \"provider\": \"here\", \"type\": \"street\", \"origin_type\": \"street\", \"is_shape\": false, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.08994, 50.62544]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3280166944",
+  "url": "https://www.leboncoin.fr/ad/locations/3280166944",
+  "title": "Appartement 1 pièce 21 m²",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Appartement Lille 1 pièce(s) 21 m2 Gare Lille Flandres - rue de Tournai Situation exceptionnelle pour ce T1Bis de 21 m² entièrement rénové comprenant une kitchenette, une pièce de vie et une salle de douche avec wc. Profitez aussi d'une terrasse commune de 40m2 Loyer : 510 HC Charges : 50  (parties communes et eau froide ) Complément de loyer : 80 euros Dépôt de garantie : 1 mois de loyer hors charges Référence annonce : EJYS-JY1-071 Date de réalisation du diagnostic : 19/03/2023 Honoraires à la charge du locataire : 354 € TTC dont 81 € pour l’état des lieux Dépôt de garantie : 510 € Montant des charges : 50 € / mois Complément de loyer : 80 € / mois (inclus dans le loyer CC) Montant estimé des dépenses annuelles d'énergie pour un usage standard : entre 420 € et 630 € par an. Prix moyens des énergies indexés sur l'année 2021 (abonnements compris)",
+  "listing": {
+   "listing_id": "3280166944",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T14:29:08.000Z",
+   "updated_at": "2026-10-01T14:29:08.000Z",
+   "professional_listing": true
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 21,
+   "floor_area": 21,
+   "area_unit": "sqm",
+   "rooms": 1,
+   "bathrooms": 1,
+   "shower_rooms": 1,
+   "availability": "01/10/2026",
+   "condition": "Bon état",
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "D",
+    "ges": "B"
+   }
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000 Théâtre Sébastopol",
+   "city": "Lille",
+   "zipcode": "59000",
+   "district": "Théâtre Sébastopol",
+   "lat": 50.629894,
+   "lng": 3.0553448,
+   "source": "city",
+   "provider": "here",
+   "type": "district",
+   "origin_type": "district",
+   "is_shape": true,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.0553448,
+      50.629894
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.629894,
+   "longitude": 3.0553448,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000280",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 640,
+   "price": 640,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 64000
+  },
+  "media": {
+   "images": {
+    "count": 5,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/97/ad/1e/97ad1eb964ab8cb0dd320d27d9444a058dc7a622.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/5a/a0/045aa0d0b7480ff32871460e375a376027402867.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d1/3f/b0/d13fb08dd1f9dfa336245ef91db2d3005d9f257c.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/bf/84/76/bf84768d88746397a6683a622ac85148861b64d3.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8c/c7/34/8cc734df1d69601f91dedb5a2c0785aee346bd98.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/97/ad/1e/97ad1eb964ab8cb0dd320d27d9444a058dc7a622.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/5a/a0/045aa0d0b7480ff32871460e375a376027402867.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d1/3f/b0/d13fb08dd1f9dfa336245ef91db2d3005d9f257c.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/bf/84/76/bf84768d88746397a6683a622ac85148861b64d3.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8c/c7/34/8cc734df1d69601f91dedb5a2c0785aee346bd98.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/97/ad/1e/97ad1eb964ab8cb0dd320d27d9444a058dc7a622.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/5a/a0/045aa0d0b7480ff32871460e375a376027402867.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d1/3f/b0/d13fb08dd1f9dfa336245ef91db2d3005d9f257c.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/bf/84/76/bf84768d88746397a6683a622ac85148861b64d3.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8c/c7/34/8cc734df1d69601f91dedb5a2c0785aee346bd98.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/97/ad/1e/97ad1eb964ab8cb0dd320d27d9444a058dc7a622.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/97/ad/1e/97ad1eb964ab8cb0dd320d27d9444a058dc7a622.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"activity_sector\", \"value\": \"2\", \"values\": [\"2\"], \"value_label\": \"2\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Non meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"21\", \"values\": [\"21\"], \"key_label\": \"Surface habitable\", \"value_label\": \"21 m²\", \"value_label_reader\": \"21 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"nb_bathrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles de bain\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"nb_shower_room\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles d'eau\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"d\", \"values\": [\"d\"], \"key_label\": \"Classe énergie\", \"value_label\": \"D\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"01/10/2026\", \"values\": [\"01/10/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"01/10/2026\", \"generic\": true}, {\"key\": \"global_condition\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"État du bien\", \"value_label\": \"Bon état\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"50\", \"values\": [\"50\"], \"key_label\": \"Charges locatives\", \"value_label\": \"50 €\", \"value_label_reader\": \"50 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"510\", \"values\": [\"510\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"510 €\", \"value_label_reader\": \"510 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"inventory_fees\", \"value\": \"81\", \"values\": [\"81\"], \"key_label\": \"Frais d'état des lieux\", \"value_label\": \"81 €\", \"value_label_reader\": \"81 Euro\", \"generic\": false}, {\"key\": \"pro_rates_link\", \"value\": \"https://telemaque.orpi.coop/agence/774/bareme.pdf\", \"values\": [\"https://telemaque.orpi.coop/agence/774/bareme.pdf\"], \"value_label\": \"https://telemaque.orpi.coop/agence/774/bareme.pdf\", \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000280\", \"values\": [\"3000280\"], \"value_label\": \"3000280\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"mandate_type\", \"value\": \"exclusive\", \"values\": [\"exclusive\"], \"value_label\": \"exclusive\", \"generic\": false}, {\"key\": \"has_visibility_option\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"visibility_option_products\", \"value\": \"RE_VISIBILITY_FEATURE\", \"values\": [\"RE_VISIBILITY_FEATURE\", \"RE_SUPER_VISIBILITY_FEATURE\"], \"value_label\": \"RE_VISIBILITY_FEATURE\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_control_inflated_price\", \"value\": \"500\", \"values\": [\"500\"], \"key_label\": \"Loyer de référence majoré\", \"value_label\": \"500 €\", \"generic\": false}, {\"key\": \"rent_supplement\", \"value\": \"80\", \"values\": [\"80\"], \"key_label\": \"Complément de loyer\", \"value_label\": \"80 €\", \"generic\": false}, {\"key\": \"annual_energy_budget_min\", \"value\": \"420\", \"values\": [\"420\"], \"key_label\": \"Montant annuel énergétique minimum\", \"value_label\": \"420 €\", \"value_label_reader\": \"420 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_max\", \"value\": \"630\", \"values\": [\"630\"], \"key_label\": \"Montant annuel énergétique maximum\", \"value_label\": \"630 €\", \"value_label_reader\": \"630 Euro\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rental_fees\", \"value\": \"354\", \"values\": [\"354\"], \"key_label\": \"Honoraires\", \"value_label\": \"354\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"590\", \"values\": [\"590\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"590\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000 Théâtre Sébastopol\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"district\": \"Théâtre Sébastopol\", \"lat\": 50.629894, \"lng\": 3.0553448, \"source\": \"city\", \"provider\": \"here\", \"type\": \"district\", \"origin_type\": \"district\", \"is_shape\": true, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.0553448, 50.629894]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3280160886",
+  "url": "https://www.leboncoin.fr/ad/locations/3280160886",
+  "title": "Chambre meublée à louer, avec WC et Douche. Proximité métro et commerces",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Je loue cette chambre meublée de 12 m² située au 2ème étage d'un immeuble de 3 étages à Lille, quartier Wazemmes. Construite en 1960, cette chambre dispose d'un WC et d'une douche privés. Cette chambre meublée bénéficie d'une belle luminosité naturelle grâce à ses grandes fenêtres. Elle comprend un espace de vie principal avec accès à une salle d'eau équipée d'une douche et d'un WC séparé. La cuisine est équipée et séparée et en commun avec d’autres locataires. - Meublée - Salle d'eau privative avec douche et WC - Belle luminosité Proximité immédiate du métro et des commerces du quartier Wazemmes, idéal pour les déplacements et l'accès aux services de proximité. Chauffage électrique collectif. Classe énergie C - Classe climat C. Chambre disponible en octobre (2026). N'hésitez pas à me contacter pour plus d'informations ou pour organiser une visite.",
+  "listing": {
+   "listing_id": "3280160886",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T14:18:41.000Z",
+   "updated_at": "2026-10-01T14:18:41.000Z",
+   "professional_listing": false
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 12,
+   "floor_area": 12,
+   "area_unit": "sqm",
+   "rooms": 2,
+   "bedrooms": 1,
+   "bathrooms": 1,
+   "floor": {
+    "number": 2,
+    "description": [
+     "Pas de rez-de-chaussée"
+    ]
+   },
+   "floors_in_building": 3,
+   "building_year": 1960,
+   "availability": "10/2026",
+   "amenities": [
+    "Construction ancienne",
+    "Cuisine équipée",
+    "Cuisine ouverte",
+    "Cuisine séparée"
+   ],
+   "heating": {
+    "type": "Collectif",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "C",
+    "ges": "C"
+   },
+   "elevator": false
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000 Wazemmes",
+   "city": "Lille",
+   "zipcode": "59000",
+   "district": "Wazemmes",
+   "lat": 50.62591,
+   "lng": 3.04912,
+   "source": "address",
+   "provider": "here",
+   "type": "streetNumber",
+   "origin_type": "streetNumber",
+   "is_shape": false,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.04912,
+      50.62591
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.62591,
+   "longitude": 3.04912,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000289",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 590,
+   "price": 590,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 59000
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/ab/39/9a/ab399a120eb4cf852f684b256fcf23a93220280b.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d7/4d/e6/d74de6b069a0623a6eea59fded69d5d14ffc7b03.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/37/83/2e/37832efa7fd648aeec3154da26199014c84ab8d7.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/ab/39/9a/ab399a120eb4cf852f684b256fcf23a93220280b.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d7/4d/e6/d74de6b069a0623a6eea59fded69d5d14ffc7b03.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/37/83/2e/37832efa7fd648aeec3154da26199014c84ab8d7.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/ab/39/9a/ab399a120eb4cf852f684b256fcf23a93220280b.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/d7/4d/e6/d74de6b069a0623a6eea59fded69d5d14ffc7b03.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/37/83/2e/37832efa7fd648aeec3154da26199014c84ab8d7.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/ab/39/9a/ab399a120eb4cf852f684b256fcf23a93220280b.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/ab/39/9a/ab399a120eb4cf852f684b256fcf23a93220280b.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"rating_score\", \"value\": \"1\", \"values\": [\"1\"], \"value_label\": \"1\", \"generic\": false}, {\"key\": \"rating_count\", \"value\": \"7\", \"values\": [\"7\"], \"value_label\": \"7\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"12\", \"values\": [\"12\"], \"key_label\": \"Surface habitable\", \"value_label\": \"12 m²\", \"value_label_reader\": \"12 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"nb_bathrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles de bain\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"Classe énergie\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"GES\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"old_builiding\", \"equipped_kitchen\", \"american_kitchen\", \"separate_kitchen\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Construction ancienne, Cuisine équipée, Cuisine ouverte, Cuisine séparée\", \"value_label_reader\": \", , , \", \"values_label\": [\"Construction ancienne\", \"Cuisine équipée\", \"Cuisine ouverte\", \"Cuisine séparée\"], \"values_label_reader\": [\"\", \"\", \"\", \"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"communal\", \"values\": [\"communal\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Collectif\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"3\", \"values\": [\"3\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"3\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Non\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1960\", \"values\": [\"1960\"], \"key_label\": \"Année de construction\", \"value_label\": \"1960\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"10/2026\", \"values\": [\"10/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"10/2026\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"30\", \"values\": [\"30\"], \"key_label\": \"Charges locatives\", \"value_label\": \"30 €\", \"value_label_reader\": \"30 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"1120\", \"values\": [\"1120\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"1120 €\", \"value_label_reader\": \"1120 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"real_estate_charges_details\", \"values\": [\"cold_water\", \"hot_water\", \"heating\", \"electricity\", \"internet\"], \"key_label\": \"Détail des charges\", \"value_label\": \"Eau froide, Eau chaude, Chauffage, Électricité, Internet\", \"values_label\": [\"Eau froide\", \"Eau chaude\", \"Chauffage\", \"Électricité\", \"Internet\"], \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000289\", \"values\": [\"3000289\"], \"value_label\": \"3000289\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"false\", \"values\": [\"false\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Non\", \"generic\": false}, {\"key\": \"street_view_url\", \"value\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.625912,3.049120\", \"values\": [\"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.625912,3.049120\"], \"value_label\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.625912,3.049120\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"560\", \"values\": [\"560\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"560\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 2/3\", \"value_label\": \"Étage 2/3\", \"value_label_reader\": \"Étage 2 sur 3\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000 Wazemmes\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"district\": \"Wazemmes\", \"lat\": 50.62591, \"lng\": 3.04912, \"source\": \"address\", \"provider\": \"here\", \"type\": \"streetNumber\", \"origin_type\": \"streetNumber\", \"is_shape\": false, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.04912, 50.62591]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3217259379",
+  "url": "https://www.leboncoin.fr/ad/locations/3217259379",
+  "title": "Studio 1 pièce 14 m²",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Studio 1 pièce 14 m² Prenez RDV ici pour visiter ce bien : [URL masquée pour votre sécurité] A LOUER , Boulevard Victor Hugo REF G494-24 Retrouvez l'ensemble de nos biens sur le site internet de l'agence ! Studio meublé de 13,93m2 situé au 2ème étage, boulevard Victor Hugo, à LILLE. Il comprend une pièce de vie avec table, chaises, lit superposé et coin cuisine (hotte, plaques, frigo, rangement), une SDB (meuble vasque, douche) et WC sur palier. Loyer de 330 euros et 60 euros de charges Disponible de suite ! Surface : 14 m² Date de réalisation du diagnostic énergétique : 22/05/2025 Consommation énergie primaire : 339 kWh/m²/an Consommation énergie finale : 147 kWh/m²/an Montant estimé des dépenses annuelles d'énergie pour un usage standard : entre 400 € et 580 € sur les années 2021, 2022 et 2023 (abonnements compris). Les informations sur les risques auxquels ce bien est exposé sont disponibles sur le site Géorisques : www.georisques.gouv.fr",
+  "listing": {
+   "listing_id": "3217259379",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-08-10T05:36:59.000Z",
+   "updated_at": "2026-10-01T13:45:25.000Z",
+   "professional_listing": true
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 14,
+   "floor_area": 14,
+   "area_unit": "sqm",
+   "rooms": 1,
+   "floor": {
+    "number": 2
+   },
+   "building_year": 1930,
+   "condition": "Bon état",
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "D",
+    "ges": "B"
+   }
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000 Wazemmes",
+   "city": "Lille",
+   "zipcode": "59000",
+   "district": "Wazemmes",
+   "lat": 50.621056,
+   "lng": 3.050326,
+   "source": "city",
+   "provider": "here",
+   "type": "district",
+   "origin_type": "streetNumber",
+   "is_shape": true,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.050326,
+      50.621056
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.621056,
+   "longitude": 3.050326,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000288",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 390,
+   "price": 390,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 39000,
+   "price_excluding_fees": 330,
+   "fees": {
+    "amount": 60
+   }
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/a0/bf/a0/a0bfa0adf00de57e362a0de342dc879465c083a1.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/5b/c9/5b/5bc95bf04834ae908b874c352fcd3119ba7fa69c.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/57/ba/8d57ba28a66000aaa337d70bed9f38dc5ab02092.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/a0/bf/a0/a0bfa0adf00de57e362a0de342dc879465c083a1.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/5b/c9/5b/5bc95bf04834ae908b874c352fcd3119ba7fa69c.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/57/ba/8d57ba28a66000aaa337d70bed9f38dc5ab02092.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/a0/bf/a0/a0bfa0adf00de57e362a0de342dc879465c083a1.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/5b/c9/5b/5bc95bf04834ae908b874c352fcd3119ba7fa69c.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/57/ba/8d57ba28a66000aaa337d70bed9f38dc5ab02092.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/a0/bf/a0/a0bfa0adf00de57e362a0de342dc879465c083a1.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/a0/bf/a0/a0bfa0adf00de57e362a0de342dc879465c083a1.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"activity_sector\", \"value\": \"2\", \"values\": [\"2\"], \"value_label\": \"2\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"14\", \"values\": [\"14\"], \"key_label\": \"Surface habitable\", \"value_label\": \"14 m²\", \"value_label_reader\": \"14 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"d\", \"values\": [\"d\"], \"key_label\": \"Classe énergie\", \"value_label\": \"D\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1930\", \"values\": [\"1930\"], \"key_label\": \"Année de construction\", \"value_label\": \"1930\", \"generic\": true}, {\"key\": \"global_condition\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"État du bien\", \"value_label\": \"Bon état\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"60\", \"values\": [\"60\"], \"key_label\": \"Charges locatives\", \"value_label\": \"60 €\", \"value_label_reader\": \"60 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"660\", \"values\": [\"660\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"660 €\", \"value_label_reader\": \"660 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"inventory_fees\", \"value\": \"42\", \"values\": [\"42\"], \"key_label\": \"Frais d'état des lieux\", \"value_label\": \"42 €\", \"value_label_reader\": \"42 Euro\", \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000288\", \"values\": [\"3000288\"], \"value_label\": \"3000288\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"mandate_type\", \"value\": \"simple\", \"values\": [\"simple\"], \"value_label\": \"simple\", \"generic\": false}, {\"key\": \"has_visibility_option\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"visibility_option_products\", \"value\": \"RE_VISIBILITY_FEATURE\", \"values\": [\"RE_VISIBILITY_FEATURE\"], \"value_label\": \"RE_VISIBILITY_FEATURE\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_supplement\", \"value\": \"55\", \"values\": [\"55\"], \"key_label\": \"Complément de loyer\", \"value_label\": \"55 €\", \"generic\": false}, {\"key\": \"price_except_fees\", \"value\": \"330\", \"values\": [\"330\"], \"key_label\": \"Prix hors honoraires\", \"value_label\": \"330 €\", \"value_label_reader\": \"330 Euro\", \"generic\": false}, {\"key\": \"fees_price\", \"value\": \"60\", \"values\": [\"60\"], \"key_label\": \"Montant des honoraires\", \"value_label\": \"60 €\", \"value_label_reader\": \"60 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_min\", \"value\": \"400\", \"values\": [\"400\"], \"key_label\": \"Montant annuel énergétique minimum\", \"value_label\": \"400 €\", \"value_label_reader\": \"400 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_max\", \"value\": \"580\", \"values\": [\"580\"], \"key_label\": \"Montant annuel énergétique maximum\", \"value_label\": \"580 €\", \"value_label_reader\": \"580 Euro\", \"generic\": false}, {\"key\": \"virtual_tour\", \"value\": \"https://view.ricoh360.com/83aa908c-b11f-408a-96ec-b924e41eae9b/13ff01c4-a444-48a0-ae19-2eed69e04af3?type=compact\", \"values\": [\"https://view.ricoh360.com/83aa908c-b11f-408a-96ec-b924e41eae9b/13ff01c4-a444-48a0-ae19-2eed69e04af3?type=compact\"], \"value_label\": \"https://view.ricoh360.com/83aa908c-b11f-408a-96ec-b924e41eae9b/13ff01c4-a444-48a0-ae19-2eed69e04af3?type=compact\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"old_price\", \"value\": \"430\", \"values\": [\"430\"], \"value_label\": \"430\", \"generic\": false}, {\"key\": \"rental_fees\", \"value\": \"183\", \"values\": [\"183\"], \"key_label\": \"Honoraires\", \"value_label\": \"183\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"330\", \"values\": [\"330\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"330\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 2\", \"value_label\": \"Étage 2\", \"value_label_reader\": \"Étage 2\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000 Wazemmes\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"district\": \"Wazemmes\", \"lat\": 50.621056, \"lng\": 3.050326, \"source\": \"city\", \"provider\": \"here\", \"type\": \"district\", \"origin_type\": \"streetNumber\", \"is_shape\": true, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.050326, 50.621056]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3280134101",
+  "url": "https://www.leboncoin.fr/ad/locations/3280134101",
+  "title": "Studio rénové – Métro Marbrerie – 620 charges comprises",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Emplacement idéal – à proximité immédiate du métro Marbrerie À louer, joli studio fraîchement rénové, situé dans une résidence calme et agréable. Le logement bénéficie d'un emplacement pratique, à quelques pas du métro Marbrerie et proche de nombreux commerces : 🚇 Métro Marbrerie à proximité immédiate 🛒 Carrefour 🛒 Lidl 🍽️ Chaud Bouillon à proximité 🏙️ Accès facile aux commerces et transports 🏠 Le logement Studio entièrement rénové, propre, moderne et fonctionnel, idéal pour une personne seule ou un étudiant. 💰 Loyer : 550 € / mois ➕ Charges : 70 € / mois ➡️ Total : 620 € / mois charges comprises 📅 Disponible prochainement 📩 Pour obtenir davantage d'informations ou convenir d'une visite, merci de me contacter par message en précisant votre situation et vos disponibilités.",
+  "listing": {
+   "listing_id": "3280134101",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T13:30:54.000Z",
+   "updated_at": "2026-10-01T13:30:54.000Z",
+   "professional_listing": false
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 26,
+   "floor_area": 26,
+   "area_unit": "sqm",
+   "rooms": 1,
+   "bedrooms": 1,
+   "bathrooms": 1,
+   "floor": {
+    "number": 1,
+    "description": [
+     "Pas de rez-de-chaussée"
+    ]
+   },
+   "floors_in_building": 2,
+   "building_year": 1975,
+   "availability": "10/2026",
+   "amenities": [
+    "Cuisine équipée",
+    "Cuisine séparée"
+   ],
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "B",
+    "ges": "B"
+   },
+   "elevator": false
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59800 Fives",
+   "city": "Lille",
+   "zipcode": "59800",
+   "district": "Fives",
+   "lat": 50.63022,
+   "lng": 3.09745,
+   "source": "address",
+   "provider": "here",
+   "type": "streetNumber",
+   "origin_type": "streetNumber",
+   "is_shape": false,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.09745,
+      50.63022
+     ]
+    }
+   },
+   "postal_code": "59800",
+   "latitude": 50.63022,
+   "longitude": 3.09745,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000263",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 620,
+   "price": 620,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 62000
+  },
+  "media": {
+   "images": {
+    "count": 4,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/eb/f8/ba/ebf8bacf07dfd9834318fbef563e956cd73785f5.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/36/ca/0436caaf319519e4bf036bac87ef9ed1756e7a85.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/be/9a/fb/be9afb5982209c66996c9d70236d9f011e6ca147.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f1/37/db/f137db5070d854f4154b5bf1d6fd0b79cfd94179.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/eb/f8/ba/ebf8bacf07dfd9834318fbef563e956cd73785f5.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/36/ca/0436caaf319519e4bf036bac87ef9ed1756e7a85.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/be/9a/fb/be9afb5982209c66996c9d70236d9f011e6ca147.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f1/37/db/f137db5070d854f4154b5bf1d6fd0b79cfd94179.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/eb/f8/ba/ebf8bacf07dfd9834318fbef563e956cd73785f5.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/04/36/ca/0436caaf319519e4bf036bac87ef9ed1756e7a85.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/be/9a/fb/be9afb5982209c66996c9d70236d9f011e6ca147.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f1/37/db/f137db5070d854f4154b5bf1d6fd0b79cfd94179.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/eb/f8/ba/ebf8bacf07dfd9834318fbef563e956cd73785f5.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/eb/f8/ba/ebf8bacf07dfd9834318fbef563e956cd73785f5.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"26\", \"values\": [\"26\"], \"key_label\": \"Surface habitable\", \"value_label\": \"26 m²\", \"value_label_reader\": \"26 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"nb_bathrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles de bain\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"Classe énergie\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"equipped_kitchen\", \"separate_kitchen\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Cuisine équipée, Cuisine séparée\", \"value_label_reader\": \", \", \"values_label\": [\"Cuisine équipée\", \"Cuisine séparée\"], \"values_label_reader\": [\"\", \"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Non\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1975\", \"values\": [\"1975\"], \"key_label\": \"Année de construction\", \"value_label\": \"1975\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"10/2026\", \"values\": [\"10/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"10/2026\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"70\", \"values\": [\"70\"], \"key_label\": \"Charges locatives\", \"value_label\": \"70 €\", \"value_label_reader\": \"70 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"550\", \"values\": [\"550\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"550 €\", \"value_label_reader\": \"550 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"real_estate_charges_details\", \"values\": [\"cold_water\", \"hot_water\", \"electricity\", \"common_areas_maintenance\", \"internet\", \"waste_collection\", \"heating\"], \"key_label\": \"Détail des charges\", \"value_label\": \"Eau froide, Eau chaude, Électricité, Entretien des parties communes, Internet, Ordures ménagères, Chauffage\", \"values_label\": [\"Eau froide\", \"Eau chaude\", \"Électricité\", \"Entretien des parties communes\", \"Internet\", \"Ordures ménagères\", \"Chauffage\"], \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000263\", \"values\": [\"3000263\"], \"value_label\": \"3000263\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"false\", \"values\": [\"false\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Non\", \"generic\": false}, {\"key\": \"street_view_url\", \"value\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.630219,3.097450\", \"values\": [\"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.630219,3.097450\"], \"value_label\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.630219,3.097450\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"550\", \"values\": [\"550\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"550\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 1/2\", \"value_label\": \"Étage 1/2\", \"value_label_reader\": \"Étage 1 sur 2\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59800 Fives\", \"city\": \"Lille\", \"zipcode\": \"59800\", \"district\": \"Fives\", \"lat\": 50.63022, \"lng\": 3.09745, \"source\": \"address\", \"provider\": \"here\", \"type\": \"streetNumber\", \"origin_type\": \"streetNumber\", \"is_shape\": false, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.09745, 50.63022]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3274089765",
+  "url": "https://www.leboncoin.fr/ad/locations/3274089765",
+  "title": "Studio 1 pièce 29 m²",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Studio 1 pièce 29 m² ANNONCE 4303 Contacter IMMO de France: Marie PLATTEEURO au O6.73.74.42.57 A louer, très beau studio de 28.74m² au premier étage d'une résidence sécurisée avec gardien Idéalement situé rue Léon Gambetta à Lille, à proximité du métro, des écoles et des commerces Il vous offre : un hall d'entrée avec kitchenette (plaques de cuisson, frigo), une pièce à vivre lumineuse, une salle de douches (arrivée d'eau pour un branchement machine à laver) Une cave et un parking viennent compléter le bien Disponible de suite à la location *** Zone soumise à l'encadrement des loyers *** Surface : 29 m² Modalité de récupération des charges locatives : Prévisionnelles mensuelles avec régularisation annuelle Date de réalisation du diagnostic énergétique : 21/09/2026 Consommation énergie primaire : 278 kWh/m²/an Consommation énergie finale : 146 kWh/m²/an Montant estimé des dépenses annuelles d'énergie pour un usage standard : entre 799 € et 1 081 € sur les années 2021, 2022 et 2023 (abonnements compris).",
+  "listing": {
+   "listing_id": "3274089765",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-09-21T16:31:44.000Z",
+   "updated_at": "2026-10-01T13:15:13.000Z",
+   "professional_listing": true
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 29,
+   "floor_area": 29,
+   "area_unit": "sqm",
+   "rooms": 1,
+   "floor": {
+    "number": 1
+   },
+   "building_year": 1976,
+   "condition": "Bon état",
+   "amenities": [
+    "Avec garage ou place de parking",
+    "Cuisine équipée",
+    "Cave",
+    "Interphone",
+    "Gardien"
+   ],
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "E",
+    "ges": "B"
+   },
+   "elevator": true,
+   "parking_spots": 1
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000 Wazemmes",
+   "city": "Lille",
+   "zipcode": "59000",
+   "district": "Wazemmes",
+   "lat": 50.626038,
+   "lng": 3.0525725,
+   "source": "city",
+   "provider": "here",
+   "type": "district",
+   "origin_type": "streetNumber",
+   "is_shape": true,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.0525725,
+      50.626038
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.626038,
+   "longitude": 3.0525725,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000289",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration_flux"
+   }
+  },
+  "pricing": {
+   "amount_eur": 645,
+   "price": 645,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 64500,
+   "price_excluding_fees": 595,
+   "fees": {
+    "amount": 50
+   }
+  },
+  "media": {
+   "images": {
+    "count": 7,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/65/d0/d4/65d0d4f8b096269dc7dfba90dc4438b7ddbe97a1.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/09/9d/37/099d3727ff8c1d3feac1a7c414f3d274590dc5d9.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/86/2d/79/862d795aba1c0eaeff09d4549eb01d2871be2495.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/76/48/5a/76485aac7619abb3b1b8d031e3ae0ffbcd379d3f.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/50/c9/1f/50c91f448682f310ac8dd97edc40a8431e7513c3.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c0/b2/03/c0b203c63bf6a8aad2c1b644028a8c3120f153fe.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/af/b1/41/afb141616ee5544c56bbe37c36cf94ce19927668.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/65/d0/d4/65d0d4f8b096269dc7dfba90dc4438b7ddbe97a1.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/09/9d/37/099d3727ff8c1d3feac1a7c414f3d274590dc5d9.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/86/2d/79/862d795aba1c0eaeff09d4549eb01d2871be2495.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/76/48/5a/76485aac7619abb3b1b8d031e3ae0ffbcd379d3f.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/50/c9/1f/50c91f448682f310ac8dd97edc40a8431e7513c3.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c0/b2/03/c0b203c63bf6a8aad2c1b644028a8c3120f153fe.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/af/b1/41/afb141616ee5544c56bbe37c36cf94ce19927668.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/65/d0/d4/65d0d4f8b096269dc7dfba90dc4438b7ddbe97a1.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/09/9d/37/099d3727ff8c1d3feac1a7c414f3d274590dc5d9.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/86/2d/79/862d795aba1c0eaeff09d4549eb01d2871be2495.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/76/48/5a/76485aac7619abb3b1b8d031e3ae0ffbcd379d3f.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/50/c9/1f/50c91f448682f310ac8dd97edc40a8431e7513c3.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c0/b2/03/c0b203c63bf6a8aad2c1b644028a8c3120f153fe.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/af/b1/41/afb141616ee5544c56bbe37c36cf94ce19927668.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/65/d0/d4/65d0d4f8b096269dc7dfba90dc4438b7ddbe97a1.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/65/d0/d4/65d0d4f8b096269dc7dfba90dc4438b7ddbe97a1.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"activity_sector\", \"value\": \"2\", \"values\": [\"2\"], \"value_label\": \"2\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Non meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"29\", \"values\": [\"29\"], \"key_label\": \"Surface habitable\", \"value_label\": \"29 m²\", \"value_label_reader\": \"29 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"e\", \"values\": [\"e\"], \"key_label\": \"Classe énergie\", \"value_label\": \"E\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"with_garage_or_parking_spot\", \"equipped_kitchen\", \"cellar\", \"intercom\", \"caretaker\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Avec garage ou place de parking, Cuisine équipée, Cave, Interphone, Gardien\", \"value_label_reader\": \", , , , \", \"values_label\": [\"Avec garage ou place de parking\", \"Cuisine équipée\", \"Cave\", \"Interphone\", \"Gardien\"], \"values_label_reader\": [\"\", \"\", \"\", \"\", \"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"elevator\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"nb_parkings\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Places de parking\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1976\", \"values\": [\"1976\"], \"key_label\": \"Année de construction\", \"value_label\": \"1976\", \"generic\": true}, {\"key\": \"global_condition\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"État du bien\", \"value_label\": \"Bon état\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"50\", \"values\": [\"50\"], \"key_label\": \"Charges locatives\", \"value_label\": \"50 €\", \"value_label_reader\": \"50 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"595\", \"values\": [\"595\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"595 €\", \"value_label_reader\": \"595 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"inventory_fees\", \"value\": \"87\", \"values\": [\"87\"], \"key_label\": \"Frais d'état des lieux\", \"value_label\": \"87 €\", \"value_label_reader\": \"87 Euro\", \"generic\": false}, {\"key\": \"pro_rates_link\", \"value\": \"https://media.immo-facile.com/segments/immo/catalog/images/manufacturers_bareme/173742.pdf\", \"values\": [\"https://media.immo-facile.com/segments/immo/catalog/images/manufacturers_bareme/173742.pdf\"], \"value_label\": \"https://media.immo-facile.com/segments/immo/catalog/images/manufacturers_bareme/173742.pdf\", \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000289\", \"values\": [\"3000289\"], \"value_label\": \"3000289\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration_flux\", \"values\": [\"integration_flux\"], \"value_label\": \"integration_flux\", \"generic\": false}, {\"key\": \"mandate_type\", \"value\": \"exclusive\", \"values\": [\"exclusive\"], \"value_label\": \"exclusive\", \"generic\": false}, {\"key\": \"has_visibility_option\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"visibility_option_products\", \"value\": \"RE_VISIBILITY_FEATURE\", \"values\": [\"RE_VISIBILITY_FEATURE\"], \"value_label\": \"RE_VISIBILITY_FEATURE\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_control_inflated_price\", \"value\": \"572\", \"values\": [\"572\"], \"key_label\": \"Loyer de référence majoré\", \"value_label\": \"572 €\", \"generic\": false}, {\"key\": \"rent_supplement\", \"value\": \"23\", \"values\": [\"23\"], \"key_label\": \"Complément de loyer\", \"value_label\": \"23 €\", \"generic\": false}, {\"key\": \"price_except_fees\", \"value\": \"595\", \"values\": [\"595\"], \"key_label\": \"Prix hors honoraires\", \"value_label\": \"595 €\", \"value_label_reader\": \"595 Euro\", \"generic\": false}, {\"key\": \"fees_price\", \"value\": \"50\", \"values\": [\"50\"], \"key_label\": \"Montant des honoraires\", \"value_label\": \"50 €\", \"value_label_reader\": \"50 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_min\", \"value\": \"799\", \"values\": [\"799\"], \"key_label\": \"Montant annuel énergétique minimum\", \"value_label\": \"799 €\", \"value_label_reader\": \"799 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_max\", \"value\": \"1081\", \"values\": [\"1081\"], \"key_label\": \"Montant annuel énergétique maximum\", \"value_label\": \"1081 €\", \"value_label_reader\": \"1081 Euro\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"old_price\", \"value\": \"660\", \"values\": [\"660\"], \"value_label\": \"660\", \"generic\": false}, {\"key\": \"rental_fees\", \"value\": \"377\", \"values\": [\"377\"], \"key_label\": \"Honoraires\", \"value_label\": \"377\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"595\", \"values\": [\"595\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"595\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 1\", \"value_label\": \"Étage 1\", \"value_label_reader\": \"Étage 1\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000 Wazemmes\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"district\": \"Wazemmes\", \"lat\": 50.626038, \"lng\": 3.0525725, \"source\": \"city\", \"provider\": \"here\", \"type\": \"district\", \"origin_type\": \"streetNumber\", \"is_shape\": true, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.0525725, 50.626038]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3280122204",
+  "url": "https://www.leboncoin.fr/ad/locations/3280122204",
+  "title": "Studio Vauban 25m2",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Studio de 25 m2 meublé au troisième étage, rue Ratisbonne à 5/10 minutes à pied de la catho, proche métro Gambetta et Carrefour Loyer de 650€ charges comprises (eau et charges copro) Le studio comprend - Sdb: douche, toilette, lavabo, sèche serviette et rangements - Coin cuisine: four, lave vaisselle grand frigo, trois plaques, hotte, évier et table - Coin salon/chambre: placards de couloir et 1meuble tv/rangement, radiateur électrique, canapé lit et fenêtre avec vue côté rue sans vis à vis (vue sur parc de maison de retraite) DPE D Merci de construire votre dossier sur le site « Dossier Facile », du gouvernement avant toute visite.",
+  "listing": {
+   "listing_id": "3280122204",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T13:07:29.000Z",
+   "updated_at": "2026-10-01T13:07:29.000Z",
+   "professional_listing": false
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 25,
+   "floor_area": 25,
+   "area_unit": "sqm",
+   "rooms": 1,
+   "floor": {
+    "number": 3,
+    "description": [
+     "Pas de rez-de-chaussée"
+    ]
+   },
+   "floors_in_building": 4,
+   "availability": "10/2026",
+   "amenities": [
+    "Cuisine équipée"
+   ],
+   "energy": {
+    "rating": "D"
+   },
+   "elevator": true
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59800 Wazemmes",
+   "city": "Lille",
+   "zipcode": "59800",
+   "district": "Wazemmes",
+   "lat": 50.62905,
+   "lng": 3.05066,
+   "source": "address",
+   "provider": "here",
+   "type": "streetNumber",
+   "origin_type": "streetNumber",
+   "is_shape": false,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.05066,
+      50.62905
+     ]
+    }
+   },
+   "postal_code": "59800",
+   "latitude": 50.62905,
+   "longitude": 3.05066,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000270",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 650,
+   "price": 650,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 65000
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/44/21/25/4421258064ce905de48972aeb58ec9945587aa58.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/cd/bd/30/cdbd3079bc843078ecb157053a930493903f510e.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/10/b0/74/10b074d6e0c1b597eb96011b01beabb6326d9e14.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/44/21/25/4421258064ce905de48972aeb58ec9945587aa58.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/cd/bd/30/cdbd3079bc843078ecb157053a930493903f510e.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/10/b0/74/10b074d6e0c1b597eb96011b01beabb6326d9e14.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/44/21/25/4421258064ce905de48972aeb58ec9945587aa58.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/cd/bd/30/cdbd3079bc843078ecb157053a930493903f510e.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/10/b0/74/10b074d6e0c1b597eb96011b01beabb6326d9e14.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/44/21/25/4421258064ce905de48972aeb58ec9945587aa58.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/44/21/25/4421258064ce905de48972aeb58ec9945587aa58.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"25\", \"values\": [\"25\"], \"key_label\": \"Surface habitable\", \"value_label\": \"25 m²\", \"value_label_reader\": \"25 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"d\", \"values\": [\"d\"], \"key_label\": \"Classe énergie\", \"value_label\": \"D\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"equipped_kitchen\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Cuisine équipée\", \"values_label\": [\"Cuisine équipée\"], \"values_label_reader\": [\"\"], \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"3\", \"values\": [\"3\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"3\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"4\", \"values\": [\"4\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"4\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"10/2026\", \"values\": [\"10/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"10/2026\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"50\", \"values\": [\"50\"], \"key_label\": \"Charges locatives\", \"value_label\": \"50 €\", \"value_label_reader\": \"50 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"district_id\", \"value\": \"3000270\", \"values\": [\"3000270\"], \"value_label\": \"3000270\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"false\", \"values\": [\"false\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Non\", \"generic\": false}, {\"key\": \"street_view_url\", \"value\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.629051,3.050660\", \"values\": [\"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.629051,3.050660\"], \"value_label\": \"https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=50.629051,3.050660\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"600\", \"values\": [\"600\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"600\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 3/4\", \"value_label\": \"Étage 3/4\", \"value_label_reader\": \"Étage 3 sur 4\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59800 Wazemmes\", \"city\": \"Lille\", \"zipcode\": \"59800\", \"district\": \"Wazemmes\", \"lat\": 50.62905, \"lng\": 3.05066, \"source\": \"address\", \"provider\": \"here\", \"type\": \"streetNumber\", \"origin_type\": \"streetNumber\", \"is_shape\": false, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.05066, 50.62905]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3276157374",
+  "url": "https://www.leboncoin.fr/ad/locations/3276157374",
+  "title": "Appartement 2 pièces 45 m²",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Appartement T2 LILLE - A proximité du centre Hospitalier Régional, au croisement des grands axes et proche des stations de métro. Au sein de la Résidence HELIO LILLE, nous vous proposons un appartement de type 2 (numéro B407 - Lot 79) de 46 m² environ, sis au quatrième étage avec ascenseur. Il est composé d'un hall d'entrée, d'un salon séjour avec son espace cuisine donnant sur balcon, d'un espace rangement attenant, d'une chambre, d'une salle d'eau avec lavabo et douche, WC séparés. Disponible à partir du 2 mars. Eau froide, eau chaude, chauffage au gaz individuels. Entretien des parties communes, entretien ascenseur et espaces verts communs, compris dans la provision sur charges mensuelle et donnant lieu à une régularisation annuelle. DPE expiré, en cours de réalisation. Pour plus d'informations sur nos logements, rendez-vous sur notre site internet Afedim. Disponibilité immédiate Les informations sur les risques auxquels ce bien est exposé sont disponibles sur le site Géorisques : www.georisques.gouv.fr Référence annonce : 0031470 Date de réalisation du diagnostic : 31/07/2026 Honoraires à la charge du locataire : 600 € TTC dont 138 € pour l’état des lieux Dépôt de garantie : 578 € Montant des charges : 76 € / mois Montant estimé des dépenses annuelles d'énergie pour un usage standard : entre 450 € et 650 € sur les années 2021, 2022 et 2023 (abonnements compris).",
+  "listing": {
+   "listing_id": "3276157374",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-09-25T05:08:23.000Z",
+   "updated_at": "2026-10-01T13:05:14.000Z",
+   "professional_listing": true
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 45,
+   "floor_area": 45,
+   "area_unit": "sqm",
+   "rooms": 2,
+   "bedrooms": 1,
+   "shower_rooms": 1,
+   "heating": {
+    "type": "Individuel",
+    "mode": "Gaz"
+   },
+   "energy": {
+    "rating": "C",
+    "ges": "C"
+   },
+   "elevator": true
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000",
+   "city": "Lille",
+   "zipcode": "59000",
+   "lat": 50.629513,
+   "lng": 3.0695825,
+   "source": "city",
+   "provider": "here",
+   "type": "city",
+   "origin_type": "city",
+   "is_shape": true,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.0695825,
+      50.629513
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.629513,
+   "longitude": 3.0695825,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "59350",
+    "visibility": false,
+    "type_id": 3,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 654,
+   "price": 654,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 65400
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c8/30/3e/c8303e240d0d78e199112c9d5950e408695f1fcd.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f5/2a/dc/f52adc880d626216eb09c8a789ade08b9f428180.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/00/df/8d00df7fb7eff978e98a6348431d1d262b5a4a81.jpg?rule=ad-large"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c8/30/3e/c8303e240d0d78e199112c9d5950e408695f1fcd.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f5/2a/dc/f52adc880d626216eb09c8a789ade08b9f428180.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/00/df/8d00df7fb7eff978e98a6348431d1d262b5a4a81.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/c8/30/3e/c8303e240d0d78e199112c9d5950e408695f1fcd.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/f5/2a/dc/f52adc880d626216eb09c8a789ade08b9f428180.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/8d/00/df/8d00df7fb7eff978e98a6348431d1d262b5a4a81.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/c8/30/3e/c8303e240d0d78e199112c9d5950e408695f1fcd.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/c8/30/3e/c8303e240d0d78e199112c9d5950e408695f1fcd.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"activity_sector\", \"value\": \"2\", \"values\": [\"2\"], \"value_label\": \"2\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Non meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"45\", \"values\": [\"45\"], \"key_label\": \"Surface habitable\", \"value_label\": \"45 m²\", \"value_label_reader\": \"45 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"nb_shower_room\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles d'eau\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"Classe énergie\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"GES\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"gas\", \"values\": [\"gas\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Gaz\", \"generic\": true}, {\"key\": \"elevator\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"76\", \"values\": [\"76\"], \"key_label\": \"Charges locatives\", \"value_label\": \"76 €\", \"value_label_reader\": \"76 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"578\", \"values\": [\"578\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"578 €\", \"value_label_reader\": \"578 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"inventory_fees\", \"value\": \"138\", \"values\": [\"138\"], \"key_label\": \"Frais d'état des lieux\", \"value_label\": \"138 €\", \"value_label_reader\": \"138 Euro\", \"generic\": false}, {\"key\": \"district_id\", \"value\": \"59350\", \"values\": [\"59350\"], \"value_label\": \"59350\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"3\", \"values\": [\"3\"], \"value_label\": \"3\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"mandate_type\", \"value\": \"simple\", \"values\": [\"simple\"], \"value_label\": \"simple\", \"generic\": false}, {\"key\": \"has_visibility_option\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"visibility_option_products\", \"value\": \"RE_VISIBILITY_FEATURE\", \"values\": [\"RE_VISIBILITY_FEATURE\"], \"value_label\": \"RE_VISIBILITY_FEATURE\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_control_inflated_price\", \"value\": \"682\", \"values\": [\"682\"], \"key_label\": \"Loyer de référence majoré\", \"value_label\": \"682 €\", \"generic\": false}, {\"key\": \"annual_energy_budget_min\", \"value\": \"450\", \"values\": [\"450\"], \"key_label\": \"Montant annuel énergétique minimum\", \"value_label\": \"450 €\", \"value_label_reader\": \"450 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_max\", \"value\": \"650\", \"values\": [\"650\"], \"key_label\": \"Montant annuel énergétique maximum\", \"value_label\": \"650 €\", \"value_label_reader\": \"650 Euro\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rental_fees\", \"value\": \"600\", \"values\": [\"600\"], \"key_label\": \"Honoraires\", \"value_label\": \"600\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"578\", \"values\": [\"578\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"578\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"lat\": 50.629513, \"lng\": 3.0695825, \"source\": \"city\", \"provider\": \"here\", \"type\": \"city\", \"origin_type\": \"city\", \"is_shape\": true, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.0695825, 50.629513]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3268468761",
+  "url": "https://www.leboncoin.fr/ad/locations/3268468761",
+  "title": "Appartement 2 pièces 32 m²",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Type 2 - Secteur Lille FIVES Lille Fives, dans une petite copropriété, superbe appartement de 32m² offrant une cuisine équipée (plaque, hotte, four) ouverte sur le séjour, une chambre, une salle de bains et wc. Chauffage individuel électrique - A 5 minutes à pied du métro Fives. Proximité des commerces. - Les informations sur les risques auxquels ce bien est exposé sont disponibles sur le site Géorisques : www.georisques.gouv.fr Référence annonce : 1087085 Date de réalisation du diagnostic : 27/11/2025 Honoraires à la charge du locataire : 427 € TTC dont 98 € pour l’état des lieux Dépôt de garantie : 508 € Montant des charges : 50 € / mois Modalité de récupération des charges locatives : provision avec régularisation annuelle Montant estimé des dépenses annuelles d'énergie pour un usage standard : entre 900 € et 1 260 € sur les années 2021, 2022 et 2023 (abonnements compris).",
+  "listing": {
+   "listing_id": "3268468761",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-09-12T21:32:24.000Z",
+   "updated_at": "2026-10-01T12:25:14.000Z",
+   "professional_listing": true
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 32,
+   "floor_area": 32,
+   "area_unit": "sqm",
+   "rooms": 2,
+   "bedrooms": 1,
+   "bathrooms": 1,
+   "floor": {
+    "number": 2,
+    "description": [
+     "Pas de rez-de-chaussée"
+    ]
+   },
+   "floors_in_building": 3,
+   "building_year": 1900,
+   "availability": "30/09/2026",
+   "amenities": [
+    "Interphone"
+   ],
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "E",
+    "ges": "B"
+   },
+   "elevator": false
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59800 Fives",
+   "city": "Lille",
+   "zipcode": "59800",
+   "district": "Fives",
+   "lat": 50.63379,
+   "lng": 3.100305,
+   "source": "city",
+   "provider": "here",
+   "type": "district",
+   "origin_type": "district",
+   "is_shape": true,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.100305,
+      50.63379
+     ]
+    }
+   },
+   "postal_code": "59800",
+   "latitude": 50.63379,
+   "longitude": 3.100305,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000263",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration_flux"
+   }
+  },
+  "pricing": {
+   "amount_eur": 558,
+   "price": 558,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 55800
+  },
+  "media": {
+   "images": {
+    "count": 4,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/68/43/9b/68439b8d0c9bb9f79a04aa4806ff012bbe20f49f.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/30/12/5c/30125c498433519f2cf10bb703a9049783cc290a.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2f/28/79/2f28796ce1e6091a7b326f0db93deb5e0cccff78.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2d/e1/30/2de1304b825d99490d868f29d69407429639387c.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/68/43/9b/68439b8d0c9bb9f79a04aa4806ff012bbe20f49f.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/30/12/5c/30125c498433519f2cf10bb703a9049783cc290a.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2f/28/79/2f28796ce1e6091a7b326f0db93deb5e0cccff78.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2d/e1/30/2de1304b825d99490d868f29d69407429639387c.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/68/43/9b/68439b8d0c9bb9f79a04aa4806ff012bbe20f49f.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/30/12/5c/30125c498433519f2cf10bb703a9049783cc290a.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2f/28/79/2f28796ce1e6091a7b326f0db93deb5e0cccff78.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/2d/e1/30/2de1304b825d99490d868f29d69407429639387c.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/68/43/9b/68439b8d0c9bb9f79a04aa4806ff012bbe20f49f.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/68/43/9b/68439b8d0c9bb9f79a04aa4806ff012bbe20f49f.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"activity_sector\", \"value\": \"2\", \"values\": [\"2\"], \"value_label\": \"2\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Non meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"32\", \"values\": [\"32\"], \"key_label\": \"Surface habitable\", \"value_label\": \"32 m²\", \"value_label_reader\": \"32 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"nb_bathrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles de bain\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"e\", \"values\": [\"e\"], \"key_label\": \"Classe énergie\", \"value_label\": \"E\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"b\", \"values\": [\"b\"], \"key_label\": \"GES\", \"value_label\": \"B\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"intercom\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Interphone\", \"values_label\": [\"Interphone\"], \"values_label_reader\": [\"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"3\", \"values\": [\"3\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"3\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Non\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1900\", \"values\": [\"1900\"], \"key_label\": \"Année de construction\", \"value_label\": \"1900\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"30/09/2026\", \"values\": [\"30/09/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"30/09/2026\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"50\", \"values\": [\"50\"], \"key_label\": \"Charges locatives\", \"value_label\": \"50 €\", \"value_label_reader\": \"50 Euro\", \"generic\": false}, {\"key\": \"security_deposit\", \"value\": \"508\", \"values\": [\"508\"], \"key_label\": \"Dépôt de garantie\", \"value_label\": \"508 €\", \"value_label_reader\": \"508 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"inventory_fees\", \"value\": \"99\", \"values\": [\"99\"], \"key_label\": \"Frais d'état des lieux\", \"value_label\": \"99 €\", \"value_label_reader\": \"99 Euro\", \"generic\": false}, {\"key\": \"pro_rates_link\", \"value\": \"https://citya-ndf.com/\", \"values\": [\"https://citya-ndf.com/\"], \"value_label\": \"https://citya-ndf.com/\", \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000263\", \"values\": [\"3000263\"], \"value_label\": \"3000263\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration_flux\", \"values\": [\"integration_flux\"], \"value_label\": \"integration_flux\", \"generic\": false}, {\"key\": \"mandate_type\", \"value\": \"simple\", \"values\": [\"simple\"], \"value_label\": \"simple\", \"generic\": false}, {\"key\": \"has_visibility_option\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"visibility_option_products\", \"value\": \"RE_VISIBILITY_FEATURE\", \"values\": [\"RE_VISIBILITY_FEATURE\"], \"value_label\": \"RE_VISIBILITY_FEATURE\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_control_inflated_price\", \"value\": \"567\", \"values\": [\"567\"], \"key_label\": \"Loyer de référence majoré\", \"value_label\": \"567 €\", \"generic\": false}, {\"key\": \"annual_energy_budget_min\", \"value\": \"900\", \"values\": [\"900\"], \"key_label\": \"Montant annuel énergétique minimum\", \"value_label\": \"900 €\", \"value_label_reader\": \"900 Euro\", \"generic\": false}, {\"key\": \"annual_energy_budget_max\", \"value\": \"1260\", \"values\": [\"1260\"], \"key_label\": \"Montant annuel énergétique maximum\", \"value_label\": \"1260 €\", \"value_label_reader\": \"1260 Euro\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rental_fees\", \"value\": \"427\", \"values\": [\"427\"], \"key_label\": \"Honoraires\", \"value_label\": \"427\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"508\", \"values\": [\"508\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"508\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 2/3\", \"value_label\": \"Étage 2/3\", \"value_label_reader\": \"Étage 2 sur 3\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59800 Fives\", \"city\": \"Lille\", \"zipcode\": \"59800\", \"district\": \"Fives\", \"lat\": 50.63379, \"lng\": 3.100305, \"source\": \"city\", \"provider\": \"here\", \"type\": \"district\", \"origin_type\": \"district\", \"is_shape\": true, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.100305, 50.63379]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ },
+ {
+  "record_type": "property_listing",
+  "id": "3280097156",
+  "url": "https://www.leboncoin.fr/ad/locations/3280097156",
+  "title": "Magnifique appt proche parc JB Lebas",
+  "category": "Locations",
+  "listing_type": "offer",
+  "description": "Calme et lumineux, vue sur JARDIN COLLECTIF, pas de vis-à-vis,, au 2 ème étage. Bien situé, à 7mn à pied du MÉTRO, à 3mn de la faculté de droit et à un quart d’heure de la GARE Lille Flandres. SPACIEUX, surface d'environ 30m2 habitable, environ 43 m2 au sol. Isolation thermique refaite, DPE en C. Meubles style contemporain: canapé, lit, bureau, nombreux RANGEMENTS, cuisine équipée d’un frigo, plaques vitrocéramiques, micro ondes. Belle douche italienne en mosaïque, parquet chêne, appartement avec CHARME. Appartement PRATIQUE et bien agencé, vous n'avez plus qu'à installer vos effets personnels! Loyer hors charges : 640 euros. Charges de 59 euros INCLUANT l’eau et l’ELECTRICITE avec le CHAUFFAGE électrique récent et programmable. LIBRE À PARTIR DE SAMEDI N'hésitez pas à me contacter pour tout renseignement complémentaire ou toute visite! Isabelle",
+  "listing": {
+   "listing_id": "3280097156",
+   "deal_type": "rent",
+   "listing_status": "active",
+   "listing_type": "apartment",
+   "posted_at": "2026-10-01T12:18:14.000Z",
+   "updated_at": "2026-10-01T12:18:14.000Z",
+   "professional_listing": false
+  },
+  "property": {
+   "type": "Appartement",
+   "property_type": "apartment",
+   "surface_m2": 30,
+   "floor_area": 30,
+   "area_unit": "sqm",
+   "rooms": 2,
+   "bedrooms": 1,
+   "bathrooms": 1,
+   "floor": {
+    "number": 2,
+    "description": [
+     "Pas de rez-de-chaussée",
+     "Dernier étage"
+    ]
+   },
+   "floors_in_building": 2,
+   "building_year": 1930,
+   "availability": "10/2026",
+   "amenities": [
+    "Construction ancienne",
+    "Animaux autorisés",
+    "Cuisine ouverte",
+    "Cuisine équipée"
+   ],
+   "heating": {
+    "type": "Individuel",
+    "mode": "Électrique"
+   },
+   "energy": {
+    "rating": "C",
+    "ges": "C"
+   },
+   "elevator": false,
+   "parking_spots": 0
+  },
+  "location": {
+   "country_id": "FR",
+   "region_id": "17",
+   "region_name": "Nord-Pas-de-Calais",
+   "department_id": "59",
+   "department_name": "Nord",
+   "city_label": "Lille 59000 Moulins",
+   "city": "Lille",
+   "zipcode": "59000",
+   "district": "Moulins",
+   "lat": 50.62125,
+   "lng": 3.07064,
+   "source": "address",
+   "provider": "here",
+   "type": "street",
+   "origin_type": "street",
+   "is_shape": false,
+   "feature": {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      3.07064,
+      50.62125
+     ]
+    }
+   },
+   "postal_code": "59000",
+   "latitude": 50.62125,
+   "longitude": 3.07064,
+   "country": "FR",
+   "country_code": "FR",
+   "district_details": {
+    "id": "3000290",
+    "visibility": true,
+    "type_id": 9,
+    "resolution_type": "integration"
+   }
+  },
+  "pricing": {
+   "amount_eur": 699,
+   "price": 699,
+   "currency": "EUR",
+   "billing_period": "month",
+   "amount_cents": 69900
+  },
+  "media": {
+   "images": {
+    "count": 3,
+    "urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/53/64/31/53643138d1bc782c41b2e2dabe3d645dc65ec5fc.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/6b/e0/35/6be03547d51a57ae9b04cf04ae05127d9bc76e3b.jpg?rule=ad-image",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/05/dc/4a/05dc4a7a1279505ec9439416084c70267c2197f3.jpg?rule=ad-image"
+    ],
+    "thumbs": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/53/64/31/53643138d1bc782c41b2e2dabe3d645dc65ec5fc.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/6b/e0/35/6be03547d51a57ae9b04cf04ae05127d9bc76e3b.jpg?rule=ad-thumb",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/05/dc/4a/05dc4a7a1279505ec9439416084c70267c2197f3.jpg?rule=ad-thumb"
+    ],
+    "large_urls": [
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/53/64/31/53643138d1bc782c41b2e2dabe3d645dc65ec5fc.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/6b/e0/35/6be03547d51a57ae9b04cf04ae05127d9bc76e3b.jpg?rule=ad-large",
+     "https://img.leboncoin.fr/api/v1/lbcpb1/images/05/dc/4a/05dc4a7a1279505ec9439416084c70267c2197f3.jpg?rule=ad-large"
+    ],
+    "primary_thumb_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/53/64/31/53643138d1bc782c41b2e2dabe3d645dc65ec5fc.jpg?rule=ad-thumb",
+    "primary_small_url": "https://img.leboncoin.fr/api/v1/lbcpb1/images/53/64/31/53643138d1bc782c41b2e2dabe3d645dc65ec5fc.jpg?rule=ad-small"
+   }
+  },
+  "source_data": "{\"attributes\": [{\"key\": \"rating_score\", \"value\": \"1\", \"values\": [\"1\"], \"value_label\": \"1\", \"generic\": false}, {\"key\": \"rating_count\", \"value\": \"4\", \"values\": [\"4\"], \"value_label\": \"4\", \"generic\": false}, {\"key\": \"real_estate_type\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Type de bien\", \"value_label\": \"Appartement\", \"generic\": true}, {\"key\": \"furnished\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Ce bien est :\", \"value_label\": \"Meublé\", \"generic\": true}, {\"key\": \"square\", \"value\": \"30\", \"values\": [\"30\"], \"key_label\": \"Surface habitable\", \"value_label\": \"30 m²\", \"value_label_reader\": \"30 Mètres carrés\", \"generic\": true}, {\"key\": \"rooms\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre de pièces\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"bedrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de chambres\", \"value_label\": \"1 ch.\", \"generic\": true}, {\"key\": \"nb_bathrooms\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Nombre de salles de bain\", \"value_label\": \"1\", \"generic\": true}, {\"key\": \"energy_rate\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"Classe énergie\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"ges\", \"value\": \"c\", \"values\": [\"c\"], \"key_label\": \"GES\", \"value_label\": \"C\", \"generic\": true}, {\"key\": \"specificities\", \"values\": [\"old_builiding\", \"animals_allowed\", \"american_kitchen\", \"equipped_kitchen\"], \"key_label\": \"Caractéristiques\", \"value_label\": \"Construction ancienne, Animaux autorisés, Cuisine ouverte, Cuisine équipée\", \"value_label_reader\": \", , , \", \"values_label\": [\"Construction ancienne\", \"Animaux autorisés\", \"Cuisine ouverte\", \"Cuisine équipée\"], \"values_label_reader\": [\"\", \"\", \"\", \"\"], \"generic\": true}, {\"key\": \"heating_type\", \"value\": \"individual\", \"values\": [\"individual\"], \"key_label\": \"Type de chauffage\", \"value_label\": \"Individuel\", \"generic\": true}, {\"key\": \"heating_mode\", \"value\": \"electric\", \"values\": [\"electric\"], \"key_label\": \"Mode de chauffage\", \"value_label\": \"Électrique\", \"generic\": true}, {\"key\": \"floor_number\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Étage de votre bien\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"nb_floors_building\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Nombre d’étages dans l’immeuble\", \"value_label\": \"2\", \"generic\": true}, {\"key\": \"floor_property\", \"values\": [\"upper_floor\", \"last_stage\"], \"key_label\": \"Étage de l'appartement\", \"values_label\": [\"Pas de rez-de-chaussée\", \"Dernier étage\"], \"generic\": false}, {\"key\": \"elevator\", \"value\": \"2\", \"values\": [\"2\"], \"key_label\": \"Ascenseur\", \"value_label\": \"Non\", \"generic\": true}, {\"key\": \"orientation\", \"value\": \"south\", \"values\": [\"south\"], \"key_label\": \"Exposition\", \"value_label\": \"Sud\", \"generic\": true}, {\"key\": \"nb_parkings\", \"value\": \"0\", \"values\": [\"0\"], \"key_label\": \"Places de parking\", \"value_label\": \"0\", \"generic\": true}, {\"key\": \"building_year\", \"value\": \"1930\", \"values\": [\"1930\"], \"key_label\": \"Année de construction\", \"value_label\": \"1930\", \"generic\": true}, {\"key\": \"available_date\", \"value\": \"10/2026\", \"values\": [\"10/2026\"], \"key_label\": \"Disponible à partir de\", \"value_label\": \"10/2026\", \"generic\": true}, {\"key\": \"monthly_charges\", \"value\": \"59\", \"values\": [\"59\"], \"key_label\": \"Charges locatives\", \"value_label\": \"59 €\", \"value_label_reader\": \"59 Euro\", \"generic\": false}, {\"key\": \"charges_included\", \"value\": \"1\", \"values\": [\"1\"], \"key_label\": \"Charges incluses\", \"value_label\": \"Oui\", \"generic\": true}, {\"key\": \"real_estate_charges_details\", \"values\": [\"cold_water\", \"hot_water\", \"electricity\", \"heating\", \"waste_collection\"], \"key_label\": \"Détail des charges\", \"value_label\": \"Eau froide, Eau chaude, Électricité, Chauffage, Ordures ménagères\", \"values_label\": [\"Eau froide\", \"Eau chaude\", \"Électricité\", \"Chauffage\", \"Ordures ménagères\"], \"generic\": false}, {\"key\": \"district_id\", \"value\": \"3000290\", \"values\": [\"3000290\"], \"value_label\": \"3000290\", \"generic\": false}, {\"key\": \"district_visibility\", \"value\": \"true\", \"values\": [\"true\"], \"value_label\": \"true\", \"generic\": false}, {\"key\": \"district_type_id\", \"value\": \"9\", \"values\": [\"9\"], \"value_label\": \"9\", \"generic\": false}, {\"key\": \"district_resolution_type\", \"value\": \"integration\", \"values\": [\"integration\"], \"value_label\": \"integration\", \"generic\": false}, {\"key\": \"is_public_rent_control\", \"value\": \"true\", \"values\": [\"true\"], \"key_label\": \"Bien soumis à l'encadrement des loyers\", \"value_label\": \"Oui\", \"generic\": false}, {\"key\": \"rent_control_inflated_price\", \"value\": \"650\", \"values\": [\"650\"], \"key_label\": \"Loyer de référence majoré\", \"value_label\": \"650 €\", \"generic\": false}, {\"key\": \"is_import\", \"value\": \"false\", \"values\": [\"false\"], \"value_label\": \"false\", \"generic\": false}, {\"key\": \"lease_type\", \"value\": \"rent\", \"values\": [\"rent\"], \"value_label\": \"rent\", \"generic\": false}, {\"key\": \"rent_excluding_charges\", \"value\": \"640\", \"values\": [\"640\"], \"key_label\": \"Loyer mensuel (hors charges)\", \"value_label\": \"640\", \"generic\": false}, {\"key\": \"floor_display\", \"value\": \"Étage 2/2\", \"value_label\": \"Étage 2/2\", \"value_label_reader\": \"Étage 2 sur 2\", \"generic\": false}], \"location\": {\"country_id\": \"FR\", \"region_id\": \"17\", \"region_name\": \"Nord-Pas-de-Calais\", \"department_id\": \"59\", \"department_name\": \"Nord\", \"city_label\": \"Lille 59000 Moulins\", \"city\": \"Lille\", \"zipcode\": \"59000\", \"district\": \"Moulins\", \"lat\": 50.62125, \"lng\": 3.07064, \"source\": \"address\", \"provider\": \"here\", \"type\": \"street\", \"origin_type\": \"street\", \"is_shape\": false, \"feature\": {\"type\": \"Feature\", \"geometry\": {\"type\": \"Point\", \"coordinates\": [3.07064, 50.62125]}}}, \"options\": {\"has_option\": false, \"booster\": false, \"photosup\": false, \"urgent\": false, \"gallery\": false, \"sub_toplist\": false, \"continuous_top_ads\": false, \"highlight\": false}}"
+ }
+]

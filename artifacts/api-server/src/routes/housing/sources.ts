@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { selogerLocations } from "@workspace/db";
 import { db } from "../../lib/database";
+import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
 import { resolvePlace, type Commune } from "../../lib/places";
 import { apify, apifyText } from "./apify-client";
@@ -88,11 +89,19 @@ export async function sourceRequest(source: ExtraSource, criteria: Criteria, lim
   return { batch: "focused", source, path, input: JSON.stringify({ startUrls: [selogerSearchUrl(criteria, code)], maxItems: limit, deepScrape: true }) };
 }
 
+/**
+ * Annonces lues par source (chacune est payée). Sur 5 annonces montrées en alternance (Le Bon Coin, SeLoger, PAP,
+ * Le Bon Coin, SeLoger), SeLoger en place 2 et PAP 1 ; le surplus remplace les annonces écartées (colocations…).
+ */
+export function sourceLimit(source: ExtraSource) {
+  return source === "seloger" ? intEnv("SELOGER_CANDIDATE_LIMIT", 6) : intEnv("PAP_CANDIDATE_LIMIT", 4);
+}
+
 /** Démarre les sources secondaires ; une source indisponible est journalisée et ignorée, jamais bloquante. */
-export async function startExtraSources(criteria: Criteria, limit: number, chargeCap: string, timeout: number): Promise<SourceRun[]> {
+export async function startExtraSources(criteria: Criteria, chargeCap: string, timeout: number): Promise<SourceRun[]> {
   const started = await Promise.all(enabledExtraSources().map(async source => {
     try {
-      const request = await sourceRequest(source, criteria, limit, chargeCap, timeout);
+      const request = await sourceRequest(source, criteria, sourceLimit(source), chargeCap, timeout);
       if (!request) return null;
       const response = object(await apify(request.path, { method: "POST", headers: { "Content-Type": "application/json" }, body: request.input }));
       const runId = text(object(response.data).id);
@@ -118,7 +127,7 @@ export function parseSelogerResolution(log: string, commune: Pick<Commune, "depa
 
 /**
  * Les URL SeLoger désignent une ville par un code interne, ni INSEE ni postal. Un run très court de l'acteur abotapi
- * (aucune annonce lue) le résout ; il est ensuite gardé en base pour toujours. null si introuvable.
+ * le résout (≈ 0,09 $, une seule fois par commune) ; il est ensuite gardé en base pour toujours. null si introuvable.
  */
 export async function selogerLocationCode(commune: Commune): Promise<string | null> {
   const [cached] = await db().select().from(selogerLocations).where(eq(selogerLocations.inseeCode, commune.code));
@@ -127,7 +136,8 @@ export async function selogerLocationCode(commune: Commune): Promise<string | nu
     mode: "search", locations: [commune.name], distributionType: "Rent", estateTypes: ["Apartment"],
     maxItems: 1, maxPages: 1, getDetails: false, proxy: { useApifyProxy: true, apifyProxyGroups: ["RESIDENTIAL"] },
   };
-  const response = object(await apify(`/v2/acts/${RESOLVER_ACTOR}/runs?waitForFinish=60&maxItems=1&maxTotalChargeUsd=0.02&timeout=60`, {
+  // Démarrage facturé 0,09 $ par l'acteur : un plafond plus bas interrompt le run avant qu'il ait résolu la ville.
+  const response = object(await apify(`/v2/acts/${RESOLVER_ACTOR}/runs?waitForFinish=60&maxItems=1&maxTotalChargeUsd=0.10&timeout=60`, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input),
   }));
   const runId = text(object(response.data).id);

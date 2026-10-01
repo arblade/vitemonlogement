@@ -1,29 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { actorRequest, housingActorInput, isHousingListingUrl, focusedSearchTerm, shouldRunBroad } from "./housing-search.ts";
+import { actorRequest, housingActorInput, isHousingListingUrl, focusedSearchTerm, LEBONCOIN_ACTORS } from "./housing-search.ts";
 
-const url = input => new URL(input.searchUrl);
+const url = request => new URL(request.input.startUrls[0]);
 
-test("ville reconnue : URL Le Bon Coin limitée aux appartements et maisons, pièces, surface, budget, ville avec coordonnées", () => {
+test("ville reconnue : acteur fatihtahta, URL limitée aux appartements et maisons, pièces, surface, budget, ville avec coordonnées", () => {
   const criteria = {
     intent: "rent", location: "Quimper", keywords: "", radius: 5,
     minPrice: 400, maxPrice: 1200, minArea: 30, maxArea: 50, minRooms: 1, maxRooms: 2, wishes: ["place de parking disponible"],
   };
-  const input = housingActorInput(criteria);
-  const params = url(input).searchParams;
-  assert.equal(url(input).origin + url(input).pathname, "https://www.leboncoin.fr/recherche");
-  assert.equal(params.get("category"), "10");
+  const request = housingActorInput(criteria);
+  assert.equal(request.actor, "fatihtahta~leboncoin-fr-scraper");
+  assert.deepEqual(Object.keys(request.input).sort(), ["limit", "startUrls"]);
+  assert.equal(request.input.limit, 10);
+  const params = url(request).searchParams;
+  assert.equal(url(request).origin + url(request).pathname, "https://www.leboncoin.fr/recherche");
+  assert.equal(params.get("category"), "10", "catégorie Locations : jamais de vente");
   assert.equal(params.get("real_estate_type"), "1,2", "jamais de parking, terrain ni « autre »");
   assert.match(params.get("locations"), /^Quimper_29000__47\.\d{5}_-4\.\d{5}_5000$/);
   assert.equal(params.get("rooms"), "1-2");
   assert.equal(params.get("square"), "30-50");
   assert.equal(params.get("price"), "400-1200");
   assert.equal(params.get("text"), "parking");
-  assert.deepEqual([input.adLimit, input.mode, input.includeSeller, input.includePhone, input.shippable], [10, "standard", false, false, false]);
-  assert.equal("location" in input || "category" in input || "searchQuery" in input, false, "les champs manuels seraient ignorés");
-  const broad = url(housingActorInput(criteria, "broad")).searchParams;
-  assert.equal(broad.get("text"), null);
-  assert.equal(broad.get("price"), "400-1200");
 });
 
 test("bornes ouvertes : « min » / « max » ; aucune borne → paramètre absent ; rayon en mètres", () => {
@@ -36,37 +34,32 @@ test("bornes ouvertes : « min » / « max » ; aucune borne → paramètre abse
   assert.equal(exact.get("rooms"), "2-2");
 });
 
-test("ville non reconnue (département, homonyme) : repli sur la requête par champs, toujours en location", () => {
+test("ville non reconnue (département, homonyme) : repli sur clearpath, qui cherche un lieu par son nom, toujours en location", () => {
   for (const location of ["Finistère", "Saint-Denis"]) {
-    const input = housingActorInput({ intent: "buy", location, keywords: "maison avec jardin", wishes: ["garage"], minPrice: 400, maxPrice: 1200 });
-    assert.equal(input.searchUrl, undefined, location);
+    const { actor, input } = housingActorInput({ intent: "buy", location, keywords: "maison avec jardin", wishes: ["garage"], minPrice: 400, maxPrice: 1200 });
+    assert.equal(actor, LEBONCOIN_ACTORS.byName, location);
     assert.equal(input.category, "10");
     assert.equal(input.location, location);
     assert.equal(input.searchQuery, "garage");
     assert.equal(input.price_max_filter, 1200);
+    assert.equal(input.adLimit, 10, "minimum imposé par clearpath");
   }
 });
 
-test("a second pass is conditional on 40 valid focused matches and a real broadening", () => {
-  assert.equal(shouldRunBroad(0, true), true);
-  assert.equal(shouldRunBroad(39, true), true);
-  assert.equal(shouldRunBroad(40, true), false);
-  assert.equal(shouldRunBroad(100, true), false);
-  assert.equal(shouldRunBroad(5, false), false);
+test("mot-clé : le premier équipement explicite", () => {
   assert.equal(focusedSearchTerm({ intent: "rent", location: "Paris", keywords: "", wishes: ["balcon", "parking"] }), "balcon");
 });
 
-test("debug trace captures the exact focused and broad actor payloads", () => {
+test("suivi : requête unique (plus de recherche élargie), chemin de l'acteur et paramètres exacts", () => {
   const criteria = { intent: "rent", location: "Quimper", radius: 5, minPrice: 400, maxPrice: 1200, keywords: "", wishes: ["parking"] };
-  const focused = actorRequest(criteria, "focused", 10, "0.10", 120);
-  const broad = actorRequest(criteria, "broad", 10, "0.10", 120);
-  assert.match(focused.path, /maxItems=10&maxTotalChargeUsd=0\.10&timeout=120/);
-  assert.equal(new URL(JSON.parse(focused.input).searchUrl).searchParams.get("text"), "parking");
-  assert.equal(new URL(JSON.parse(broad.input).searchUrl).searchParams.get("text"), null);
-  assert.equal(new URL(JSON.parse(broad.input).searchUrl).searchParams.get("price"), "400-1200");
-  assert.equal(focused.batch, "focused");
-  assert.equal(broad.batch, "broad");
+  const request = actorRequest(criteria, 10, "0.10", 120);
+  assert.equal(request.path, "/v2/acts/fatihtahta~leboncoin-fr-scraper/runs?maxItems=10&maxTotalChargeUsd=0.10&timeout=120");
+  assert.equal(request.batch, "focused");
+  assert.equal(new URL(JSON.parse(request.input).startUrls[0]).searchParams.get("text"), "parking");
+  const fallback = actorRequest({ ...criteria, location: "Finistère" }, 10, "0.10", 120);
+  assert.match(fallback.path, /^\/v2\/acts\/clearpath~leboncoin-api\/runs\?/);
 });
+
 test("rejects products and sales while keeping rental listings", () => {
   assert.equal(isHousingListingUrl("https://www.leboncoin.fr/ad/jeux_jouets/3195605873"), false);
   assert.equal(isHousingListingUrl("https://www.leboncoin.fr/ad/ameublement/3274278581"), false);

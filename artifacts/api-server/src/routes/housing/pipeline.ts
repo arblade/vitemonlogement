@@ -26,7 +26,7 @@ export function blockingFailure(error: unknown): string | null {
 export async function advanceSearch(id: number): Promise<number> {
   const row = await getSearchRow(id);
   if (!row || row.status !== "running") return 0;
-  const isRefresh = Boolean(row.analyzed) || row.phase === "broad";
+  const isRefresh = Boolean(row.analyzed);
   try {
     let criteria = JSON.parse(row.criteria) as Criteria;
     if (!row.runId) {
@@ -44,7 +44,7 @@ export async function advanceSearch(id: number): Promise<number> {
         criteria = { ...criteria, intent: "rent" };
         await setCriteria(id, criteria);
       }
-      const { runId, request, sourceRuns } = await startSearch(criteria, row.phase === "broad" ? "broad" : "focused");
+      const { runId, request, sourceRuns } = await startSearch(criteria);
       await setRun(id, runId, request, sourceRuns);
       return POLL_MS;
     }

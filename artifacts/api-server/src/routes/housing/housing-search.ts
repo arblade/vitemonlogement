@@ -2,22 +2,17 @@ import type { Criteria } from "./store";
 import { resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
 
+// « broad » : recherche élargie, supprimée le 01/10/2026 ; reste lisible dans les anciennes recherches.
 export type SearchBatch = "focused" | "broad";
 export type ActorRequest = { batch: SearchBatch; path: string; input: string; source?: "leboncoin" | "pap" | "seloger" };
-export const BROAD_THRESHOLD = 40;
 
-// An actor accepts only one free-text searchQuery. Prefer the first explicit
-// amenity over a dwelling type; the broad pass removes only that text filter.
+// Un seul mot-clé par recherche : le premier équipement explicite, sinon un type de logement.
 export function focusedSearchTerm(criteria: Criteria): string | null {
   for (const wish of criteria.wishes ?? []) {
     const match = wish.match(/\b(parking|stationnement|garage|meubl[ée]|balcon|jardin|terrasse|ascenseur)\b/i);
     if (match) return match[0].toLocaleLowerCase("fr");
   }
   return criteria.keywords.match(/\b(appartement|maison|studio|duplex|loft|chambre)\b/i)?.[0]?.toLocaleLowerCase("fr") ?? null;
-}
-
-export function shouldRunBroad(focusedMatches: number, hasFocusedQuery: boolean) {
-  return hasFocusedQuery && focusedMatches < BROAD_THRESHOLD;
 }
 
 // The app only searches rentals. The actor's documented category 10 is locations;
@@ -65,32 +60,39 @@ export function leboncoinSearchUrl(criteria: Criteria, term: string | null): str
   return `https://www.leboncoin.fr/recherche?${params}`;
 }
 
-export function housingActorInput(criteria: Criteria, batch: SearchBatch = "focused", adLimit = 10) {
-  // Even a keyword-only search remains restricted to rental category, place,
-  // radius and budget. A missing mention is not proof the amenity is absent.
-  const term = batch === "focused" ? focusedSearchTerm(criteria) : null;
+/** Acteurs Le Bon Coin : `fatihtahta` (0,001 $ l'annonce, sans frais de démarrage) lit une URL de recherche ;
+ * `clearpath` (0,009 $ par run + 0,0015 $ l'annonce) sert de secours quand la ville n'est pas reconnue, car il sait
+ * chercher un lieu par son nom. */
+export const LEBONCOIN_ACTORS = { url: "fatihtahta~leboncoin-fr-scraper", byName: "clearpath~leboncoin-api" } as const;
+
+export function housingActorInput(criteria: Criteria, adLimit = 10): { actor: string; input: Record<string, unknown> } {
+  // Même sans URL, la recherche reste limitée aux locations, au lieu, au rayon et au budget.
+  const term = focusedSearchTerm(criteria);
   const searchUrl = leboncoinSearchUrl(criteria, term);
-  const options = { adLimit, mode: "standard", includeSeller: false, includePhone: false, shippable: false };
-  if (searchUrl) return { searchUrl, ...options };
+  if (searchUrl) return { actor: LEBONCOIN_ACTORS.url, input: { startUrls: [searchUrl], limit: adLimit } };
   return {
-    ...(term ? { searchQuery: term } : {}),
-    category: "10",
-    location: criteria.location,
-    radius: Math.max(0, Math.min(200, criteria.radius ?? 5)),
-    ...(criteria.minPrice != null ? { price_min_filter: criteria.minPrice } : {}),
-    ...(criteria.maxPrice != null ? { price_max_filter: criteria.maxPrice } : {}),
-    adLimit,
-    mode: "standard",
-    includeSeller: false,
-    includePhone: false,
-    shippable: false,
+    actor: LEBONCOIN_ACTORS.byName,
+    input: {
+      ...(term ? { searchQuery: term } : {}),
+      category: "10",
+      location: criteria.location,
+      radius: Math.max(0, Math.min(200, criteria.radius ?? 5)),
+      ...(criteria.minPrice != null ? { price_min_filter: criteria.minPrice } : {}),
+      ...(criteria.maxPrice != null ? { price_max_filter: criteria.maxPrice } : {}),
+      adLimit: Math.max(10, adLimit), // minimum imposé par clearpath
+      mode: "standard",
+      includeSeller: false,
+      includePhone: false,
+      shippable: false,
+    },
   };
 }
 
-export function actorRequest(criteria: Criteria, batch: SearchBatch, candidateLimit: number, chargeCap: string, timeout: number): ActorRequest {
+export function actorRequest(criteria: Criteria, candidateLimit: number, chargeCap: string, timeout: number): ActorRequest {
+  const { actor, input } = housingActorInput(criteria, candidateLimit);
   return {
-    batch,
-    path: `/v2/actors/clearpath~leboncoin-api/runs?maxItems=${candidateLimit}&maxTotalChargeUsd=${chargeCap}&timeout=${timeout}`,
-    input: JSON.stringify(housingActorInput(criteria, batch, Math.max(10, candidateLimit))),
+    batch: "focused",
+    path: `/v2/acts/${actor}/runs?maxItems=${candidateLimit}&maxTotalChargeUsd=${chargeCap}&timeout=${timeout}`,
+    input: JSON.stringify(input),
   };
 }

@@ -103,3 +103,11 @@ Sources des tarifs : [OpenAI gpt-5-mini](https://developers.openai.com/api/docs/
 [OpenAI gpt-4.1-nano](https://developers.openai.com/api/docs/models/gpt-4.1-nano),
 [comparatif des tarifs OpenAI](https://modelcompare.dev/pricing/openai-api-pricing) ; tarifs Apify lus sur l'API
 Apify (`/v2/acts/{acteur}`) et coûts facturés lus sur chaque run.
+
+## Appliqué (01/10/2026)
+Points 2, 4 et 5 : acteur Le Bon Coin `fatihtahta` (adaptateur testé sur 6 annonces réelles lues par les deux acteurs :
+mêmes titre, loyer, surface, pièces, lieu, position, photos, description et critères ; `clearpath` gardé en secours
+quand la ville n'est pas reconnue) ; SeLoger 6 annonces, PAP 4 (`SELOGER_CANDIDATE_LIMIT`, `PAP_CANDIDATE_LIMIT`) ;
+recherche élargie **supprimée** (et non « seulement si utile », à la demande). Mesuré en réel : ≈ 0,055 $ d'Apify par
+recherche à 3 sources. Point 1 (effort de raisonnement OpenAI) pas encore appliqué.
+Correction : le code de ville SeLoger coûte ≈ 0,09 $ une fois par ville (voir `bilan-financier.md`).

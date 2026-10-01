@@ -27,23 +27,16 @@ function PreviewCard({ className = '' }: { className?: string }) {
   </div>;
 }
 
-export function SearchProgress({ stage, phase = 'focused' }: { stage: string; phase?: 'focused' | 'broad' }) {
-  const stageIndex = steps.findIndex(step => step.key === stage);
-  // Une recherche élargie peut recommencer à chercher après la vérification
-  // initiale. Ce nouveau passage ne doit pas faire reculer la barre.
-  const activeIndex = phase === 'broad' ? steps.length - 1 : Math.max(0, stageIndex);
+export function SearchProgress({ stage }: { stage: string }) {
+  const activeIndex = Math.max(0, steps.findIndex(step => step.key === stage));
   // Milestones, not a time estimate: do not announce 100% while work is still running.
-  const progress = phase === 'broad' ? (stage === 'analyzing' ? 92 : 85) : [20, 50, 75][activeIndex];
-  const activity = phase === 'broad'
-    ? stage === 'analyzing'
-      ? 'Nous vérifions aussi les annonces trouvées en élargissant la recherche.'
-      : 'Nous cherchons d’autres annonces qui pourraient vous convenir.'
-    : stage === 'analyzing'
-      ? 'Nous lisons les annonces et vérifions ce qui correspond à vos critères.'
-      : stage === 'searching'
-        ? 'Nous parcourons les annonces qui pourraient vous convenir.'
-        : 'Nous repérons vos critères dans votre description.';
-  const stateOf = (index: number) => phase === 'broad' || index < activeIndex ? 'done' : index === activeIndex ? 'current' : 'todo';
+  const progress = [20, 50, 75][activeIndex];
+  const activity = stage === 'analyzing'
+    ? 'Nous lisons les annonces et vérifions ce qui correspond à vos critères.'
+    : stage === 'searching'
+      ? 'Nous parcourons les annonces qui pourraient vous convenir.'
+      : 'Nous repérons vos critères dans votre description.';
+  const stateOf = (index: number) => index < activeIndex ? 'done' : index === activeIndex ? 'current' : 'todo';
 
   return <section className="rounded-[2rem] border border-line-soft bg-paper p-6 shadow-[0_6px_24px_rgba(0,0,0,.06)] md:p-10" aria-label="Recherche en cours" aria-live="polite">
     <div className="flex items-center gap-2.5 text-sm font-semibold text-ink">
@@ -54,7 +47,7 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
       Recherche en cours
     </div>
     <h3 data-testid="text-current-activity" className="mt-4 max-w-xl text-2xl font-semibold leading-snug tracking-[-.02em] text-ink md:text-[28px]">{activity}</h3>
-    <p className="mt-2 text-sm leading-relaxed text-stone">{phase === 'broad' ? 'Les premières annonces sont disponibles plus bas.' : 'Vous pouvez quitter cette page : la recherche continue et vos résultats vous attendront dans « Mes recherches ».'}</p>
+    <p className="mt-2 text-sm leading-relaxed text-stone">Vous pouvez quitter cette page : la recherche continue et vos résultats vous attendront dans « Mes recherches ».</p>
 
     <div
       className="mt-7 h-1.5 overflow-hidden rounded-full bg-line-soft"
@@ -63,7 +56,7 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={progress}
-      aria-valuetext={phase === 'broad' ? 'Recherche élargie en cours' : steps[activeIndex].label}
+      aria-valuetext={steps[activeIndex].label}
     >
       <div className="progress-fill h-full rounded-full bg-gradient-to-r from-brand to-brand-dark transition-[width] duration-700 ease-out motion-reduce:transition-none" style={{ width: `${progress}%` }} />
     </div>
@@ -80,15 +73,11 @@ export function SearchProgress({ stage, phase = 'focused' }: { stage: string; ph
           <span className="sr-only">{state === 'done' ? 'terminée' : state === 'current' ? 'en cours' : 'à venir'}</span>
         </li>;
       })}
-      {phase === 'broad' && <li data-testid="stage-broad" aria-current="step" className="flex items-center gap-4">
-        <StepIcon state="current" />
-        <span className="text-base font-semibold text-ink">Recherche élargie <span className="sr-only">en cours</span></span>
-      </li>}
     </ol>
 
-    {phase !== 'broad' && <div aria-hidden="true" data-testid="progress-preview" className="mt-10 grid gap-5 sm:grid-cols-2">
+    <div aria-hidden="true" data-testid="progress-preview" className="mt-10 grid gap-5 sm:grid-cols-2">
       <PreviewCard />
       <PreviewCard className="hidden sm:block" />
-    </div>}
+    </div>
   </section>;
 }

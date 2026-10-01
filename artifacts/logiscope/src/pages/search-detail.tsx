@@ -168,7 +168,7 @@ export default function SearchDetail() {
       {search.isLoading && <div className="mx-auto max-w-3xl"><SearchProgress stage="interpreting"/></div>}
       {data && <>
         {data.status !== 'running' && !refresh.isPending && <>
-          {showDebug && <SearchRequestDebug requests={data.searchRequests} focusedMatches={data.focusedMatches} status={data.status} phase={data.phase} error={data.error}/>}
+          {showDebug && <SearchRequestDebug requests={data.searchRequests} focusedMatches={data.focusedMatches} status={data.status}/>}
           <SearchPromptEditor key={data.id} prompt={data.prompt} pending={create.isPending} error={relaunchError} onSubmit={onRelaunch}/>
         </>}
         {interactionError && <p role="alert" className="mb-5 text-sm text-brick">{interactionError}</p>}
@@ -178,8 +178,7 @@ export default function SearchDetail() {
            {data.status==='completed' && !refresh.isPending && <div className="flex flex-wrap items-center gap-3"><Button type="button" data-testid="button-refresh" onClick={onRefresh} className="h-10 rounded-lg bg-brand px-5 text-xs font-semibold text-lime-light hover:bg-brand-dark"><RefreshCw size={15} className="mr-2"/> Chercher d’autres annonces</Button>{listings.length>0 && <><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></>}</div>}
         </div>}
          {(data.status==='running'||refresh.isPending) && <div className="mx-auto max-w-3xl">
-           <SearchProgress stage={data.stage ?? 'interpreting'} phase={data.phase}/>
-           {data.phase === 'broad' && listings.length > 0 && <div className="mt-10">{resultsSection}</div>}
+           <SearchProgress stage={data.stage ?? 'interpreting'}/>
          </div>}
         {data.status==='failed' && <div className="max-w-2xl"><ErrorNotice message={data.error || 'La recherche n’a pas pu se terminer. Essayez une nouvelle description.'}/><Link href="/" data-testid="link-new-after-failure" className="mt-6 inline-flex items-center gap-2 text-sm font-bold underline underline-offset-4">Faire une nouvelle recherche <ArrowRight size={15}/></Link></div>}
         {(refreshError || (data.status==='completed' && data.error)) && <div role="alert" className="mb-7 max-w-2xl"><ErrorNotice message={refreshError || data.error || ''}/></div>}

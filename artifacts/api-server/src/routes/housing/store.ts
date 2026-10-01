@@ -203,7 +203,7 @@ export async function getSearch(id: number) {
   return { ...await summary(row), listings, routingAvailable: routingAvailable() };
 }
 
-export async function completeSearch(id: number, listings: Omit<Listing, "id">[], batchName: SearchBatch, continueBroad = false, maxResults = 5) {
+export async function completeSearch(id: number, listings: Omit<Listing, "id">[], batchName: SearchBatch, maxResults = 5) {
   const t = housingListings;
   await db().transaction(async tx => {
     for (const item of listings.slice(0, maxResults)) {
@@ -232,9 +232,9 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
       });
     }
     await tx.update(housingSearches).set({
-      status: continueBroad ? "running" : "completed",
-      stage: continueBroad ? "searching" : "ready",
-      phase: continueBroad ? "broad" : batchName,
+      status: "completed",
+      stage: "ready",
+      phase: batchName,
       runId: null,
       focusedMatches: batchName === "focused" ? listings.length : sql`${housingSearches.focusedMatches}`,
       analyzed: 1, error: null, attempts: 0, nextCheckAt: 0,

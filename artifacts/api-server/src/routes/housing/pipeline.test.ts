@@ -4,16 +4,16 @@ import type { AddressInfo } from "node:net";
 import test, { after, before } from "node:test";
 import { eq } from "drizzle-orm";
 import { housingSearches } from "@workspace/db";
+import { fatihRecord } from "../../test/fatih";
 
 // Bout en bout, sans réseau ni secret : de faux serveurs Apify et OpenAI locaux répondent au vrai code
 // (interprétation → run Apify → récupération → analyse IA → enregistrement) piloté par le vrai worker.
-const ads = [1, 2].map(n => ({
+const ads = [1, 2].map(n => fatihRecord({
   url: `https://www.leboncoin.fr/ad/locations/${n}`,
   title: `Studio ${n} Lille`,
   description: `Studio ${n} calme. Les chats sont acceptés. Loyer 600 € par mois.`,
-  price_euros: 600, square: 28, rooms: 1,
-  location: n === 1 ? { city: "Lille", lat: 50.6365, lng: 3.0635, type: "streetNumber" } : { city: "Lille", lat: 50.63, lng: 3.06, type: "city" },
-  images: { urls_large: [`https://img.leboncoin.fr/${n}.jpg`] },
+  price: 600, area: 28, rooms: 1, images: [`https://img.leboncoin.fr/${n}.jpg?rule=ad-image`],
+  ...(n === 1 ? { lat: 50.6365, lng: 3.0635, type: "streetNumber" } : { lat: 50.63, lng: 3.06, type: "city" }),
 }));
 const counts = { interpret: 0, analyze: 0, apifyRuns: 0, geocode: 0 };
 let fake: Server;
@@ -25,7 +25,7 @@ before(async () => {
     req.on("end", () => {
       const json = (value: unknown) => { res.setHeader("content-type", "application/json"); res.end(JSON.stringify(value)); };
       const url = req.url ?? "";
-      if (req.method === "POST" && url.startsWith("/v2/actors/")) { counts.apifyRuns++; return json({ data: { id: "run-1" } }); }
+      if (req.method === "POST" && url.startsWith("/v2/acts/fatihtahta~leboncoin-fr-scraper/runs")) { counts.apifyRuns++; return json({ data: { id: "run-1" } }); }
       if (url.startsWith("/v2/actor-runs/")) return json({ data: { status: "SUCCEEDED", defaultDatasetId: "ds-1" } });
       if (url.startsWith("/v2/datasets/")) return json(ads);
       if (url.startsWith("/geocodage/search")) {
