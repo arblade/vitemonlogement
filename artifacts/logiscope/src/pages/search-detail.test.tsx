@@ -108,13 +108,23 @@ describe('Page résultats : contenu', () => {
     expect(screen.getByTestId('button-like-1')).toHaveAccessibleName(/Ajouter aux favoris/);
   });
 
-  it('plus de bloc « Affiner votre recherche » : « Modifier ma demande » est un bouton direct, « Chercher d’autres annonces » est secondaire', () => {
+  it('plus de bloc « Affiner votre recherche » : « Modifier ma demande » est le bouton principal, à côté de « Chercher d’autres annonces » qui devient secondaire', () => {
     renderPage();
     expect(document.body).not.toHaveTextContent('Affiner votre recherche');
-    expect(screen.getByTestId('button-edit-prompt')).toHaveTextContent('Modifier ma demande');
-    expect(screen.getByTestId('button-edit-prompt').className).not.toContain('bg-brand');
-    expect(screen.getByTestId('button-refresh').className).not.toContain('bg-brand');
-    expect(screen.getByTestId('button-refresh').className).toContain('border');
+    const edit = screen.getByTestId('button-edit-prompt'), refresh = screen.getByTestId('button-refresh');
+    expect(edit).toHaveTextContent('Modifier ma demande');
+    expect(edit.className).toContain('bg-brand');
+    expect(refresh.className).not.toContain('bg-brand');
+    expect(refresh.className).toContain('border');
+    expect(edit.parentElement).toBe(refresh.parentElement);
+    expect(edit.compareDocumentPosition(refresh) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('recherche échouée : « Modifier ma demande » reste disponible, sans « Chercher d’autres annonces »', () => {
+    api.state.data = search({ status: 'failed', error: 'Échec', listings: [], count: 0 });
+    renderPage();
+    expect(screen.getByTestId('button-edit-prompt')).toBeInTheDocument();
+    expect(screen.queryByTestId('button-refresh')).not.toBeInTheDocument();
   });
 
   it('« Modifier ma demande » ouvre le champ prérempli et relance une nouvelle recherche', async () => {
@@ -122,6 +132,7 @@ describe('Page résultats : contenu', () => {
     api.create.mockResolvedValue(search({ id: 2 }));
     renderPage();
     await user.click(screen.getByTestId('button-edit-prompt'));
+    expect(screen.queryByTestId('button-edit-prompt')).not.toBeInTheDocument();
     const field = screen.getByTestId('input-edit-prompt');
     expect(field).toHaveValue('Un studio à Lille, 700 € max, chat accepté');
     await user.clear(field);

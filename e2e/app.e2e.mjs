@@ -176,8 +176,11 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       for (const id of ["button-edit-prompt", "button-refresh"]) {
         const box = await page.locator(`[data-testid=${id}]`).boundingBox();
         assert.ok(box && box.height >= 32 && box.x >= 0 && box.x + box.width <= page.viewportSize().width, `${name} : ${id} (${JSON.stringify(box)})`);
-        assert.doesNotMatch(await page.getAttribute(`[data-testid=${id}]`, "class"), /bg-brand/, `${name} : ${id} en secondaire`);
       }
+      assert.match(await page.getAttribute("[data-testid=button-edit-prompt]", "class"), /bg-brand/, `${name} : « Modifier ma demande » en principal`);
+      assert.doesNotMatch(await page.getAttribute("[data-testid=button-refresh]", "class"), /bg-brand/, `${name} : « Chercher d'autres annonces » en secondaire`);
+      const [edit, refresh] = await Promise.all(["button-edit-prompt", "button-refresh"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));
+      assert.ok(edit.x < refresh.x || edit.y < refresh.y, `${name} : « Modifier ma demande » avant « Chercher d'autres annonces »`);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
