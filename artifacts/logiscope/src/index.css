@@ -107,6 +107,13 @@
 .vml-badge { background: #fff; color: var(--color-ink); padding: 6px 10px; font-size: 13px; border: 2px solid var(--color-brand); }
 .vml-badge svg { color: var(--color-brand); }
 .vml-line { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); padding: 3px 7px; border-radius: 6px; border: 2px solid #fff; font-size: 12px; font-weight: 800; line-height: 1; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
+/* Carte des résultats : pastille de prix cliquable par logement. Le conteneur du marqueur est un point de taille nulle. */
+.vml-price { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); min-height: 32px; padding: 0 12px; border-radius: 9999px; border: 1px solid rgba(0,0,0,.14); background: #fff; color: var(--color-ink); font: inherit; font-size: 13px; font-weight: 700; line-height: 1; white-space: nowrap; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.14), 0 6px 16px rgba(0,0,0,.14); transition: background-color .15s, color .15s, transform .15s; }
+.vml-price:hover, .vml-price:focus-visible { background: var(--color-ink); color: #fff; transform: translate(-50%, -50%) scale(1.08); outline: none; }
+.vml-price:focus-visible { box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--color-ink); }
+.vml-price[data-viewed="true"] { background: #ebebeb; color: #717171; }
+.vml-price[data-viewed="true"]:hover, .vml-price[data-viewed="true"]:focus-visible { background: var(--color-ink); color: #fff; }
+.maplibregl-marker:hover { z-index: 1000 !important; }
 .maplibregl-map { font-family: inherit; }
 .maplibregl-ctrl-group { border-radius: 12px !important; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.15) !important; }
 .maplibregl-ctrl-group button { width: 34px !important; height: 34px !important; }

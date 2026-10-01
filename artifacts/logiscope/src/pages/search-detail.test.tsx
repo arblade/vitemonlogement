@@ -9,6 +9,15 @@ import SearchDetail from '@/pages/search-detail';
 import { resetListingInteractionsCache } from '@/lib/listing-interactions';
 import { checks, listing, mockFetch, search, type Route as FetchRoute } from '@/test/fixtures';
 
+// jsdom n'a pas de WebGL : les cartes MapLibre sont remplacées par un témoin des données reçues (vrai rendu : e2e).
+vi.mock('@/components/listing-map-canvas', () => ({ default: () => <div data-testid="canvas"/> }));
+vi.mock('@/components/results-map-canvas', () => ({
+  default: ({ items, places, viewed, onPick }: { items: { listing: { id: number } }[]; places: { id: string }[]; viewed: ReadonlySet<number>; onPick: (id: number) => void }) =>
+    <div data-testid="results-map-canvas" data-places={places.map(place => place.id).join(',')}>
+      {items.map(({ listing: { id } }) => <button key={id} type="button" data-testid={`results-marker-${id}`} data-viewed={viewed.has(id)} onClick={() => onPick(id)}>{id}</button>)}
+    </div>,
+}));
+
 const api = vi.hoisted(() => ({
   state: { data: undefined as unknown, isLoading: false, isError: false, refetch: vi.fn() },
   refresh: vi.fn(),
@@ -402,3 +411,114 @@ describe('Page résultats : autres états', () => {
 });
 
 void checks;
+
+describe('Page résultats : carte des logements', () => {
+  const at = { lat: 50.6408, lng: 3.0611 };
+  const placed = [
+    listing(1, { ...at, geoPrecision: 'streetNumber' }),
+    listing(2, { lat: 50.63, lng: 3.07, geoPrecision: 'street' }),
+    listing(3, { lat: 50.62, lng: 3.05, geoPrecision: 'district' }),
+    listing(4, { lat: 50.61, lng: 3.04, geoPrecision: 'city' }),
+    listing(5),
+  ];
+  const markers = () => screen.queryAllByTestId(/^results-marker-\d+$/).map(node => node.getAttribute('data-testid')!.replace('results-marker-', ''));
+
+  it('aucun logement à position précise (quartier, commune ou rien) : pas de bouton, la liste reste seule', () => {
+    api.state.data = search({ listings: [placed[2], placed[3], placed[4]] });
+    renderPage();
+    expect(screen.getByTestId('card-listing-3')).toBeInTheDocument();
+    expect(screen.queryByTestId('button-open-results-map')).not.toBeInTheDocument();
+  });
+
+  it('le bouton annonce le nombre de logements placés ; la carte ne montre que l’adresse exacte et la rue, et le dit pour les autres', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: placed });
+    renderPage();
+    const button = screen.getByTestId('button-open-results-map');
+    expect(button).toHaveTextContent('Voir la carte');
+    expect(button).toHaveTextContent('2');
+    expect(screen.queryByTestId('dialog-results-map')).not.toBeInTheDocument();
+    await user.click(button);
+    expect(await screen.findByTestId('dialog-results-map')).toBeInTheDocument();
+    expect(await screen.findByTestId('results-map-canvas')).toBeInTheDocument();
+    expect(markers()).toEqual(['1', '2']);
+    const note = screen.getByTestId('results-map-note');
+    expect(note).toHaveTextContent('2 logements sur la carte');
+    expect(note).toHaveTextContent('3 autres n’ont qu’un quartier ou une commune');
+  });
+
+  it('un seul logement manquant : accords au singulier ; aucun manquant : pas de remarque', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [placed[0], placed[2]] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    expect(screen.getByTestId('results-map-note')).toHaveTextContent('1 logement sur la carte');
+    expect(screen.getByTestId('results-map-note')).toHaveTextContent('1 autre n’a qu’un quartier ou une commune pour toute position : il n’est pas placé ici, mais figure dans la liste.');
+  });
+
+  it('la carte s’ouvre et se ferme sans quitter la page', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: placed });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    await user.click(await screen.findByTestId('button-close-results-map'));
+    await waitFor(() => expect(screen.queryByTestId('dialog-results-map')).not.toBeInTheDocument());
+    expect(screen.getByTestId('card-listing-1')).toBeInTheDocument();
+  });
+
+  it('un clic sur un logement de la carte ouvre sa fiche (la carte se ferme) ; fermer la fiche ramène à la carte', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: placed });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    await user.click(await screen.findByTestId('results-marker-2'));
+    expect(await screen.findByTestId('dialog-listing-2')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('dialog-results-map')).not.toBeInTheDocument());
+    await user.click(screen.getByTestId('button-close-listing-2'));
+    expect(await screen.findByTestId('dialog-results-map')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId('dialog-listing-2')).not.toBeInTheDocument());
+    expect(markers()).toEqual(['1', '2']);
+  });
+
+  it('une fiche ouverte depuis la liste ne rouvre pas la carte en se fermant', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: placed });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    await user.click(await screen.findByTestId('button-close-listing-1'));
+    await waitFor(() => expect(screen.queryByTestId('dialog-listing-1')).not.toBeInTheDocument());
+    expect(screen.queryByTestId('dialog-results-map')).not.toBeInTheDocument();
+  });
+
+  it('un logement ouvert depuis la carte est marqué consulté (liste et carte)', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: placed });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    expect(screen.getByTestId('results-marker-1')).toHaveAttribute('data-viewed', 'false');
+    await user.click(screen.getByTestId('results-marker-1'));
+    await screen.findByTestId('dialog-listing-1');
+    await user.keyboard('{Escape}'); // aucun clic dans la fiche : le marquage vient de l'ouverture depuis la carte
+    expect(await screen.findByTestId('results-marker-1')).toHaveAttribute('data-viewed', 'true');
+    expect(screen.getByTestId('results-marker-2')).toHaveAttribute('data-viewed', 'false');
+    expect(screen.getByTestId('card-listing-1')).toHaveTextContent('déjà consultée');
+  });
+
+  it('les lieux de vie localisés de la demande sont repérés sur la carte, pas ceux dont l’adresse est introuvable', async () => {
+    const user = userEvent.setup();
+    const base = search();
+    api.state.data = search({ listings: placed, criteria: { ...base.criteria, places: [
+      { id: 'place-1', label: 'Travail', kind: 'work', address: 'gare Lille Flandres', lat: 50.6366, lng: 3.0706, resolved: 'Gare Lille Flandres' },
+      { id: 'place-2', label: 'École', kind: 'school', address: '12 rue Inconnue', lat: null, lng: null, resolved: null },
+    ] } });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-results-map'));
+    expect(await screen.findByTestId('results-map-canvas')).toHaveAttribute('data-places', 'place-1');
+  });
+
+  it('pendant une recherche en cours, ni bouton ni carte', () => {
+    api.state.data = search({ status: 'running', stage: 'searching', listings: placed });
+    renderPage();
+    expect(screen.queryByTestId('button-open-results-map')).not.toBeInTheDocument();
+  });
+});

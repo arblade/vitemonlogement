@@ -180,6 +180,78 @@ test("sources (mobile puis desktop) : chaque carte nomme son site, et le lien y 
   }
 });
 
+test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la rue sont placés, un clic ouvre la fiche et la fermeture ramène à la carte", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      await page.goto(`${base}/searches/1`);
+      await page.waitForSelector("[data-testid=card-listing-3]");
+      const button = "[data-testid=button-open-results-map]";
+      assert.match(await text(page, button), /Voir la carte\s*2/, name);
+      assert.equal(await page.locator("[data-testid=dialog-results-map]").count(), 0, `${name} : carte fermée tant qu'on ne la demande pas`);
+      const buttonBox = await page.locator(button).boundingBox();
+      assert.ok(buttonBox && buttonBox.height >= 32, `${name} : bouton tactile (${JSON.stringify(buttonBox)})`);
+      await page.click(button);
+      await page.waitForSelector("[data-testid=results-map-canvas][data-listings='2']");
+      // Pastilles de prix : annonces 1 (adresse exacte) et 3 (rue) ; l'annonce 2 (commune seule) n'est pas placée.
+      await page.waitForSelector("[data-testid=results-marker-1]");
+      await page.waitForSelector("[data-testid=results-marker-3]");
+      assert.equal(await page.locator("[data-testid=results-marker-2]").count(), 0, `${name} : la commune seule n'est pas un point`);
+      assert.match(await text(page, "[data-testid=results-marker-1]"), /600|610|620|630/, name);
+      assert.match(await text(page, "[data-testid=results-place-place-1]"), /Travail/, `${name} : le lieu de travail est repéré`);
+      assert.match(await text(page, "[data-testid=results-map-note]"), /2 logements sur la carte.*1 autre n’a qu’un quartier ou une commune/s, name);
+      const viewport = page.viewportSize();
+      const dialogBox = await page.locator("[data-testid=dialog-results-map]").boundingBox();
+      const canvasBox = await page.locator("[data-testid=results-map-canvas]").boundingBox();
+      if (name === "mobile") assert.ok(dialogBox && dialogBox.width === viewport.width && dialogBox.height === viewport.height, `mobile : plein écran (${JSON.stringify(dialogBox)})`);
+      else assert.ok(dialogBox && dialogBox.width < viewport.width && dialogBox.width > 800, `desktop : grande fenêtre (${JSON.stringify(dialogBox)})`);
+      assert.ok(canvasBox && canvasBox.height > 300, `${name} : carte visible (${JSON.stringify(canvasBox)})`);
+      for (const id of [1, 3]) {
+        const marker = await page.locator(`[data-testid=results-marker-${id}]`).boundingBox();
+        assert.ok(marker && marker.height >= 32 && marker.x >= canvasBox.x && marker.x + marker.width <= canvasBox.x + canvasBox.width
+          && marker.y >= canvasBox.y && marker.y + marker.height <= canvasBox.y + canvasBox.height, `${name} : pastille ${id} dans la carte et tactile (${JSON.stringify(marker)})`);
+      }
+      const horizontal = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      assert.ok(horizontal <= 0, `${name} : pas de défilement horizontal (${horizontal})`);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/carte-resultats-${name}.png` });
+      // Un clic sur une pastille ouvre la fiche (la carte se ferme) ; fermer la fiche ramène à la carte, qui reste utilisable.
+      await page.click("[data-testid=results-marker-3]");
+      await page.waitForSelector("[data-testid=dialog-listing-3]");
+      await page.waitForFunction(() => document.querySelector("[data-testid=dialog-results-map]") === null);
+      assert.match(await text(page, "[data-testid=dialog-listing-3]"), /Studio lumineux proche métro 3/, name);
+      await page.waitForSelector("[data-testid=dialog-listing-3] [data-testid=listing-map-canvas]");
+      await page.click("[data-testid=button-close-listing-3]");
+      await page.waitForSelector("[data-testid=dialog-results-map]");
+      await page.waitForSelector("[data-testid=results-marker-1]");
+      assert.equal(await page.getAttribute("[data-testid=results-marker-3]", "data-viewed"), "true", `${name} : annonce ouverte = consultée`);
+      await page.click("[data-testid=results-marker-1]");
+      await page.waitForSelector("[data-testid=dialog-listing-1]");
+      await page.keyboard.press("Escape");
+      await page.waitForSelector("[data-testid=dialog-results-map]");
+      // Fermer la carte rend la page à nouveau utilisable (pas de blocage des clics après l'enchaînement des fenêtres).
+      await page.click("[data-testid=button-close-results-map]");
+      await page.waitForFunction(() => document.querySelector("[data-testid=dialog-results-map]") === null);
+      assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).pointerEvents), "none", `${name} : page cliquable`);
+      await page.click("[data-testid=button-open-listing-3]");
+      await page.waitForSelector("[data-testid=dialog-listing-3]");
+      await page.click("[data-testid=button-close-listing-3]");
+      await page.waitForFunction(() => document.querySelector("[data-testid=dialog-listing-3]") === null);
+      assert.equal(await page.locator("[data-testid=dialog-results-map]").count(), 0, `${name} : une fiche ouverte depuis la liste ne rouvre pas la carte`);
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
 test("carte (mobile) : adresse exacte → logement, lieu de travail, trajet et durée ; commune seule → cercle et lieu, sans trajet", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");

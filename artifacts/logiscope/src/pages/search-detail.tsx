@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, useRefreshHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorNotice, Eyebrow, formatDate, formatPrice } from '@/components/site-shell';
 import { ListingGallery } from '@/components/listing-gallery';
 import { ListingDetail } from '@/components/listing-detail';
+import { ResultsMap } from '@/components/results-map';
+import { mappedListings } from '@/lib/geo';
 import { generalIcons, listingFacts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
@@ -35,12 +37,12 @@ const checkGroups = [
   { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
 ] as const;
 
-function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, onSelect, onFavorite, onViewed, searchId, places, routingAvailable }: {
+function ListingCard({ listing, checks, index, selected, compareFull, liked, viewed, open, setOpen, onSelect, onFavorite, onViewed, searchId, places, routingAvailable }: {
   listing: HousingListing; checks: HousingCriterion[]; index: number; selected: boolean; compareFull: boolean;
+  open: boolean; setOpen: (open: boolean) => void;
   searchId?: number; places?: HousingPlace[]; routingAvailable?: boolean;
   liked: boolean; viewed: boolean; onSelect: () => void; onFavorite: () => void; onViewed: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [expandedSummary, setExpandedSummary] = useState(false);
   const [canExpandSummary, setCanExpandSummary] = useState(false);
   const summaryRef = useRef<HTMLParagraphElement>(null);
@@ -104,6 +106,10 @@ export default function SearchDetail() {
   const [refreshError, setRefreshError] = useState('');
   const [relaunchError, setRelaunchError] = useState('');
   const [interactionError, setInteractionError] = useState('');
+  // Fiche ouverte (depuis la liste ou la carte) et carte des résultats : la fiche ouverte depuis la carte y ramène à sa fermeture.
+  const [openId, setOpenId] = useState<number | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [fromMap, setFromMap] = useState(false);
   const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
   const interactions = useListingInteractions();
   const favoriteActions = useFavoriteActions();
@@ -113,16 +119,31 @@ export default function SearchDetail() {
   const refresh = useRefreshHousingSearch();
   const create = useCreateHousingSearch();
   const data = search.data;
-  const listings = [...(data?.listings || [])].sort((a,b)=>
+  const listings = useMemo(() => [...(data?.listings || [])].sort((a,b)=>
     Number(a.batch === 'broad') - Number(b.batch === 'broad') ||
-    (sort==='price'?(a.price ?? Infinity)-(b.price ?? Infinity):sort==='area'?(b.area ?? -1)-(a.area ?? -1):b.score-a.score));
+    (sort==='price'?(a.price ?? Infinity)-(b.price ?? Infinity):sort==='area'?(b.area ?? -1)-(a.area ?? -1):b.score-a.score)), [data?.listings, sort]);
+  const mappableCount = useMemo(() => mappedListings(listings).length, [listings]);
+  const viewedIds = useMemo(() => new Set(listings.filter(item => interactions.viewed.includes(listingKey(item.url))).map(item => item.id)), [listings, interactions.viewed]);
+  const setFiche = (listingId: number, value: boolean) => {
+    if (value) { setOpenId(listingId); return; }
+    setOpenId(current => current === listingId ? null : current);
+    if (fromMap) { setFromMap(false); setMapOpen(true); }
+  };
+  const pickOnMap = (listingId: number) => {
+    const picked = listings.find(item => item.id === listingId);
+    if (!picked) return;
+    if (!markListingViewed(picked.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.');
+    setMapOpen(false);
+    setFromMap(true);
+    setOpenId(listingId);
+  };
   const freshCount = listings.filter(item => !viewedUrls.has(listingKey(item.url))).length;
   const selected = listings.filter(item=>selectedIds.includes(item.id));
   const toggle = (listingId: number) => setSelectedIds(current=>current.includes(listingId)?current.filter(id=>id!==listingId):current.length<3?[...current,listingId]:current);
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
     <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
     <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
-    <div className="space-y-5">{listings.map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
+    <div className="space-y-5">{listings.map((listing,index) => <ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} open={openId === listing.id} setOpen={value => setFiche(listing.id, value)} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
       liked={Boolean(interactions.favorites[listingKey(listing.url)])} viewed={viewedUrls.has(listingKey(listing.url))}
       onSelect={()=>toggle(listing.id)}
       onViewed={()=>{ if (!markListingViewed(listing.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }}
@@ -175,7 +196,7 @@ export default function SearchDetail() {
         {data.status !== 'running' && !refresh.isPending &&
         <div className="mb-9 flex flex-col justify-between gap-6 border-b border-line pb-8 md:flex-row md:items-end">
            <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-3xl font-semibold leading-tight tracking-[-.03em] md:text-4xl">{`${data.count} annonce${data.count>1?'s':''} à explorer`}</h2><p className="mt-2 text-xs text-stone">{perCallLimit ? `${perCallLimit} nouvelles annonces maximum par appel · ` : ''}Les anciennes restent disponibles, sans doublons</p></div>
-           {data.status==='completed' && !refresh.isPending && <div className="flex flex-wrap items-center gap-3"><Button type="button" data-testid="button-refresh" onClick={onRefresh} className="h-10 rounded-lg bg-brand px-5 text-xs font-semibold text-lime-light hover:bg-brand-dark"><RefreshCw size={15} className="mr-2"/> Chercher d’autres annonces</Button>{listings.length>0 && <><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></>}</div>}
+           {data.status==='completed' && !refresh.isPending && <div className="flex flex-wrap items-center gap-3"><Button type="button" data-testid="button-refresh" onClick={onRefresh} className="h-10 rounded-lg bg-brand px-5 text-xs font-semibold text-lime-light hover:bg-brand-dark"><RefreshCw size={15} className="mr-2"/> Chercher d’autres annonces</Button>{listings.length>0 && <><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></>}{mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#b0b0b0] bg-cream px-4 text-xs font-semibold transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><MapIcon size={15} aria-hidden="true"/> Voir la carte <span className="rounded-full bg-sage px-2 py-0.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}</div>}
         </div>}
          {(data.status==='running'||refresh.isPending) && <div className="mx-auto max-w-3xl">
            <SearchProgress stage={data.stage ?? 'interpreting'}/>
@@ -205,6 +226,7 @@ export default function SearchDetail() {
         </>}
       </>}
     </div>
+    {data && <ResultsMap listings={listings} places={data.criteria.places} viewedIds={viewedIds} open={mapOpen} onOpenChange={setMapOpen} onPick={pickOnMap}/>}
     {selected.length>0 && <div className="sticky bottom-0 z-20 border-t border-[#b0b0b0] bg-[#ffe3e8] shadow-[0_-12px_40px_rgba(39,37,51,.12)]"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-5 py-4 md:px-10 lg:px-16"><div className="flex items-center gap-3"><Layers2 size={18}/><span className="text-sm font-semibold">{selected.length} annonce{selected.length>1?'s':''} à comparer</span><span className="hidden text-xs text-[#484848] sm:inline">Jusqu’à 3 annonces</span></div><div className="flex items-center gap-3"><button data-testid="button-clear-compare" onClick={()=>setSelectedIds([])} className="text-xs font-semibold underline underline-offset-4">Effacer</button><a href="#comparatif" data-testid="link-show-compare" className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-xs font-semibold text-[#ffe3e8]">Voir le comparatif <ArrowRight size={14}/></a></div></div></div>}
     {selected.length>0 && <section id="comparatif" className="scroll-mt-8 bg-sage"><div className="mx-auto max-w-[1440px] px-5 py-14 md:px-10 lg:px-16"><div className="mb-7 flex items-end justify-between"><div><Eyebrow number="02">En regard</Eyebrow><h2 className="mt-4 text-4xl font-semibold tracking-tight">Comparer pour choisir</h2></div><button data-testid="button-close-compare" onClick={()=>setSelectedIds([])} aria-label="Fermer le comparatif" className="grid size-9 place-items-center rounded-full border border-[#c4c4c4] hover:bg-[#ffe3e8]"><X size={16}/></button></div><div className="overflow-x-auto rounded-xl border border-[#dddddd] bg-cream"><table className="w-full min-w-[560px] border-collapse text-left text-xs"><thead><tr><th className="w-28 p-5 text-[#717171]">Critère</th>{selected.map(item=><th key={item.id} className="min-w-[175px] p-5 text-sm font-semibold">{item.title}</th>)}</tr></thead><tbody>{[
       ['Prix',(item:HousingListing)=>formatPrice(item.price)],['Surface',(item:HousingListing)=>item.area!=null?`${item.area} m²`:'Non précisée'],['Pièces',(item:HousingListing)=>item.rooms!=null?String(item.rooms):'Non précisées'],['Lieu',(item:HousingListing)=>item.location||'Non précisé'],['Pertinence',(item:HousingListing)=>`${Math.round(item.score)}/100`]

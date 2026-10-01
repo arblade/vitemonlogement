@@ -16,6 +16,7 @@ const ads = [1, 2].map(n => fatihRecord({
   ...(n === 1 ? { lat: 50.6365, lng: 3.0635, type: "streetNumber" } : { lat: 50.63, lng: 3.06, type: "city" }),
 }));
 const counts = { interpret: 0, analyze: 0, apifyRuns: 0, geocode: 0 };
+const openaiBodies: { model?: string; reasoning_effort?: string; max_completion_tokens?: number }[] = [];
 let fake: Server;
 
 before(async () => {
@@ -34,6 +35,7 @@ before(async () => {
       }
       if (url.endsWith("/chat/completions")) {
         const request = JSON.parse(body) as { messages: { content: string }[] };
+        openaiBodies.push(JSON.parse(body));
         let content: unknown;
         if (request.messages[0].content.includes("Interprète une demande")) {
           counts.interpret++;
@@ -151,5 +153,16 @@ test("sans lieu cité, aucun géocodage (et un géocodeur en panne ne bloque jam
     assert.equal(place?.lat, null, "gardé, mais sans coordonnées : pas de point sur la carte");
   } finally {
     process.env.GEOCODER_BASE_URL = previous;
+  }
+});
+
+test("OpenAI : gpt-5-mini en réflexion « faible » pour l'interprétation comme pour l'analyse (moitié prix, sans réponse coupée)", async () => {
+  const { REASONING_EFFORT } = await import("./ai");
+  assert.equal(REASONING_EFFORT, "low");
+  assert.ok(openaiBodies.length >= 2, "au moins un appel d'interprétation et un d'analyse ont eu lieu");
+  for (const body of openaiBodies) {
+    assert.equal(body.model, "gpt-5-mini");
+    assert.equal(body.reasoning_effort, "low");
+    assert.equal(body.max_completion_tokens, 8192);
   }
 });

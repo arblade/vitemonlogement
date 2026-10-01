@@ -61,8 +61,8 @@ await setCriteria(id, { location: "Lille", intent: "rent", maxPrice: 700, radius
   places: [{ id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille" }] });
 const listing = (n: number) => ({
   // Annonce 1 : Le Bon Coin ; annonce 2 : PAP (sources multiples).
-  source: n === 1 ? "leboncoin" as const : "pap" as const,
-  batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: n === 1 ? `https://www.leboncoin.fr/ad/locations/${n}` : `https://www.pap.fr/annonces/-r44280300${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
+  source: n === 2 ? "pap" as const : "leboncoin" as const,
+  batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: n === 2 ? `https://www.pap.fr/annonces/-r44280300${n}` : `https://www.leboncoin.fr/ad/locations/${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
   location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n,
   features: n === 1 ? [
     { label: "Meublé", value: "", source: "annonce" as const, evidence: "furnished: 1" },
@@ -75,10 +75,12 @@ const listing = (n: number) => ({
     { id: "price", label: "Budget ≤ 700 €", status: "confirmed" as const, source: "api" as const, value: "590 €", evidence: "" },
     { id: "wish-1", label: "chat accepté", status: "unknown" as const, source: "unknown" as const, value: "", evidence: "" },
   ],
-  // Annonce 1 : adresse exacte (carte) ; annonce 2 : commune seulement (pas de carte).
-  ...(n === 1 ? { ...home, geoPrecision: "streetNumber" as const } : { lat: 50.63, lng: 3.06, geoPrecision: "city" as const }),
+  // Annonce 1 : adresse exacte ; annonce 3 : rue ; annonce 2 : commune seulement (ni point ni place sur la carte des résultats).
+  ...(n === 1 ? { ...home, geoPrecision: "streetNumber" as const }
+    : n === 3 ? { lat: 50.6435, lng: 3.0545, geoPrecision: "street" as const }
+    : { lat: 50.63, lng: 3.06, geoPrecision: "city" as const }),
 });
-await completeSearch(id, [listing(1), listing(2)], "focused");
+await completeSearch(id, [listing(1), listing(2), listing(3)], "focused");
 
 const { default: app } = await import("../src/app");
 app.listen(Number(process.env.PORT ?? 4180), () => console.log("prêt"));

@@ -19,6 +19,19 @@ export function listingArea(listing: HousingListing): ListingArea | null {
   return null;
 }
 
+export type MappedListing = { listing: HousingListing } & LatLng;
+
+/**
+ * Logements de la carte des résultats : seulement ceux dont la position est précise (adresse exacte ou rue).
+ * Un quartier ou une commune n'est pas une position : le cercle n'aurait pas de sens parmi d'autres points.
+ */
+export function mappedListings(listings: HousingListing[]): MappedListing[] {
+  return listings.flatMap(listing => {
+    const area = listingArea(listing);
+    return area?.precise ? [{ listing, lat: area.lat, lng: area.lng }] : [];
+  });
+}
+
 export const locatedPlaces = (places: HousingPlace[] = []): LocatedPlace[] =>
   places.filter((place): place is LocatedPlace => place.lat != null && place.lng != null);
 

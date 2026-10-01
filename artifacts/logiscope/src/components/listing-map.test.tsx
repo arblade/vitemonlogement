@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { HousingListing, HousingPlace, ListingRoute } from '@workspace/api-client-react';
 import { ListingMap } from '@/components/listing-map';
-import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, ROUTE_COLOR, routeDrawing, textOn, type LatLng } from '@/lib/geo';
+import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, mappedListings, ROUTE_COLOR, routeDrawing, textOn, type LatLng } from '@/lib/geo';
 import { listing, mockFetch } from '@/test/fixtures';
 
 // jsdom n'a pas de WebGL : la carte MapLibre est remplacée par un témoin des données reçues (le vrai rendu est vérifié en e2e).
@@ -32,6 +32,15 @@ describe('geo : utilitaires', () => {
     expect(AREA_RADIUS.city).toBeGreaterThan(AREA_RADIUS.district);
     expect(listingArea(precise({ geoPrecision: null }))).toBeNull();
     expect(listingArea(listing(2))).toBeNull();
+  });
+
+  it('mappedListings : seuls l’adresse exacte et la rue sont placés, avec leur position, dans l’ordre de la liste', () => {
+    const all = [
+      precise({ id: 1 }), precise({ id: 2, geoPrecision: 'district' }), precise({ id: 3, geoPrecision: 'street', lat: 50.1, lng: 3.2 }),
+      precise({ id: 4, geoPrecision: 'city' }), listing(5), precise({ id: 6, geoPrecision: null }), precise({ id: 7, lat: null, lng: null }),
+    ];
+    expect(mappedListings(all).map(item => [item.listing.id, item.lat, item.lng])).toEqual([[1, home.lat, home.lng], [3, 50.1, 3.2]]);
+    expect(mappedListings([])).toEqual([]);
   });
 
   it('circle : polygone fermé dont chaque sommet est à la bonne distance du centre', () => {

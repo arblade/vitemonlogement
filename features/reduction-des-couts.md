@@ -109,5 +109,8 @@ Points 2, 4 et 5 : acteur Le Bon Coin `fatihtahta` (adaptateur testé sur 6 anno
 mêmes titre, loyer, surface, pièces, lieu, position, photos, description et critères ; `clearpath` gardé en secours
 quand la ville n'est pas reconnue) ; SeLoger 6 annonces, PAP 4 (`SELOGER_CANDIDATE_LIMIT`, `PAP_CANDIDATE_LIMIT`) ;
 recherche élargie **supprimée** (et non « seulement si utile », à la demande). Mesuré en réel : ≈ 0,055 $ d'Apify par
-recherche à 3 sources. Point 1 (effort de raisonnement OpenAI) pas encore appliqué.
+recherche à 3 sources.
+Point 1 appliqué ensuite : `reasoning_effort: "low"` sur gpt-5-mini, interprétation et analyse (`REASONING_EFFORT` dans
+`ai.ts`, testé sur le paramètre réellement envoyé à l'API) : analyse de 5 annonces ≈ 0,0118 → ≈ 0,006 $, lecture de la
+demande ≈ 0,0016 → ≈ 0,0009 $.
 Correction : le code de ville SeLoger coûte ≈ 0,09 $ une fois par ville (voir `bilan-financier.md`).

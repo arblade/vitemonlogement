@@ -14,8 +14,8 @@ Mesuré en réel sur 3 recherches (Lille, Rennes avec « balcon », Nantes) :
 | SeLoger | 0,038 $ (10 annonces) | **0,0244 $** (6 annonces) |
 | PAP | 0,045 $ (10 annonces) | **0,013 à 0,021 $** (4 annonces au plus) |
 | **Apify par recherche, 3 sources** | 0,107 à 0,131 $ | **≈ 0,055 $** |
-| OpenAI | 0,014 à 0,04 $ | inchangé (réglage de l'effort de raisonnement pas encore appliqué) |
-| **Total par recherche** | 0,12 à 0,17 $ | **≈ 0,07 à 0,10 $** ; 10 recherches ≈ 0,7 à 1 $ (≈ 0,6 à 0,85 €) |
+| OpenAI (réflexion « faible » appliquée) | 0,014 à 0,04 $ | **≈ 0,007 à 0,02 $** (analyse de 5 annonces ≈ 0,006 $, lecture de la demande ≈ 0,0009 $) |
+| **Total par recherche** | 0,12 à 0,17 $ | **≈ 0,06 à 0,08 $** ; 10 recherches ≈ 0,6 à 0,8 $ (≈ 0,5 à 0,7 €) |
 
 **Correction** : le code de ville SeLoger n'est pas gratuit. L'acteur qui le donne facture **0,09 $ de démarrage**
 par run ; le « 0 $ » mesuré plus tôt venait d'un plafond trop bas (0,02 $) qui interrompait le run, parfois avant

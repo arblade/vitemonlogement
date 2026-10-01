@@ -12,9 +12,17 @@ function client() {
 
 export type JsonLlm = (system: string, user: string) => Promise<unknown>;
 
+/**
+ * Réflexion « faible » : même tri des chambres et mêmes critères qu'au niveau par défaut (mesuré le 01/10/2026 sur
+ * 69 annonces réelles), pour la moitié du prix de l'analyse. Au niveau par défaut, la réflexion dépassait parfois la
+ * limite de tokens : réponse coupée, analyse échouée puis retentée (donc repayée).
+ */
+export const REASONING_EFFORT = "low" as const;
+
 async function jsonResponse(system: string, user: string): Promise<unknown> {
   const response = await client().chat.completions.create({
     model: "gpt-5-mini",
+    reasoning_effort: REASONING_EFFORT,
     max_completion_tokens: 8192,
     response_format: { type: "json_object" },
     messages: [{ role: "system", content: system }, { role: "user", content: user }],

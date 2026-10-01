@@ -18,8 +18,20 @@
 ## Pour activer les temps de trajet
 Créer une clé Google Cloud avec l'**API Routes** activée (et restreinte à cette API), puis la poser dans la variable `GOOGLE_MAPS_API_KEY` du service Render. Aucun redéploiement de code nécessaire.
 
+## Carte de la liste de résultats (fait le 01/10)
+Bouton « Voir la carte » (avec le nombre de logements placés) dans l'en-tête de la liste, visible une fois la recherche
+terminée et seulement s'il y a au moins un logement placé. Il ouvre une fenêtre : plein écran sur mobile, grande
+fenêtre centrée sur ordinateur.
+- **Qui est placé** : seulement l'adresse exacte et la rue (`mappedListings`). Un quartier ou une commune n'est pas une
+  position : ces logements ne sont pas sur la carte, et la fenêtre le dit (« 3 autres n'ont qu'un quartier ou une
+  commune… mais figurent dans la liste »), au lieu de les poser à un endroit faux ou de les noyer sous des cercles.
+- **Pastilles** : le prix, sur fond blanc ; grisée si le logement est déjà consulté ; pleine au survol et au clavier
+  (chaque pastille est un bouton avec un libellé). Les lieux de vie de la demande (travail, école) sont repérés aussi.
+- **Clic sur une pastille** : la carte se ferme et la **fiche** du logement s'ouvre ; la fermer ramène à la carte
+  (pour parcourir les logements un à un). Une fiche ouverte depuis la liste ne rouvre pas la carte.
+- Carte chargée à l'ouverture seulement (MapLibre), même fond OpenFreeMap gratuit que la fiche.
+
 ## Reste à faire
-- Carte de la **liste** de résultats (toutes les annonces, pastilles de prix, zones approximatives en cercle).
 - Vie privée : numéro de rue des particuliers affiché tel quel (à décider).
 - Critère « à moins de 30 min du travail » (filtre / score), voir [criteres-de-trajet](criteres-de-trajet.md).
 - Non vérifié en réel : réponse de Google (clé absente), extraction des lieux par le LLM (testée avec un faux LLM).
