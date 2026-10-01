@@ -23,6 +23,27 @@ const text = (page, selector) => page.locator(selector).first().innerText();
 before(async () => { browser = await chromium.launch({ args: ["--no-sandbox"] }); mobile = await newContext("mobile"); desktop = await newContext("desktop"); });
 after(async () => { await mobile?.close(); await desktop?.close(); await browser?.close(); });
 
+test("partage du lien (WhatsApp, Signal…) : la page annonce une image PNG 1200×630 légère, à une adresse absolue, sur l'accueil comme sur un lien d'invitation", async () => {
+  for (const pathname of ["/", "/?invite=Arblade"]) {
+    const html = await (await fetch(base + pathname)).text(); // sans JavaScript, comme un robot d'aperçu
+    const meta = name => html.match(new RegExp(`<meta[^>]+(?:property|name)="${name}"[^>]+content="([^"]*)"`))?.[1];
+    assert.equal(meta("og:image"), `${base}/og-image.png`, pathname);
+    assert.equal(meta("twitter:image"), `${base}/og-image.png`, pathname);
+    assert.equal(meta("og:url"), `${base}/`, pathname);
+    assert.equal(meta("og:title"), "Vite mon logement", pathname);
+    assert.ok(meta("og:description")?.length > 20, pathname);
+    assert.equal(meta("og:image:width"), "1200");
+    assert.equal(meta("og:image:height"), "630");
+    assert.ok(!html.includes("__ORIGIN__"), pathname);
+  }
+  const image = await fetch(`${base}/og-image.png`);
+  assert.equal(image.headers.get("content-type"), "image/png");
+  const bytes = Buffer.from(await image.arrayBuffer());
+  assert.equal(bytes.subarray(1, 4).toString(), "PNG");
+  assert.deepEqual([bytes.readUInt32BE(16), bytes.readUInt32BE(20)], [1200, 630], "dimensions réelles de l'image");
+  assert.ok(bytes.length < 300_000, `WhatsApp refuse les images trop lourdes (${bytes.length} octets)`);
+});
+
 test("accès : sans invitation, seule la connexion est proposée (pas d'inscription libre)", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/");

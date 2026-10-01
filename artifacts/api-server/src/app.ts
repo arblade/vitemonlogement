@@ -1,6 +1,6 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -46,10 +46,23 @@ app.use("/api", router);
 // En production, le même service sert le front compilé (Vite) et l'API.
 const staticDir = process.env.FRONTEND_DIST || path.resolve(process.cwd(), "artifacts/logiscope/dist/public");
 if (existsSync(path.join(staticDir, "index.html"))) {
-  app.use(express.static(staticDir));
+  // Les aperçus de lien (WhatsApp, Signal…) lisent les balises og:* de la page, sans exécuter le JavaScript, et
+  // exigent des adresses absolues : on y met l'adresse du site telle que le visiteur (ou le robot) l'a demandée.
+  const indexHtml = readFileSync(path.join(staticDir, "index.html"), "utf8");
+  const originOf = (req: Request) => {
+    const configured = process.env.PUBLIC_URL?.trim().replace(/\/+$/, "");
+    if (configured && /^https?:\/\/[a-z0-9.-]+(:\d+)?$/i.test(configured)) return configured;
+    const host = req.get("host") ?? "";
+    return /^[a-z0-9.-]+(:\d+)?$/i.test(host) ? `${req.protocol}://${host}` : ""; // hôte douteux : adresse relative
+  };
+  const sendIndex = (req: Request, res: Response) => {
+    res.type("html").set("Cache-Control", "no-cache").send(indexHtml.replaceAll("__ORIGIN__", originOf(req)));
+  };
+  app.get("/", sendIndex);
+  app.use(express.static(staticDir, { index: false }));
   app.get("/{*splat}", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
-    res.sendFile(path.join(staticDir, "index.html"));
+    sendIndex(req, res);
   });
 }
 
