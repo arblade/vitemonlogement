@@ -10,7 +10,7 @@ body{width:1200px;height:630px;font-family:"Liberation Sans",Arial,sans-serif;co
 .band{position:absolute;inset:0 auto 0 0;width:520px;background:linear-gradient(160deg,#ff385c,#e31c5f)}
 .logo{position:absolute;left:72px;top:72px;width:112px;height:112px;border-radius:28px;background:#fff;display:grid;place-items:center}
 .band h1{position:absolute;left:72px;top:232px;width:420px;color:#fff;font-size:70px;line-height:1.02;letter-spacing:-.03em}
-.band p{position:absolute;left:72px;bottom:64px;width:400px;color:#fff3;color:rgba(255,255,255,.88);font-size:26px;line-height:1.3}
+.band p{position:absolute;left:72px;bottom:60px;width:410px;color:rgba(255,255,255,.9);font-size:27px;line-height:1.3}.band p b{color:#fff}
 .card{position:absolute;left:590px;top:92px;width:540px;border:1px solid #ddd;border-radius:28px;padding:34px 34px 30px;box-shadow:0 20px 50px rgba(34,34,34,.12);background:#fff}
 .photo{height:150px;border-radius:18px;background:linear-gradient(135deg,#ffd9e0,#ffeef1)}
 .title{margin-top:24px;font-size:32px;font-weight:700;letter-spacing:-.02em}
@@ -22,7 +22,7 @@ body{width:1200px;height:630px;font-family:"Liberation Sans",Arial,sans-serif;co
 <div class="band">
   <div class="logo"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ff385c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
   <h1>Vite mon logement</h1>
-  <p>Triez vos annonces de location selon vos critères.</p>
+  <p><b>Fini les 50 onglets</b> et le bloc&#8209;notes : l’IA trie les annonces selon vos critères.</p>
 </div>
 <div class="card">
   <div class="photo"></div>

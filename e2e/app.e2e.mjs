@@ -30,7 +30,8 @@ test("partage du lien (WhatsApp, Signal…) : la page annonce une image PNG 1200
     assert.equal(meta("og:image"), `${base}/og-image.png`, pathname);
     assert.equal(meta("twitter:image"), `${base}/og-image.png`, pathname);
     assert.equal(meta("og:url"), `${base}/`, pathname);
-    assert.equal(meta("og:title"), "Vite mon logement", pathname);
+    assert.match(meta("og:title"), /^Vite mon logement.*IA/, pathname);
+    assert.match(meta("og:description"), /onglets/, pathname);
     assert.ok(meta("og:description")?.length > 20, pathname);
     assert.equal(meta("og:image:width"), "1200");
     assert.equal(meta("og:image:height"), "630");
