@@ -10,7 +10,7 @@ type PromptForm = { prompt: string };
 
 /** Bouton principal de la barre d'outils des résultats : ouvre le champ de modification (voir SearchPromptEditor). */
 export function EditPromptButton({ onClick }: { onClick: () => void }) {
-  return <Button type="button" data-testid="button-edit-prompt" onClick={onClick} className="h-10 rounded-lg bg-brand px-4 text-xs font-semibold text-lime-light hover:bg-brand-dark"><Pencil size={14} className="mr-2"/> Modifier ma demande</Button>;
+  return <Button type="button" data-testid="button-edit-prompt" onClick={onClick} className="h-10 rounded-lg bg-brand px-4 text-xs font-semibold text-lime-light hover:bg-brand-dark"><Pencil size={14} className="mr-2"/> Modifier</Button>;
 }
 
 export function SearchPromptEditor({ prompt, pending, error, editing, setEditing, onSubmit }: {

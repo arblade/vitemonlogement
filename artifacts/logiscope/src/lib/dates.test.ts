@@ -7,7 +7,8 @@ describe('Dates lisibles', () => {
   it('« il y a… » puis la date', () => {
     expect(ago('2026-10-01T15:56:00Z', now)).toBe('il y a 4 min');
     expect(ago('2026-10-01T13:00:00Z', now)).toBe('il y a 3 h');
-    expect(ago('2026-09-30T19:00:00Z', now)).toBe('hier');
+    expect(ago('2026-09-30T19:00:00Z', now)).toBe('il y a 21 h'); // moins de 24 h
+    expect(ago('2026-09-30T10:00:00Z', now)).toBe('hier');
     expect(ago('2026-09-28T10:00:00Z', now)).toBe('il y a 3 jours');
     expect(ago('2026-09-14T10:00:00Z', now)).toBe('le 14 sept.');
     expect(ago(null, now)).toBeNull();

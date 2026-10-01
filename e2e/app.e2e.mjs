@@ -285,13 +285,13 @@ test("recherche suivie (mobile puis desktop) : la fenêtre explique, on la crée
       const page = await context.newPage();
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid=card-watch]");
-      assert.match(await text(page, "[data-testid=card-watch]"), /Recherche ponctuelle/, name);
+      assert.match(await text(page, "[data-testid=card-watch]"), /Pour être prévenu des nouvelles annonces de cette recherche chaque jour, suivez-la\./, name);
       await page.click("[data-testid=button-watch]");
       await page.waitForSelector("[data-testid=dialog-watch]");
       assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose/, name);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-fenetre-${name}.png` });
       await page.click("[data-testid=button-confirm-watch]");
-      await page.waitForSelector("[data-testid=text-watch-status]:has-text('Recherche suivie')");
+      await page.waitForSelector("[data-testid=text-watch-status]:has-text('chaque jour à')");
       assert.match(await text(page, "[data-testid=text-watch-status]"), /Recherche suivie · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
       // Recherche suivie : ni « Modifier ma demande » ni « Étendre ».
       assert.equal(await page.locator("[data-testid=button-edit-prompt], [data-testid=button-refresh]").count(), 0, `${name} : pas de boutons de recherche ponctuelle`);
@@ -336,7 +336,7 @@ test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la 
       await page.goto(`${base}/searches/1`);
       await page.waitForSelector("[data-testid=card-listing-3]");
       const button = "[data-testid=button-open-results-map]";
-      assert.match(await text(page, button), /Voir la carte\s*2/, name);
+      assert.match(await text(page, button), /Carte\s*2/, name);
       assert.equal(await page.locator("[data-testid=dialog-results-map]").count(), 0, `${name} : carte fermée tant qu'on ne la demande pas`);
       const buttonBox = await page.locator(button).boundingBox();
       assert.ok(buttonBox && buttonBox.height >= 32, `${name} : bouton tactile (${JSON.stringify(buttonBox)})`);

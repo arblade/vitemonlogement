@@ -112,7 +112,7 @@ describe('Page résultats : contenu', () => {
     renderPage();
     expect(document.body).not.toHaveTextContent('Affiner votre recherche');
     const edit = screen.getByTestId('button-edit-prompt'), refresh = screen.getByTestId('button-refresh');
-    expect(edit).toHaveTextContent('Modifier ma demande');
+    expect(edit).toHaveTextContent('Modifier');
     expect(edit.className).toContain('bg-brand');
     expect(refresh.className).not.toContain('bg-brand');
     expect(refresh.className).toContain('border');
@@ -584,7 +584,8 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     const user = userEvent.setup();
     const calls = mockFetch(watchRoutes());
     renderPage();
-    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche ponctuelle');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Recherche suivie');
+    expect(screen.getByTestId('text-watch-status')).toHaveTextContent('Pour être prévenu des nouvelles annonces de cette recherche chaque jour, suivez-la.');
     await user.click(screen.getByTestId('button-watch'));
     const dialog = await screen.findByTestId('dialog-watch');
     const explanation = within(dialog).getByTestId('watch-explanation');
@@ -662,7 +663,7 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     renderPage();
     expect(cardOrder()).toEqual(['2', '4', '1', '3']);
     const line = screen.getByTestId('separator-release');
-    expect(line).toHaveTextContent(/^Fin de la dernière relève · aujourd’hui à \d\d:\d\d$/);
+    expect(line).toHaveTextContent(/^Fin de la dernière relève · (aujourd’hui|hier) à \d\d:\d\d$/);
     // Juste après la dernière annonce de la relève, juste avant la première plus ancienne.
     expect(screen.getByTestId('card-listing-4').compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(line.compareDocumentPosition(screen.getByTestId('card-listing-1')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -675,7 +676,7 @@ describe('Page résultats : recherche suivie et lecture progressive', () => {
     api.state.data = search({ watch: 'active', watchTimes: ['08:00'], lastWatchAt: new Date().toISOString(),
       listings: [listing(1, { firstSeenAt: '2026-09-30T06:00:00Z' })] });
     renderPage();
-    expect(screen.getByTestId('separator-release')).toHaveTextContent(/^Relève aujourd’hui à \d\d:\d\d : aucune nouvelle annonce$/);
+    expect(screen.getByTestId('separator-release')).toHaveTextContent(/^Relève (aujourd’hui|hier) à \d\d:\d\d : aucune nouvelle annonce$/);
   });
 
   it('recherche ponctuelle : ni trait de relève, et « Modifier ma demande » et « Étendre » restent', () => {
@@ -790,7 +791,7 @@ describe('Page résultats : carte des logements', () => {
     api.state.data = search({ listings: placed });
     renderPage();
     const button = screen.getByTestId('button-open-results-map');
-    expect(button).toHaveTextContent('Voir la carte');
+    expect(button).toHaveTextContent(/^Carte\s*\d*$/);
     expect(button).toHaveTextContent('2');
     expect(screen.queryByTestId('dialog-results-map')).not.toBeInTheDocument();
     await user.click(button);

@@ -16,8 +16,8 @@ export function ago(iso: string | null | undefined, now = Date.now()) {
   const minutes = Math.max(0, Math.round((now - at) / 60_000));
   if (minutes < 1) return 'à l’instant';
   if (minutes < 60) return `il y a ${minutes} min`;
+  if (minutes < 24 * 60) return `il y a ${Math.round(minutes / 60)} h`; // moins de 24 h : « il y a 5 h », même passé minuit
   const days = daysBetween(at, now);
-  if (days === 0) return `il y a ${Math.round(minutes / 60)} h`;
   if (days === 1) return 'hier';
   if (days < 7) return `il y a ${days} jours`;
   return `le ${day.format(at)}`;
