@@ -68,6 +68,11 @@ test("le premier compte a adopté l'ancienne recherche, et ses favoris sont en b
   await page.waitForSelector("[data-testid=card-listing-1]");
   await page.click("[data-testid=button-like-1]");
   await page.waitForFunction(() => document.querySelector("[data-testid=button-like-1]")?.getAttribute("aria-pressed") === "true");
+  // Le cœur est au rose de l'app (#ff385c, jeton « brand »), rebondit au like, puis l'animation s'arrête d'elle-même.
+  const heart = page.locator("[data-testid=button-like-1]");
+  assert.equal(await heart.evaluate(element => getComputedStyle(element.querySelector("svg")).animationName), "heart-pop", "le cœur rebondit au like");
+  await page.waitForFunction(() => !document.querySelector("[data-testid=button-like-1]")?.className.includes("heart-pop"));
+  assert.equal(await heart.evaluate(element => getComputedStyle(element).color), "rgb(255, 56, 92)", "cœur au rose de l'app");
   await page.evaluate(() => localStorage.clear()); // preuve que le favori ne dépend pas du navigateur
   await page.reload();
   await page.waitForFunction(() => document.querySelector("[data-testid=button-like-1]")?.getAttribute("aria-pressed") === "true");

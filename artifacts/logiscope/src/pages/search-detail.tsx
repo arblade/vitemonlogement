@@ -57,6 +57,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
   liked: boolean; viewed: boolean; onSelect: () => void; onFavorite: () => void; onViewed: () => void;
 }) {
   const [expandedSummary, setExpandedSummary] = useState(false);
+  const [popping, setPopping] = useState(false); // petite animation du cœur, seulement au moment où l'on ajoute le favori
   const [canExpandSummary, setCanExpandSummary] = useState(false);
   const summaryRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -81,7 +82,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
             <div className="min-w-0">{viewed && <span data-testid={`badge-viewed-${listing.id}`} className="mb-2 inline-block rounded-md bg-[#ebebeb] px-2 py-0.5 text-xs font-medium text-[#484848]">Déjà consultée</span>}<h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3></div>
            <div className="relative z-20 flex shrink-0 items-center justify-between gap-2 sm:items-start sm:justify-end">
-             <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={onFavorite} className={`grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-[#ff385c] bg-lime-wash text-[#c13515]' : 'border-[#dddddd] bg-white text-stone hover:text-[#c13515]'}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'}/></button>
+             <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={() => { if (!liked) setPopping(true); onFavorite(); }} className={`relative grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-brand bg-lime-wash text-brand' : 'border-[#dddddd] bg-white text-stone hover:text-brand'} ${popping && liked ? 'heart-pop' : ''}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'} onAnimationEnd={() => setPopping(false)}/></button>
              <div className="rounded-lg bg-lime-wash px-2.5 py-2 text-center"><span className="block font-data text-[16px] font-bold leading-none">{Math.round(listing.score)}<span className="text-xs">/100</span></span><span className="mt-1 block text-xs uppercase tracking-[.05em]">pertinence</span></div>
            </div>
         </div>

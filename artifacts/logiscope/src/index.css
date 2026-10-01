@@ -94,6 +94,12 @@
 .progress-fill { position: relative; overflow: hidden; }
 .progress-fill::after { content:""; position:absolute; inset:0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent); transform: translateX(-100%); animation: progress-sheen 2s ease-in-out infinite; }
 @keyframes progress-sheen { to { transform: translateX(100%) } }
+/* Like : le cœur rebondit (≈ 0,4 s) et un fin cercle rose s'étend autour du bouton ; discret, une seule fois. */
+@keyframes heart-pop { 0% { transform:scale(1) } 35% { transform:scale(1.32) } 65% { transform:scale(.92) } 100% { transform:scale(1) } }
+@keyframes heart-ring { 0% { opacity:.55; transform:scale(1) } 100% { opacity:0; transform:scale(1.55) } }
+.heart-pop svg { animation: heart-pop .4s cubic-bezier(.34,1.56,.64,1) }
+.heart-pop::after { content:''; position:absolute; inset:-1px; border-radius:inherit; border:2px solid var(--color-brand); pointer-events:none; animation: heart-ring .4s ease-out forwards }
+@media (prefers-reduced-motion: reduce) { .heart-pop svg,.heart-pop::after { animation:none } }
 @media (prefers-reduced-motion: reduce) { .reveal,.pulse-dot,.shimmer,.spin-arc,.pulse-ring,.progress-fill::after { animation:none } }
 /* Carte de la fiche (MapLibre) : pastilles façon Airbnb. Chaque marqueur est un point de taille nulle ; la pastille se centre dessus. */
 .vml-pin, .vml-badge { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 9999px; font-weight: 700; line-height: 1; box-shadow: 0 2px 4px rgba(0,0,0,.12), 0 6px 16px rgba(0,0,0,.14); }

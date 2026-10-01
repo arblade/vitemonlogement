@@ -362,6 +362,25 @@ describe('Page résultats : favoris et comparaison', () => {
     expect(calls.find(call => call.method === 'DELETE')?.url).toContain(encodeURIComponent(listing(2).url));
   });
 
+  it('le cœur, au rose de l’app, rebondit au moment du like seulement (pas au chargement, ni au retrait ; fin de l’animation vérifiée dans le navigateur)', async () => {
+    const user = userEvent.setup();
+    mockFetch(favoriteRoutes([{ url: listing(3).url, title: 'x', image: null, price: 1, area: 1, rooms: 1, location: 'L', score: 1, searchId: 1, savedAt: '2026-09-30T10:00:00Z' }]));
+    renderPage();
+    const heart = screen.getByTestId('button-like-2');
+    expect(heart.className).not.toContain('heart-pop');
+    await waitFor(() => expect(screen.getByTestId('button-like-3')).toHaveAttribute('aria-pressed', 'true'));
+    expect(screen.getByTestId('button-like-3').className).not.toContain('heart-pop'); // déjà aimée au chargement : pas d'animation
+    await user.click(heart);
+    await waitFor(() => expect(heart).toHaveAttribute('aria-pressed', 'true'));
+    expect(heart.className).toContain('heart-pop');
+    expect(heart.className).toContain('text-brand'); // le rose de l'app, plus l'ancien rouge-orangé #c13515
+    expect(heart.className).toContain('border-brand');
+    expect(heart.className).not.toContain('c13515');
+    await user.click(heart);
+    await waitFor(() => expect(heart).toHaveAttribute('aria-pressed', 'false'));
+    expect(heart.className).not.toContain('heart-pop');
+  });
+
   it('un favori déjà en base apparaît coché au chargement', async () => {
     mockFetch(favoriteRoutes([{ url: listing(3).url, title: 'x', image: null, price: 1, area: 1, rooms: 1, location: 'L', score: 1, searchId: 1, savedAt: '2026-09-30T10:00:00Z' }]));
     renderPage();
