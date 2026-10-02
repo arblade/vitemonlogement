@@ -41,7 +41,7 @@ test("critères tranchés par Le Bon Coin seul : case cochée = oui ; case absen
   assert.equal(results.find(check => check.label === "cave")?.source, "api");
 });
 
-test("caractéristiques affichées sans IA : cases cochées, chauffage, disponibilité, dernier étage", () => {
+test("caractéristiques affichées sans IA : cases cochées, chauffage, dernier étage ; jamais de date de disponibilité (champ auto-rempli, souvent faux)", () => {
   const record = fatihRecord({ url: "https://www.leboncoin.fr/ad/locations/1", title: "T2", description: "Bel appartement.", price: 700, area: 40, rooms: 2 });
   const data = JSON.parse(record.source_data as string);
   data.attributes.push(
@@ -53,7 +53,9 @@ test("caractéristiques affichées sans IA : cases cochées, chauffage, disponib
   const shown = Object.fromEntries(listing.features.map(feature => [feature.label, feature.value]));
   for (const label of ["Parking", "Cuisine équipée", "Cave", "Interphone", "Gardien", "Dernier étage"]) assert.equal(shown[label], "", label);
   assert.equal(shown.Chauffage, "Individuel · gaz");
-  assert.equal(shown.Disponible, "à partir du 01/11/2026");
+  // « available_date » : souvent rempli par défaut (mois de publication), parfois déjà passé ou contredit par le texte.
+  assert.equal(shown.Disponible, undefined);
+  assert.ok(!listing.features.some(feature => /\d{1,2}\/\d{4}|disponib/i.test(`${feature.label} ${feature.value}`)));
   assert.ok(listing.features.every(feature => feature.source === "annonce"));
 });
 

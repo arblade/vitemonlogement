@@ -130,8 +130,9 @@ OpenAI est déjà faible face à Apify (≈ 20 % de la dépense) : Jev réduit s
 Trois étages, du plus sûr au plus cher, autour d'un **catalogue de 33 caractéristiques** (`routes/housing/catalogue.ts`) :
 1. **Le Bon Coin** (gratuit, certain, actif même sans Jev) : en plus des champs déjà lus, les cases « Spécificités »
    (parking ou garage, cuisine équipée, cave, interphone, gardien, animaux autorisés…), l'étage (`floor_property`,
-   `floor_number`), l'état (`global_condition`), les charges comprises, le chauffage (« Individuel · gaz ») et la date
-   de disponibilité. Ils tranchent les critères correspondants (« cave », « chat accepté », « sans ascenseur »,
+   `floor_number`), l'état (`global_condition`), les charges comprises et le chauffage (« Individuel · gaz »). **Pas la date de disponibilité**
+   (`available_date`) : retirée le 03/10, champ souvent rempli par défaut (mois de publication), parfois déjà passé ou
+   contredit par le texte (constaté sur les annonces réelles). Ils tranchent les critères correspondants (« cave », « chat accepté », « sans ascenseur »,
    « pas de rez-de-chaussée »…) et s'affichent comme caractéristiques. Une case non cochée reste « à vérifier ».
    **Seul un « oui » des champs fait foi.** Un « non » (« Ascenseur : Non », « 0 place ») est souvent une valeur par
    défaut que le propriétaire n'a pas remplie : la description est lue quand même (Jev ou LLM), et un « oui » explicite

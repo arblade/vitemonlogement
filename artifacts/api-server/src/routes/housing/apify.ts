@@ -70,14 +70,11 @@ function otherApiFeatures(data: Record<string, unknown>, criteria: Criteria): Fe
     features.push({ label: spec.label, value, source: "annonce",
       evidence: `Indiqué dans l’annonce : « ${key} ».` });
   }
-  // Chauffage (« Individuel · gaz ») et date de disponibilité, quand Le Bon Coin les donne.
+  // Chauffage (« Individuel · gaz »), quand Le Bon Coin le donne. Pas la date de disponibilité (`available_date`) : champ
+  // souvent rempli par défaut (mois de publication), parfois déjà passé, parfois contredit par le texte.
   const heating = [apiValue(data, "heating_type"), apiValue(data, "heating_mode")].filter((value): value is string => typeof value === "string" && value.trim().length > 0 && value.length < 30);
   if (heating.length && !features.some(feature => feature.label === "Chauffage")) {
     features.push({ label: "Chauffage", value: heating.map((value, i) => i ? value.toLocaleLowerCase("fr") : value).join(" · "), source: "annonce", evidence: "Indiqué dans l’annonce : « chauffage »." });
-  }
-  const available = apiValue(data, "available_date");
-  if (typeof available === "string" && /^\d{1,2}\/\d{4}$|^\d{2}\/\d{2}\/\d{4}$/.test(available.trim())) {
-    features.push({ label: "Disponible", value: `à partir du ${available.trim()}`.replace(/^à partir du (\d{1,2}\/\d{4})$/, "à partir de $1"), source: "annonce", evidence: "Indiqué dans l’annonce : « date de disponibilité »." });
   }
   // Catalogue (cases « Spécificités », étage, état…) : ce que Le Bon Coin dit avec certitude, sans IA.
   const shown = new Set(features.map(feature => feature.label));

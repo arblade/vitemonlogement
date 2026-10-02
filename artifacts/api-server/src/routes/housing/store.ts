@@ -107,6 +107,14 @@ export type Listing = {
 
 export type SearchRow = typeof housingSearches.$inferSelect;
 
+/**
+ * « Disponible : à partir de 10/2026 », lu un temps dans le champ Le Bon Coin `available_date` (auto-rempli, souvent
+ * faux) : retiré à la lecture pour les annonces déjà enregistrées. Une disponibilité lue dans le texte par l'IA, citation
+ * à l'appui, n'est pas concernée.
+ */
+export const isStaleAvailability = (feature: Pick<Feature, "label" | "source" | "evidence">) =>
+  feature.source === "annonce" && feature.label === "Disponible" && feature.evidence.includes("date de disponibilité");
+
 /** `ownerId` : le compte propriétaire (NULL uniquement pour les recherches antérieures aux comptes et les tests). */
 export async function createSearch(prompt: string, ownerId: number | null = null) {
   const placeholder: Criteria = { location: "", intent: "rent", keywords: "", radius: 5, wishes: [] };
@@ -229,7 +237,7 @@ export async function getSearch(id: number) {
       aiSummary: listing.aiSummary,
       summaryEvidence: JSON.parse(listing.summaryEvidence) as string[],
       criterionResults: JSON.parse(listing.criterionResults) as CriterionResult[],
-      features: JSON.parse(listing.features) as Feature[],
+      features: (JSON.parse(listing.features) as Feature[]).filter(feature => !isStaleAvailability(feature)),
       lat: listing.lat, lng: listing.lng, geoPrecision: listing.geoPrecision as GeoPrecision | null,
       geoSource: listing.geoSource === "description" ? "description" as const : null, geoEvidence: listing.geoEvidence,
       postcode: listing.postcode, postedAt: listing.postedAt, refreshedAt: listing.refreshedAt, firstSeenAt: listing.firstSeenAt,
