@@ -243,6 +243,36 @@ précédentes. Il restait trois relectures payées, corrigées :
 Exemple mesuré sur le faux marché des tests : création de veille sur un marché à une annonce toutes les 2 h, 35 + 19
 annonces lues au lieu de 35 + 35.
 
+## Simulation sur 10 jours (02/10, `veille-scenario.test.ts`)
+Test de bout en bout, sans service payant ni attente : horloge simulée, vraie API, vrai worker, vraie base (PGlite, ou un
+vrai Postgres avec `SCENARIO_DATABASE_URL`), faux Le Bon Coin dont le marché vit (≈ 48 annonces par jour de semaine,
+15 % de remontées, 4 % de suppressions puis republications), fausse IA, faux Resend. Lancement seul :
+`pnpm --filter @workspace/api-server test:veille` (≈ 20 s ; il fait aussi partie de `pnpm test`).
+
+Du jeudi 22 octobre au dimanche 1er novembre 2026 : création (remontée de 4 jours), relèves à 8 h et 18 h, **passage à
+l'heure d'hiver** (25/10), **redémarrage** pendant la relève de 8 h (un seul rattrapage à 11 h), **Apify en panne** une
+relève (rien de perdu à la suivante), **IA en panne** (relève gardée, e-mail envoyé), **Resend en panne** une fois (nouvel
+essai, un seul e-mail), **désinscription** puis réinscription, **7 jours sans visite** (pause, e-mail, plus aucune
+lecture), **reprise**.
+
+À chaque relève, comparaison avec un modèle indépendant : exactement les annonces jamais vues au-dessus du curseur
+(ni remontées ni republications d'annonces connues, aucune manquante) ; curseur = mise à jour la plus récente ; heure
+du passage suivant écrite en dur en UTC (vérifie l'heure de Paris et le changement d'heure) ; pages lues dans l'ordre,
+page 1 relue au plus une fois, aucune page lue pour rien ; un seul e-mail, au compte, avec ces annonces et l'heure de
+Paris. Bilan : chaque annonce publiée pendant la veille montrée une fois comme nouvelle, aucune analysée deux fois.
+Vérifié en réintroduisant des défauts (curseur figé, une seule page, republications non reconnues, relève en échec non
+reprogrammée) : chacun fait échouer la simulation.
+
+**Ce que la simulation a appris** : un seul débit pour la journée faisait lire trop à 8 h (la nuit, calme) et pas assez
+à 18 h (la journée : page 1 relue 7 fois sur 19). Le débit est maintenant **mémorisé par créneau** (`watch_rates`,
+migration 0010) et la page entière n'est lue d'emblée qu'au-delà de **30** annonces attendues. Résultat sur la même
+simulation : 743 annonces lues au lieu de 809 (≈ 0,74 $ d'Apify pour 10 jours très actifs), page 1 relue 4 fois (première
+relève sans historique, rattrapage, rythme qui change du week-end à la semaine). La simulation l'impose désormais
+(lecture ≤ 2 × nouveautés, page 1 relue ≤ 5 fois).
+
+**À savoir** : une annonce ancienne, jamais vue par cette veille (plus vieille que les 4 jours de départ), qui remonte en
+tête est montrée comme **nouvelle** (adresse jamais vue). Seules les remontées d'annonces déjà connues ne le sont pas.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de veilles quotidiennes par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).

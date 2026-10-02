@@ -19,7 +19,7 @@ import { interleave, normalizeExtra, startExtraSources } from "./sources";
 import { finishPass, pendingAnalysis, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
 import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
-import { nextParisTime } from "../../lib/paris-time";
+import { currentParisSlot, nextParisTime } from "../../lib/paris-time";
 import { enqueueWatchMail } from "../../lib/mail-outbox";
 import { object, text } from "./parse";
 
@@ -50,6 +50,8 @@ export type PassState = {
   sinceCursor: number;
   /** Annonces lues, sans compter deux fois une page relue en entier : sert au débit observé (création de la veille). */
   counted?: number;
+  /** Relève : le créneau couvert (« 08:00 »), dont le débit observé est mémorisé à part. */
+  slot?: string | null;
   startedAt: number;
 };
 
@@ -59,19 +61,22 @@ const clamp = (value: number, low: number, high: number) => Math.max(low, Math.m
  * Au-delà de ce nombre d'annonces attendues, on lit la page entière d'emblée : lire une partie puis devoir relire la
  * page en entier (l'acteur ne sait pas commencer à la 21e) coûte plus cher que les quelques annonces en trop.
  */
-export const PARTIAL_MAX = 25;
+export const PARTIAL_MAX = 30;
 /** Taille d'une lecture pour `expected` annonces attendues (marge comprise) : entre 10 et 35. */
 export const pageLimit = (expected: number) => expected > PARTIAL_MAX ? PAGE_SIZE : clamp(Math.ceil(expected), 10, PAGE_SIZE);
 
 /** Première page d'un passage. Passage suivi : juste ce qu'il faut d'après le débit observé (entre 10 et 35). */
-export function firstState(mode: PassMode, row: Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate">, now = Date.now()): PassState {
+export function firstState(mode: PassMode, row: Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "watchRates" | "watchTimes">, now = Date.now()): PassState {
   const base = { pagesRead: 0, newest: null, oldest: null, reads: 0, fresh: 0, sinceCursor: 0, counted: 0, startedAt: now };
   if (mode === "extend") return { ...base, mode, page: Math.max(1, row.pagesRead + 1), limit: PAGE_SIZE, stopAt: null };
   if (mode === "initial") return { ...base, mode, page: 1, limit: oneShotLimit(), stopAt: null };
   if (mode === "backfill") return { ...base, mode, page: 1, limit: PAGE_SIZE, stopAt: now - liveDays() * 24 * HOUR };
   const cursor = row.cursorAt ?? now - 12 * HOUR;
-  const expected = (row.watchRate ?? PAGE_SIZE / 12) * Math.max(0, now - cursor) / HOUR * 1.3;
-  return { ...base, mode, page: 1, limit: pageLimit(expected), stopAt: cursor };
+  // Débit de ce créneau (la nuit pour 8 h, la journée pour 18 h), sinon le débit général.
+  const slot = currentParisSlot(row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [], now);
+  const rate = (slot ? slotRates(row)[slot] : undefined) ?? row.watchRate ?? PAGE_SIZE / 12;
+  const expected = rate * Math.max(0, now - cursor) / HOUR * 1.3;
+  return { ...base, mode, page: 1, limit: pageLimit(expected), stopAt: cursor, slot };
 }
 
 /** Lance la lecture d'une page (et, à la toute première, des sources secondaires). */
@@ -160,6 +165,8 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
   return "done";
 }
 
+const slotRates = (row: Pick<SearchRow, "watchRates">) => row.watchRates ? JSON.parse(row.watchRates) as Record<string, number> : {};
+
 /**
  * Taille de la page suivante : d'après le rythme de la page qui vient d'être lue (35 annonces sur tant d'heures), ce qu'il
  * reste d'annonces jusqu'à la borne d'arrêt, avec 30 % de marge. Évite de payer toute une page pour en trouver 5.
@@ -189,6 +196,9 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
   const rate = observed == null ? row.watchRate
     : state.mode === "watch" ? (truncated ? Math.max(row.watchRate ?? 0, observed) : observed)
     : state.mode === "backfill" || (state.mode === "initial" && state.limit === PAGE_SIZE) ? observed : row.watchRate;
+  const rates = slotRates(row);
+  const slotRate = state.mode === "watch" && state.slot && observed != null
+    ? { watchRates: JSON.stringify({ ...rates, [state.slot]: truncated ? Math.max(rates[state.slot] ?? 0, observed) : observed }) } : {};
   const times = row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [];
   await finishPass(row.id, {
     cursorAt: Math.max(row.cursorAt ?? 0, state.newest ?? 0) || null,
@@ -198,6 +208,7 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
     // Création de la veille quotidienne : ce qu'elle trouve sur 4 jours n'est pas « nouveau » (l'utilisateur est là).
     ...(state.mode === "backfill" ? { lastVisitedAt: now } : {}),
     watchRate: rate,
+    ...slotRate,
     ...(state.mode === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, now) } : {}),
     // Relève : ses annonces (première lecture = début du passage) sont séparées des plus anciennes dans la liste.
     ...(state.mode === "watch" ? { lastWatchAt: state.startedAt, lastWatchStatus: truncated ? "partial" : "ok", watchFailures: 0 } : {}),

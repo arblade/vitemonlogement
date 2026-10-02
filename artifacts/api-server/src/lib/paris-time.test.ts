@@ -33,3 +33,15 @@ test("créneaux invalides ignorés", () => {
   assert.equal(nextParisTime(["8h", "nimporte"], Date.now()), null);
   assert.ok(nextParisTime(["8h", "18:00"], Date.now()));
 });
+
+test("créneau couvert par une relève : le dernier créneau passé, la veille au soir avant 8 h, changement d'heure compris", async () => {
+  const { currentParisSlot } = await import("./paris-time");
+  const times = ["08:00", "18:00"];
+  assert.equal(currentParisSlot(times, Date.parse("2026-10-23T06:00:00Z")), "08:00", "8 h pile (heure d'été)");
+  assert.equal(currentParisSlot(times, Date.parse("2026-10-23T05:59:59Z")), "18:00", "juste avant 8 h : la relève de la veille au soir");
+  assert.equal(currentParisSlot(times, Date.parse("2026-10-23T15:00:00Z")), "08:00", "rattrapage à 17 h : créneau de 8 h");
+  assert.equal(currentParisSlot(times, Date.parse("2026-10-25T07:00:00Z")), "08:00", "8 h le jour du passage à l'heure d'hiver");
+  assert.equal(currentParisSlot(times, Date.parse("2026-10-25T06:30:00Z")), "18:00", "7 h 30 en heure d'hiver : pas encore 8 h");
+  assert.equal(currentParisSlot(["07:30"], Date.parse("2026-10-23T03:00:00Z")), "07:30", "un seul créneau");
+  assert.equal(currentParisSlot([], Date.now()), null);
+});

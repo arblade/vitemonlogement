@@ -1,0 +1,1 @@
+ALTER TABLE "housing_searches" ADD COLUMN "watch_rates" text;

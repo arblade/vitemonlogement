@@ -398,7 +398,7 @@ export async function setPass(id: number, fields: Partial<Pick<SearchRow, "passS
 }
 
 /** Fin d'une lecture (première recherche ou tâche) : la recherche est prête, la tâche suivante éventuelle est l'analyse demandée. */
-export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt" | "lastWatchAt" | "lastWatchStatus" | "watchFailures">> = {}) {
+export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "watchRates" | "nextWatchAt" | "error" | "lastVisitedAt" | "lastWatchAt" | "lastWatchStatus" | "watchFailures">> = {}) {
   const next = await hasRequestedAnalysis(id) ? "analyze" : null;
   await db().update(housingSearches).set({
     status: "completed", stage: "ready", runId: null, passState: null, task: next, analyzed: 1, attempts: 0, nextCheckAt: 0, error: null, ...fields,

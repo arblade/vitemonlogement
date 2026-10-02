@@ -383,8 +383,8 @@ async function pass(id: number) {
   return settle(id);
 }
 
-test("relève : plus de 25 annonces attendues → la page entière d'emblée, jamais lue en partie puis relue", async () => {
-  const id = await watchedSince(3, 10_000, 7); // 7 par heure depuis ≈ 3 h 10, + 30 % : ≈ 29 attendues
+test("relève : plus de 30 annonces attendues → la page entière d'emblée, jamais lue en partie puis relue", async () => {
+  const id = await watchedSince(3, 10_000, 8); // 8 par heure depuis ≈ 3 h 10, + 30 % : ≈ 33 attendues
   market = [...arrivals(30, 4, 10_100), ...market];
   await pass(id);
   assert.deepEqual(reads, [{ page: 1, limit: 35 }]);

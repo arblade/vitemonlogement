@@ -71,6 +71,13 @@
       "when": 1790925187437,
       "tag": "0009_mails_et_releves",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790934517731,
+      "tag": "0010_debit_par_creneau",
+      "breakpoints": true
     }
   ]
 }

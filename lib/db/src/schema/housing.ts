@@ -43,6 +43,9 @@ export const housingSearches = pgTable("housing_searches", {
   nextWatchAt: bigint("next_watch_at", { mode: "number" }),
   // Annonces lues par heure lors des derniers passages : règle la taille de la première page lue.
   watchRate: doublePrecision("watch_rate"),
+  // Débit observé par créneau (JSON { "08:00": 1.2, "18:00": 3.4 }) : la relève de 8 h couvre la nuit, celle de 18 h la
+  // journée ; un seul débit ferait lire trop le matin et pas assez le soir (page 1 relue).
+  watchRates: text("watch_rates"),
   // Début de la dernière relève (passage suivi, ms) : ses annonces sont séparées des plus anciennes dans la liste.
   lastWatchAt: bigint("last_watch_at", { mode: "number" }),
   // Dernière ouverture de la recherche par son propriétaire (ms) : ce qui est arrivé après est « non vu ».

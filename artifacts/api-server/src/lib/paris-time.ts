@@ -37,6 +37,18 @@ export function leboncoinDate(value: unknown): number | null {
 /** Créneau « HH:MM » valide. */
 export const isClockTime = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 
+/** Créneau (« 08:00 »…) dont la dernière occurrence est la plus récente à `at` ou avant : celui que la relève couvre. */
+export function currentParisSlot(times: readonly string[], at: number): string | null {
+  let best: { time: string; at: number } | null = null;
+  for (const time of times.filter(isClockTime)) {
+    let occurrence = nextParisTime([time], at - 50 * 3_600_000);
+    if (occurrence == null) continue;
+    for (let next = nextParisTime([time], occurrence); next != null && next <= at; next = nextParisTime([time], occurrence)) occurrence = next;
+    if (occurrence <= at && (!best || occurrence > best.at)) best = { time, at: occurrence };
+  }
+  return best?.time ?? null;
+}
+
 /** Prochain passage strictement après `after`, parmi des heures de Paris (« 08:00 », « 18:00 »). */
 export function nextParisTime(times: readonly string[], after: number): number | null {
   const valid = times.filter(isClockTime);
