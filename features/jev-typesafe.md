@@ -1,7 +1,8 @@
 # Étude : Jev (TypeSafe) pour lire les annonces à moindre coût (03/10/2026)
 
-**Statut : étude, rien de codé.** Sources publiques uniquement (pas encore d'accès à l'API) : chiffres du fournisseur,
-non vérifiés par nous.
+**Statut : implémenté sur la branche `jev` (03/10), désactivé par défaut** (`ANALYSIS_ENGINE=llm`). Jev n'a jamais été
+appelé pour de vrai : il faut l'accès (liste d'attente) puis le banc d'essai. Sources publiques uniquement : chiffres du
+fournisseur, non vérifiés par nous.
 
 ## Ce qu'est Jev
 - Modèle de **décision typée** de TypeSafe (San Francisco), ouvert en accès anticipé le 15/09/2026. Il **n'écrit pas de
@@ -124,6 +125,32 @@ OpenAI est déjà faible face à Apify (≈ 20 % de la dépense) : Jev réduit s
 | 1 | Accès (liste d'attente TypeSafe, ou Cloudflare Workers AI / AI/ML API) | — | — |
 | 2 | Banc d'essai : les 69 annonces réelles déjà utilisées, vérité annotée à la main sur ≈ 15 caractéristiques + type d'offre + 3 critères ; Jev contre gpt-5-mini : justesse, faux « oui », tokens réellement facturés, latence | 1 jour | < 1 $ |
 | 3 | Si concluant : moteur Jev derrière `ANALYSIS_ENGINE`, catalogue de caractéristiques, seuils, garde-fou mots-clés ; résumé et adresse au LLM à l'ouverture de la fiche ; tests (faux Jev, comme les faux Apify/OpenAI) | 2 jours | — |
+
+## Implémenté (branche `jev`)
+Trois étages, du plus sûr au plus cher, autour d'un **catalogue de 33 caractéristiques** (`routes/housing/catalogue.ts`) :
+1. **Le Bon Coin** (gratuit, certain, actif même sans Jev) : en plus des champs déjà lus, les cases « Spécificités »
+   (parking ou garage, cuisine équipée, cave, interphone, gardien, animaux autorisés…), l'étage (`floor_property`,
+   `floor_number`), l'état (`global_condition`), les charges comprises, le chauffage (« Individuel · gaz ») et la date
+   de disponibilité. Ils tranchent les critères correspondants (« cave », « chat accepté », « sans ascenseur »,
+   « pas de rez-de-chaussée »…) et s'affichent comme caractéristiques. Une case non cochée reste « à vérifier ».
+2. **Jev** (`ANALYSIS_ENGINE=jev` + `JEV_API_KEY`) : type d'offre, caractéristiques du catalogue que Le Bon Coin ne dit
+   pas, et critères de l'utilisateur qui en relèvent. Une question n'est posée que si le sujet apparaît dans le texte
+   (≈ 6 questions par annonce au lieu de 34) ; réponse retenue au-dessus de 0,85 (`JEV_MIN_CONFIDENCE`), avec la phrase
+   de l'annonce comme preuve ; écarter une annonce exige 0,90 et une phrase qui le montre. Client tolérant au format
+   (`lib/jev.ts`) : adresse, modèle et clé réglables, réponses lues sous plusieurs formes.
+3. **LLM** : critères complexes (plus de 6 mots, ou hors catalogue : « calme », « proche de mon travail »…), critères
+   que Jev n'a pas tranchés, résumé, adresse ; caractéristiques et type d'offre seulement si Jev ne les a pas donnés.
+   **Jev en panne : le LLM fait tout, comme avant.**
+
+Tests (`jev.test.ts`, faux Jev et faux LLM, aucun appel payant) : lecture des « Spécificités », critères tranchés par
+Le Bon Coin, catalogue, client HTTP (requête, formats de réponse), questions limitées aux sujets présents, seuils,
+preuve, « sans … » inversé, offre écartée seulement avec preuve, enchaînement des trois étages, repli si Jev tombe,
+cache. Vérifiés en cassant volontairement seuil, mot-clé, preuve de l'offre et répartition Jev/LLM.
+
+**Banc d'essai** (`pnpm --filter @workspace/api-server bench:jev`, appels payants, à la demande) :
+`-- --annoter bench/a-annoter.json` écrit les 39 annonces des échantillons avec une vérité à remplir ;
+`-- --verite bench/a-annoter.json` lance Jev et le LLM et écrit `reports/jev-bench-<date>.md` (justesse, faux « oui »,
+accord avec le LLM, tokens facturés, coût, temps) ; `-- --essai` vérifie le script avec un faux Jev local.
 
 ## Sources
 - [TypeSafe : Jev Latest API (AI/ML API)](https://aimlapi.com/models/typesafe-jev-latest)

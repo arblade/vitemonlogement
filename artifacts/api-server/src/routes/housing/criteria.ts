@@ -1,4 +1,5 @@
 import type { Criteria, Criterion, CriterionResult, Listing } from "./store";
+import { catalogueFeature, catalogueFor, wantsAbsence } from "./catalogue";
 
 type Basic = Pick<Listing, "price" | "area" | "rooms" | "location">;
 
@@ -6,11 +7,12 @@ function labelForWish(value: string) {
   return value.trim().slice(0, 100);
 }
 
+/**
+ * Caractéristique du catalogue visée par un souhait (« balcon », « chat accepté »…) : tranchée par Le Bon Coin quand il
+ * le dit, sinon par Jev. null : critère « complexe », lu par le LLM.
+ */
 export function classifyWish(label: string): Criterion["apiField"] {
-  if (/parking|stationnement|garage/i.test(label)) return "parking";
-  if (/meubl[ée]/i.test(label)) return "furnished";
-  if (/ascenseur/i.test(label)) return "elevator";
-  return null;
+  return catalogueFor(label)?.id ?? null;
 }
 
 const pieces = (count: number) => `${count} pièce${count > 1 ? "s" : ""}`;
@@ -36,7 +38,7 @@ export function checksFor(criteria: Criteria): Criterion[] {
     const label = labelForWish(wish);
     if (!label) continue;
     const apiField = classifyWish(label);
-    checks.push({ id: `wish-${index + 1}`, label, availability: apiField ? "hybrid" : "description", apiField });
+    checks.push({ id: `wish-${index + 1}`, label, availability: catalogueFeature(apiField)?.structured ? "hybrid" : "description", apiField });
   }
   return checks;
 }
@@ -96,8 +98,7 @@ export function evaluateStructured(criteria: Criteria, listing: Basic, raw: Reco
     if (check.apiField === "parking") {
       const parking = apiValue(raw, "nb_parkings");
       const count = Number(parking);
-      if (!Number.isFinite(count) || parking == null) return unknown(check);
-      return structured(`${count} place(s)`, "nb_parkings", check, count > 0);
+      if (Number.isFinite(count) && parking != null) return structured(`${count} place(s)`, "nb_parkings", check, (count > 0) !== wantsAbsence(check.label));
     }
     if (check.apiField === "furnished" || check.apiField === "elevator") {
       const key = check.apiField === "furnished" ? "furnished" : "elevator";
@@ -105,10 +106,14 @@ export function evaluateStructured(criteria: Criteria, listing: Basic, raw: Reco
       const text = typeof value === "string" ? value.toLocaleLowerCase("fr") : "";
       const positive = value === true || value === 1 || (key === "furnished" ? /^meubl[eé]$|^oui$|^yes$|^true$|^1$/.test(text) : /^oui$|^yes$|^true$|^1$/.test(text));
       const negative = value === false || value === 0 || (key === "furnished" ? /^non[\s-]*meubl[eé]$|^non$|^no$|^false$|^0$/.test(text) : /^non$|^no$|^false$|^0$/.test(text));
-      if (!positive && !negative) return unknown(check);
-      const wantsNegative = /non[\s-]*meubl[eé]|sans\s+meubl|sans\s+ascenseur/i.test(check.label);
-      return structured(positive ? "Oui" : "Non", key, check, wantsNegative ? negative : positive);
+      if (positive || negative) {
+        const wantsNegative = /non[\s-]*meubl[eé]|sans\s+meubl|sans\s+ascenseur/i.test(check.label);
+        return structured(positive ? "Oui" : "Non", key, check, wantsNegative ? negative : positive);
+      }
     }
+    // Autres caractéristiques du catalogue : cases « Spécificités », étage, état… seulement quand Le Bon Coin le dit.
+    const presence = catalogueFeature(check.apiField)?.structured?.(raw) ?? null;
+    if (presence) return structured(presence === "yes" ? "Oui" : "Non", "Spécificités", check, (presence === "yes") !== wantsAbsence(check.label));
     return unknown(check);
   });
 }

@@ -16,10 +16,11 @@ test("classifyWish : seuls parking, meublé et ascenseur sont hybrides", () => {
 });
 
 test("checksFor : lieu, budget, surface, pièces et souhaits sont tous représentés", () => {
-  const checks = checksFor({ ...base, maxPrice: 700, minArea: 25, minRooms: 1, wishes: ["chat accepté", "parking"] });
-  assert.deepEqual(checks.map(check => check.id), ["location", "price", "area", "rooms", "wish-1", "wish-2"]);
-  assert.equal(checks.find(check => check.id === "wish-1")?.availability, "description");
-  assert.equal(checks.find(check => check.id === "wish-2")?.availability, "hybrid");
+  const checks = checksFor({ ...base, maxPrice: 700, minArea: 25, minRooms: 1, wishes: ["chat accepté", "parking", "calme et lumineux, pas loin de mon travail"] });
+  assert.deepEqual(checks.map(check => check.id), ["location", "price", "area", "rooms", "wish-1", "wish-2", "wish-3"]);
+  // « chat accepté » : case « Animaux autorisés » de Le Bon Coin (sinon Jev) ; « parking » : nb_parkings / Spécificités.
+  assert.deepEqual(checks.filter(check => check.id.startsWith("wish")).map(check => [check.apiField, check.availability]),
+    [["pets", "hybrid"], ["parking", "hybrid"], [null, "description"]], "le critère complexe reste au LLM");
 });
 
 test("evaluateStructured : budget respecté / dépassé / absent", () => {

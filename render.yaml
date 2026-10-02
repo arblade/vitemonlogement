@@ -40,6 +40,11 @@ services:
       # À poser à https://vitemonlogement.fr quand le domaine pointera sur Render.
       - key: PUBLIC_URL
         sync: false
+      # Lecture des annonces par Jev (TypeSafe) : ANALYSIS_ENGINE=jev + JEV_API_KEY ; sans elles, le LLM seul.
+      - key: ANALYSIS_ENGINE
+        sync: false
+      - key: JEV_API_KEY
+        sync: false
       # Facultatifs : expéditeur et adresse de réponse des e-mails (défaut : alertes@vitemonlogement.fr).
       - key: MAIL_FROM
         sync: false
