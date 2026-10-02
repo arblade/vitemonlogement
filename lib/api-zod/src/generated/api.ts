@@ -119,6 +119,10 @@ export const ListHousingSearchesResponseItem = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 export const ListHousingSearchesResponse = zod.array(ListHousingSearchesResponseItem)
@@ -191,6 +195,10 @@ export const CreateHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -299,6 +307,10 @@ export const GetHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -418,6 +430,10 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -529,6 +545,10 @@ export const RefreshHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -649,6 +669,10 @@ export const WatchHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -718,6 +742,10 @@ export const UnwatchHousingSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -794,6 +822,10 @@ export const GetWatchedSearchResponse = zod.object({
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
   "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
+  "readProgress": zod.union([zod.object({
+  "page": zod.number().int(),
+  "maxPages": zod.number().int()
+}),zod.null()]).optional().describe('Reading in progress (page being read, maximum pages for this pass), null when nothing is being read'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }),zod.null()])
 })

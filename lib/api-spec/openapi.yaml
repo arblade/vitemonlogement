@@ -399,9 +399,20 @@ components:
           description: Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)
           type: ["string", "null"]
           enum: [ok, partial, failed, null]
+        readProgress:
+          description: Reading in progress (page being read, maximum pages for this pass), null when nothing is being read
+          oneOf:
+            - $ref: "#/components/schemas/ReadProgress"
+            - type: "null"
         unseenCount:
           description: Listings of the followed search found since the last visit
           type: integer
+    ReadProgress:
+      type: object
+      required: [page, maxPages]
+      properties:
+        page: { type: integer }
+        maxPages: { type: integer }
     HousingSearchRequest:
       type: object
       required: [batch, path, input]

@@ -268,6 +268,11 @@ export const HousingSearchSummaryLastWatchStatus = {
   failed: 'failed',
 } as const;
 
+export interface ReadProgress {
+  page: number;
+  maxPages: number;
+}
+
 export interface HousingSearchSummary {
   id: number;
   prompt: string;
@@ -308,6 +313,8 @@ export interface HousingSearchSummary {
      * @nullable
      */
   lastWatchStatus?: HousingSearchSummaryLastWatchStatus;
+  /** Reading in progress (page being read, maximum pages for this pass), null when nothing is being read */
+  readProgress?: ReadProgress | null;
   /** Listings of the followed search found since the last visit */
   unseenCount: number;
 }

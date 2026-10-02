@@ -292,6 +292,10 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
       assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose[\s\S]*Un e-mail vous est envoyé à \S+@\S+ à chaque relève qui trouve de nouveaux logements\./, name);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-fenetre-${name}.png` });
       await page.click("[data-testid=button-confirm-watch]");
+      // Mise en place (remontée de 4 jours) : progression réelle en segments.
+      await page.waitForSelector("[data-testid=results-backfill]");
+      assert.match(await text(page, "[data-testid=results-backfill]"), /Mise en place de votre veille[\s\S]*annonces? trouvées?[\s\S]*Page 1 sur 3 au plus/, name);
+      if (process.env.E2E_SCREENSHOTS) { await page.locator("[data-testid=results-backfill]").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/progression-${name}.png` }); }
       await page.waitForSelector("[data-testid=text-watch-status]:has-text('chaque jour à')");
       assert.match(await text(page, "[data-testid=text-watch-status]"), /Veille quotidienne · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
       assert.match(await text(page, "[data-testid=text-watch-mail]"), /E-mail à \S+@\S+ à chaque relève qui trouve du nouveau/, name);
@@ -325,6 +329,42 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
       await page.goto(`${base}/`);
       await page.waitForSelector("[data-testid=button-start-search]");
       assert.equal(await page.locator("[data-testid=card-watched-search], [data-testid=hero-new-listings]").count(), 0, `${name} : plus de veille quotidienne`);
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
+test("jauge de correspondance et lien d'un e-mail vers une annonce (mobile puis desktop) : la fiche s'ouvre directement", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      const search = await (await page.request.get(`${base}/api/housing/searches/1`)).json();
+      const target = search.listings[search.listings.length - 1];
+      await page.goto(`${base}/searches/1?annonce=${target.id}`);
+      await page.waitForSelector(`[data-testid=dialog-listing-${target.id}]`);
+      assert.equal(new URL(page.url()).search, "", `${name} : l'adresse redevient celle de la recherche`);
+      const gauge = page.locator(`[data-testid=gauge-detail-${target.id}]`);
+      assert.match(await gauge.innerText(), new RegExp(`${Math.round(target.score)}[\\s\\S]*correspondance`, "i"), name);
+      // En-tête de la fiche : jauge, « Voir l'annonce » et la croix tiennent sur la ligne, la croix reste touchable.
+      const close = await page.locator(`[data-testid=button-close-listing-${target.id}]`).boundingBox();
+      const viewport = page.viewportSize();
+      assert.ok(close.x >= 0 && close.x + close.width <= viewport.width, `${name} : croix de fermeture visible (${close.x + close.width} > ${viewport.width})`);
+      assert.ok(close.height >= 32, name);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/fiche-jauge-${name}.png` });
+      await page.click(`[data-testid=button-close-listing-${target.id}]`);
+      await page.waitForSelector(`[data-testid=gauge-card-${search.listings[0].id}]`);
+      assert.equal(await page.locator("text=Recherche n°").count(), 0, `${name} : plus de numéro de recherche`);
+      if (process.env.E2E_SCREENSHOTS) { await page.locator(`[data-testid=card-listing-${search.listings[0].id}]`).scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/carte-jauge-${name}.png` }); }
       await page.close();
     }
   } finally {

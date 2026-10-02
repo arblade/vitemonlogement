@@ -3,6 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '@/components/auth-gate';
+import { matchLabel } from '@/components/match-gauge';
 import type { HousingListing } from '@workspace/api-client-react';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
@@ -71,7 +72,7 @@ describe('Page résultats : contenu', () => {
       const tile = within(card).getByTestId(`card-general-1-${label}`);
       expect(tile.querySelector('svg')).not.toBeNull();
     }
-    expect(within(card).getByTestId('card-criterion-1-wish-1')).toHaveTextContent(/non précisé/i);
+    expect(within(card).getByTestId('card-criterion-1-wish-1')).toHaveTextContent(/à vérifier/i);
   });
 
   it('carte allégée : critères puis caractéristiques en une rangée de pastilles, sans titres, ni rang · site, ni lien « Détails, sources et preuves »', () => {
@@ -89,7 +90,7 @@ describe('Page résultats : contenu', () => {
     const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
     // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les caractéristiques en mots simples,
     // dans l’ordre de lecture (pièces, étage, équipements, énergie, charges, absent) ; 6 pastilles au plus.
-    expect(chips).toEqual(['chat accepté : non précisé', '1 chambre', '3e étage', 'Cave', 'DPE D', 'Charges 60 €', '+1']);
+    expect(chips).toEqual(['chat accepté : à vérifier', '1 chambre', '3e étage', 'Cave', 'DPE D', 'Charges 60 €', '+1']);
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
@@ -179,11 +180,11 @@ describe('Page résultats : contenu', () => {
     expect(document.body).not.toHaveTextContent('Le tri est fait');
   });
 
-  it('l’explication « Où on cherche les critères » est repliée par défaut', () => {
+  it('vocabulaire simplifié : ni numéro de recherche, ni classement interne des critères (« Où on cherche… »)', () => {
     renderPage();
-    const details = screen.getByText('Où on cherche les critères').closest('details');
-    expect(details).not.toBeNull();
-    expect(details).not.toHaveAttribute('open');
+    for (const gone of ['Recherche n°', 'Où on cherche les critères', 'Parfois indiqué', 'À lire dans la description', 'Indiqué dans l’annonce', 'pertinence'])
+      expect(document.body).not.toHaveTextContent(gone);
+    expect(screen.getByText(/La jauge de correspondance aide à parcourir les annonces/)).toBeInTheDocument();
   });
 });
 
@@ -292,7 +293,7 @@ describe('Ouverture de la carte au clic', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(dialog()).not.toBeInTheDocument());
-    await user.click(screen.getByText('/100').closest('div')!);
+    await user.click(screen.getByTestId('gauge-card-1'));
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 
@@ -336,18 +337,17 @@ describe('Vocabulaire : aucun terme technique à l’écran', () => {
     api.state.data = search({ listings: [rich()] });
     renderPage();
     expect(document.body.textContent).not.toMatch(jargon);
-    expect(screen.getByText('Indiqué dans l’annonce')).toBeInTheDocument();
-    expect(screen.getByText('À lire dans la description')).toBeInTheDocument();
   });
 
-  it('la fiche détaillée ouverte non plus, et nomme l’origine des informations en clair', async () => {
+  it('la fiche détaillée ouverte non plus : statut des critères en mots simples, sans dire où l’information a été trouvée', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [rich()] });
     renderPage();
     await user.click(screen.getByTestId('text-listing-title-1'));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).not.toMatch(jargon);
-    expect(within(dialog).getAllByText(/^(Indiqué dans l’annonce|Lu dans la description|À vérifier dans l’annonce)$/).length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText(/^(Confirmé|Ne correspond pas|À vérifier)$/).length).toBeGreaterThan(0);
+    expect(dialog).not.toHaveTextContent(/Indiqué dans l’annonce|Lu dans la description|points|pertinence|0[1-3] \//);
     expect(within(dialog).getByText('Caractéristiques')).toBeInTheDocument();
   });
 });
@@ -430,7 +430,7 @@ describe('Page résultats : fiche détaillée', () => {
     expect(within(dialog).queryByRole('textbox')).not.toBeInTheDocument();
   });
 
-  it('critères : libellé, statut et source seulement, sans justificatif ni avertissement', async () => {
+  it('critères : libellé et statut seulement, sans justificatif ni avertissement', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [listing(1, { criterionResults: [
       { id: 'wish-1', label: 'chat accepté', status: 'confirmed', source: 'description', value: 'oui', evidence: 'les chats sont les bienvenus' },
@@ -440,8 +440,7 @@ describe('Page résultats : fiche détaillée', () => {
     const dialog = await screen.findByTestId('dialog-listing-1');
     const cat = within(dialog).getByTestId('criterion-result-1-wish-1');
     expect(cat).toHaveTextContent('chat accepté');
-    expect(within(cat).getByTestId('status-criterion-1-wish-1')).toHaveTextContent('Critère satisfait');
-    expect(within(cat).getByTestId('source-criterion-1-wish-1')).toHaveTextContent('Lu dans la description');
+    expect(within(cat).getByTestId('status-criterion-1-wish-1')).toHaveTextContent('Confirmé');
     expect(cat).not.toHaveTextContent(/bienvenus|Justificatif|Extrait/);
     expect(within(dialog).getByTestId('criterion-result-1-wish-2')).not.toHaveTextContent(/Aucune information/);
     expect(within(dialog).queryByText(/Une information absente/)).not.toBeInTheDocument();
@@ -476,7 +475,7 @@ describe('Page résultats : fiche détaillée', () => {
     expect(within(within(dialog).getByTestId('features-1')).getAllByRole('listitem')).toHaveLength(13);
   });
 
-  it('critères de la fiche en badges, comme sur la carte : couleur selon le statut, source à côté', async () => {
+  it('critères de la fiche en badges, comme sur la carte : couleur et mot selon le statut', async () => {
     const user = userEvent.setup();
     api.state.data = search({ listings: [listing(1, { criterionResults: [
       { id: 'wish-1', label: 'chat accepté', status: 'contradicted', source: 'description', value: '', evidence: 'animaux non acceptés' },
@@ -487,7 +486,7 @@ describe('Page résultats : fiche détaillée', () => {
     expect(badge.tagName).toBe('LI');
     expect(badge.className).toContain('rounded-full');
     expect(badge.className).toContain('text-[#b42318]');
-    expect(badge).toHaveTextContent('chat accepté : Critère non satisfait · Lu dans la description');
+    expect(badge).toHaveTextContent('chat accepté · Ne correspond pas');
   });
 });
 
@@ -961,5 +960,75 @@ describe('Veille quotidienne : e-mails et issue de la dernière relève', () => 
     api.state.data = active({ lastWatchStatus: 'ok' });
     renderPage();
     expect(screen.queryByTestId('text-watch-outcome')).not.toBeInTheDocument();
+  });
+});
+
+describe('Jauge de correspondance', () => {
+  it('carte et fiche : un anneau proportionnel au score, le score au centre ; la fiche dit en mots ce qu’il vaut', async () => {
+    const user = userEvent.setup();
+    mockFetch(favoriteRoutes());
+    api.state.data = search({ listings: [listing(1, { score: 84 }), listing(2, { score: 25 })] });
+    renderPage();
+    const gauge = screen.getByTestId('gauge-card-1');
+    expect(within(gauge).getByRole('img')).toHaveAccessibleName('Excellente correspondance : 84 sur 100');
+    expect(gauge).toHaveTextContent('84');
+    const arc = (id: string) => Number(screen.getByTestId(`${id}-arc`).getAttribute('stroke-dasharray')!.split(' ')[0]);
+    expect(arc('gauge-card-1') / arc('gauge-card-2')).toBeCloseTo(84 / 25, 1);
+    expect(within(screen.getByTestId('gauge-card-2')).getByRole('img')).toHaveAccessibleName('Faible correspondance : 25 sur 100');
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const detail = within(await screen.findByTestId('dialog-listing-1')).getByTestId('gauge-detail-1');
+    expect(detail).toHaveTextContent('84Excellente correspondance');
+  });
+
+  it('les mots suivent le score : 80 et plus, 60 et plus, 40 et plus, en dessous', () => {
+    expect([95, 80, 79, 60, 59, 40, 39, 0].map(matchLabel)).toEqual([
+      'Excellente correspondance', 'Excellente correspondance', 'Bonne correspondance', 'Bonne correspondance',
+      'Correspondance partielle', 'Correspondance partielle', 'Faible correspondance', 'Faible correspondance',
+    ]);
+  });
+});
+
+describe('Lien d’un e-mail vers une annonce', () => {
+  it('/searches/1?annonce=24 : la fiche de l’annonce s’ouvre, même plus bas que les 20 premières ; l’adresse redevient /searches/1', async () => {
+    mockFetch(favoriteRoutes());
+    const many = Array.from({ length: 25 }, (_, i) => listing(i + 1, { score: 90 - i }));
+    api.state.data = search({ listings: many });
+    window.history.replaceState(null, '', '/searches/1?annonce=24');
+    renderPage('/searches/1');
+    expect(await screen.findByTestId('dialog-listing-24')).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('annonce retirée depuis l’e-mail : la liste s’affiche, sans fiche ni erreur', async () => {
+    mockFetch(favoriteRoutes());
+    window.history.replaceState(null, '', '/searches/1?annonce=999');
+    renderPage('/searches/1');
+    expect(screen.getByTestId('card-listing-1')).toBeInTheDocument();
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(window.location.search).toBe('');
+    window.history.replaceState(null, '', '/');
+  });
+});
+
+describe('Mise en place de la veille : progression réelle', () => {
+  it('barre en segments (pages lues, page en cours), annonces déjà trouvées, message qui change', () => {
+    mockFetch(favoriteRoutes());
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00'], task: 'backfill', count: 41, readProgress: { page: 2, maxPages: 3 } });
+    renderPage();
+    const block = screen.getByTestId('results-backfill');
+    expect(block).toHaveTextContent('Mise en place de votre veille');
+    expect(screen.getByTestId('backfill-found')).toHaveTextContent('41 annonces trouvées');
+    expect(screen.getByTestId('backfill-page')).toHaveTextContent('Page 2 sur 3 au plus');
+    expect([1, 2, 3].map(n => screen.getByTestId(`backfill-segment-${n}`).dataset.state)).toEqual(['done', 'current', 'todo']);
+    expect(block).toHaveTextContent('Nous rassemblons les annonces des 4 derniers jours…');
+  });
+
+  it('pas de lecture en cours : plus de bloc', () => {
+    mockFetch(favoriteRoutes());
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00'], task: null, readProgress: null });
+    renderPage();
+    expect(screen.queryByTestId('results-backfill')).not.toBeInTheDocument();
   });
 });

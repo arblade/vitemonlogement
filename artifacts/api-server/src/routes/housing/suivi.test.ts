@@ -501,8 +501,15 @@ test("relève avec du nouveau : un e-mail récapitulatif à l'adresse du compte 
   assert.equal(mail.idempotencyKey, `watch:${id}:${after.lastWatchAt}`, "même relève, même clé : jamais deux e-mails");
   assert.equal(mail.body.subject, "7 nouveaux logements à Lille");
   assert.ok(mail.body.html.includes(`https://vitemonlogement.fr/searches/${id}`));
-  assert.ok(mail.body.html.includes("Voir les 7 nouveautés"));
-  assert.ok(mail.body.html.includes("Et 2 autres sur le site."));
+  assert.ok(mail.body.html.includes("Voir tous les résultats"));
+  assert.ok(mail.body.html.includes("Et 2 autres nouveautés sur le site."));
+  // Chaque annonce mène à sa fiche sur le site ; le bouton du bas, à tous les résultats.
+  const { getSearch } = await import("./store");
+  const fresh = (await getSearch(id))!.listings.filter(listing => listing.firstSeenAt === after.lastWatchAt);
+  const links = [...mail.body.html.matchAll(/href="https:\/\/vitemonlogement\.fr\/searches\/\d+\?annonce=(\d+)"/g)].map(match => Number(match[1]));
+  assert.equal(new Set(links).size, 5, "un lien par annonce montrée");
+  assert.ok(links.every(listingId => fresh.some(listing => listing.id === listingId)), "liens vers les nouvelles annonces de la recherche");
+  assert.ok(mail.body.html.includes(`href="https://vitemonlogement.fr/searches/${id}"`), "tous les résultats");
   assert.ok(mail.body.html.includes("Logement lumineux."), "le résumé de l'IA");
   assert.equal((mail.body.html.match(/Appartement T2 n° 171\d\d/g) ?? []).length, 5, "5 annonces montrées, pas 7");
   assert.match(mail.body.text, /Relève de \d{1,2} h/);
@@ -600,4 +607,21 @@ test("relèves étalées : à 8 h, chaque veille part avec son propre décalage 
   } finally {
     process.env.WATCH_SPREAD_SECONDS = "0";
   }
+});
+
+test("progression exposée pendant la mise en place de la veille : page lue, pages au plus ; plus rien une fois fini", async () => {
+  market = makeMarket(200, 0.5, 9000); // très active : 3 pages
+  const id = await followed();
+  const { createWorker } = await import("../../lib/worker");
+  const { getSearch } = await import("./store");
+  const worker = createWorker({ owner: "test" });
+  const seen: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    await setRow(id, { nextCheckAt: 0 });
+    await worker.tick();
+    const search = (await getSearch(id))!;
+    if (search.readProgress) seen.push(`${search.readProgress.page}/${search.readProgress.maxPages}`);
+    if (!search.task) { assert.equal(search.readProgress, null); break; }
+  }
+  assert.deepEqual([...new Set(seen)], ["1/3", "2/3", "3/3"]);
 });

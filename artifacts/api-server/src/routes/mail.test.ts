@@ -79,7 +79,7 @@ test("réactiver les e-mails depuis le site : il faut être connecté, et une va
 
 test("gabarit du récapitulatif : texte de l'annonce échappé, singulier, faits lisibles, relève partielle signalée", async () => {
   const { watchDigest, facts } = await import("../lib/mail-templates");
-  const listing = { title: "<script>alert(1)</script> T2 & balcon", price: 1250, area: 40.4, rooms: 2, location: "Lille", image: "https://img.example/1.jpg?a=1&b=2", aiSummary: "Lumineux." };
+  const listing = { title: "<script>alert(1)</script> T2 & balcon", price: 1250, area: 40.4, rooms: 2, location: "Lille", image: "https://img.example/1.jpg?a=1&b=2", aiSummary: "Lumineux.", link: "https://vitemonlogement.fr/searches/3?annonce=9" };
   const mail = watchDigest({
     location: "Lille", prompt: "Un T2 à Lille", passAt: Date.UTC(2026, 9, 2, 6, 0), listings: [listing], partial: true,
     searchUrl: "https://vitemonlogement.fr/searches/3", unsubscribeUrl: "https://vitemonlogement.fr/api/mail/unsubscribe?u=1&t=x", email: "a@example.com",
@@ -88,7 +88,10 @@ test("gabarit du récapitulatif : texte de l'annonce échappé, singulier, faits
   assert.ok(!mail.html.includes("<script>"), "pas de HTML venu d'une annonce");
   assert.ok(mail.html.includes("&lt;script&gt;alert(1)&lt;/script&gt; T2 &amp; balcon"));
   assert.ok(mail.html.includes("https://img.example/1.jpg?a=1&amp;b=2"));
-  assert.ok(mail.html.includes("Voir la nouveauté"));
+  assert.ok(mail.html.includes("Voir tous les résultats"));
+  assert.ok(mail.html.includes('href="https://vitemonlogement.fr/searches/3?annonce=9"'), "lien vers la fiche de l'annonce");
+  assert.ok(mail.html.includes("Voir ce logement"));
+  assert.match(mail.text, /Voir ce logement : https:\/\/vitemonlogement\.fr\/searches\/3\?annonce=9/);
   assert.ok(mail.html.includes("Recherche très large"));
   assert.match(mail.text, /Relève de 8 h /, "heure de Paris (6 h UTC en été)");
   assert.equal(facts(listing), "1 250 €/mois · 40 m² · 2 pièces · Lille");

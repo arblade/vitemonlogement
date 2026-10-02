@@ -20,6 +20,7 @@ import { EditPromptButton, SearchPromptEditor } from '@/components/search-prompt
 import { useAppConfig } from '@/hooks/use-app-config';
 import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
 import { sourceName } from '@/lib/sources';
+import { MatchGauge, matchLabel } from '@/components/match-gauge';
 
 
 function refreshErrorMessage(error: unknown) {
@@ -33,12 +34,6 @@ function createErrorMessage(error: unknown) {
   if (error && typeof error === 'object' && 'data' in error && error.data && typeof error.data === 'object' && 'error' in error.data && typeof error.data.error === 'string') return error.data.error;
   return 'La nouvelle recherche n’a pas pu démarrer. Votre texte est conservé : réessayez.';
 }
-
-const checkGroups = [
-  { availability: 'api', title: 'Indiqué dans l’annonce', detail: 'Visible directement dans les informations de l’annonce.', tone: 'border-ok-line bg-ok-wash text-ok-deep' },
-  { availability: 'hybrid', title: 'Parfois indiqué', detail: 'Parfois dans les informations de l’annonce, sinon à lire dans la description.', tone: 'border-line bg-sage text-ink' },
-  { availability: 'description', title: 'À lire dans la description', detail: 'Recherché dans le texte de l’annonce.', tone: 'border-line bg-mist text-stone' },
-] as const;
 
 /** « Publiée il y a 3 h » ; une annonce remontée par son auteur le dit (« Remontée hier · publiée le 14 sept. »). */
 function dateLine(listing: HousingListing) {
@@ -80,6 +75,25 @@ function ReleaseLine({ text, testId }: { text: string; testId: string }) {
   </div>;
 }
 
+/**
+ * Mise en place d'une veille quotidienne (remontée de 4 jours) : progression réelle, à la façon Airbnb : une fine barre
+ * en segments (une page lue = un segment à l'encre, la page en cours qui respire), le nombre d'annonces déjà trouvées,
+ * et le message qui change en dessous.
+ */
+function BackfillProgress({ page, maxPages, found }: { page: number; maxPages: number; found: number }) {
+  return <div role="status" data-testid="results-backfill" className="mb-6 rounded-2xl border border-line bg-cream px-5 py-4">
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="text-sm font-semibold text-ink">Mise en place de votre veille</span>
+      <span data-testid="backfill-found" className="shrink-0 text-xs text-stone">{found} annonce{found > 1 ? 's' : ''} trouvée{found > 1 ? 's' : ''}</span>
+    </div>
+    <div aria-hidden="true" className="mt-3 flex gap-1.5">{Array.from({ length: maxPages }, (_, index) =>
+      <span key={index} data-testid={`backfill-segment-${index + 1}`} data-state={index + 1 < page ? 'done' : index + 1 === page ? 'current' : 'todo'}
+        className={`h-1 flex-1 rounded-full ${index + 1 < page ? 'bg-ink' : index + 1 === page ? 'animate-pulse bg-[#b0b0b0]' : 'bg-line-soft'}`}/>)}
+    </div>
+    <p className="mt-2.5 flex flex-wrap gap-x-1.5 text-xs text-stone"><span data-testid="backfill-page">Page {page} sur {maxPages} au plus ·</span><RotatingMessage messages={BACKFILL_MESSAGES}/></p>
+  </div>;
+}
+
 const Spinner = () => <span aria-hidden="true" className="spin-arc size-8 rounded-full border-[3px] border-[#ffe3e8] border-t-brand"/>;
 
 /**
@@ -106,7 +120,7 @@ function LoadMore({ remaining, loading, onLoad }: { remaining: number; loading: 
 }
 
 const CARD_CHIPS = 6;
-const STATUS_TEXT = { confirmed: 'satisfait', contradicted: 'non satisfait', unknown: 'non précisé' } as const;
+const STATUS_TEXT = { confirmed: 'confirmé', contradicted: 'ne correspond pas', unknown: 'à vérifier' } as const;
 
 /** Une seule rangée de pastilles, sans titre : vos critères d'abord (couleur = statut), puis les autres caractéristiques (neutres). */
 function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[]) {
@@ -151,7 +165,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
             <div className="min-w-0">{(isNew || viewed) && <span className="mb-2 flex gap-1.5">{isNew && <span data-testid={`badge-new-${listing.id}`} className="inline-block rounded-md bg-brand px-2 py-0.5 text-xs font-semibold text-white">Nouvelle</span>}{viewed && <span data-testid={`badge-viewed-${listing.id}`} className="inline-block rounded-md bg-[#ebebeb] px-2 py-0.5 text-xs font-medium text-[#484848]">Déjà consultée</span>}</span>}<h3 data-testid={`text-listing-title-${listing.id}`} className="text-[21px] font-semibold leading-[1.15] tracking-[-.03em] md:text-[24px]">{listing.title}</h3>{dateLine(listing) && <p data-testid={`text-listing-date-${listing.id}`} className="mt-1 text-xs text-stone">{dateLine(listing)}</p>}</div>
            <div className="relative z-20 flex shrink-0 items-center justify-between gap-2 sm:items-start sm:justify-end">
              <button type="button" data-testid={`button-like-${listing.id}`} aria-label={liked ? `Retirer des favoris : ${listing.title}` : `Ajouter aux favoris : ${listing.title}`} aria-pressed={liked} onClick={() => { if (!liked) setPopping(true); onFavorite(); }} className={`relative grid size-10 place-items-center rounded-lg border transition-colors ${liked ? 'border-brand bg-lime-wash text-brand' : 'border-[#dddddd] bg-white text-stone hover:text-brand'} ${popping && liked ? 'heart-pop' : ''}`}><Heart size={19} fill={liked ? 'currentColor' : 'none'} onAnimationEnd={() => setPopping(false)}/></button>
-             <div className="rounded-lg bg-lime-wash px-2.5 py-2 text-center"><span className="block font-data text-[16px] font-bold leading-none">{Math.round(listing.score)}<span className="text-xs">/100</span></span><span className="mt-1 block text-xs uppercase tracking-[.05em]">pertinence</span></div>
+             <MatchGauge score={listing.score} testId={`gauge-card-${listing.id}`}/>
            </div>
         </div>
          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-soft bg-line-soft sm:grid-cols-4" aria-label="Repères essentiels">
@@ -193,6 +207,8 @@ export default function SearchDetail() {
   const [editingPrompt, setEditingPrompt] = useState(false);
   const [shown, setShown] = useState(PAGE_SIZE);
   const [fromMap, setFromMap] = useState(false);
+  // Lien d'un e-mail (/searches/12?annonce=345) : la fiche de cette annonce s'ouvre dès que la recherche est chargée.
+  const [linkedId, setLinkedId] = useState(() => Number(new URLSearchParams(window.location.search).get('annonce')) || null);
   const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
   const interactions = useListingInteractions();
   const favoriteActions = useFavoriteActions();
@@ -274,13 +290,26 @@ export default function SearchDetail() {
     setFromMap(true);
     setOpenId(listingId);
   };
+  useEffect(() => {
+    if (linkedId == null || !data) return;
+    setLinkedId(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('annonce'); // fermer la fiche ne la rouvre pas ; recharger la page montre la liste
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    const picked = listings.find(item => item.id === linkedId);
+    if (!picked) return; // annonce retirée depuis l'e-mail : la liste s'affiche
+    const position = listings.indexOf(picked);
+    setShown(count => Math.max(count, Math.ceil((position + 1) / PAGE_SIZE) * PAGE_SIZE));
+    if (!markListingViewed(picked.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.');
+    setOpenId(picked.id);
+  }, [linkedId, data, listings]);
   const freshCount = listings.filter(item => !viewedUrls.has(listingKey(item.url))).length;
   const selected = listings.filter(item=>selectedIds.includes(item.id));
   const toggle = (listingId: number) => setSelectedIds(current=>current.includes(listingId)?current.filter(id=>id!==listingId):current.length<3?[...current,listingId]:current);
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
     <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
     <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
-    {data?.task === 'backfill' && <div role="status" data-testid="results-backfill" className="mb-6 flex items-center gap-4 rounded-2xl bg-lime-wash px-4 py-4 text-sm text-brand-dark"><Spinner/><RotatingMessage messages={BACKFILL_MESSAGES}/></div>}
+    {data?.task === 'backfill' && <BackfillProgress page={data.readProgress?.page ?? 1} maxPages={data.readProgress?.maxPages ?? 3} found={data.count}/>}
     {newCount > 0 && <p data-testid="text-new-count" className="mb-5 inline-flex items-center gap-2 rounded-lg bg-lime-wash px-3 py-2 text-sm font-semibold text-brand-dark"><BellRing size={15} aria-hidden="true"/>{newCount} nouvelle{newCount > 1 ? 's' : ''} annonce{newCount > 1 ? 's' : ''} depuis votre dernière visite</p>}
     {releaseEnd === 0 && releaseAt && <ReleaseLine testId="separator-release" text={`Relève ${releaseAt} : aucune nouvelle annonce`}/>}
     <div className="space-y-5">{listings.slice(0, shown).map((listing,index) => <Fragment key={listing.id}><ListingCard key={listing.id} listing={listing} checks={data?.criteria.checks || []} searchId={data?.id} places={data?.criteria.places} routingAvailable={data?.routingAvailable} open={openId === listing.id} setOpen={value => setFiche(listing.id, value)} index={index} selected={selectedIds.includes(listing.id)} compareFull={selectedIds.length>=3}
@@ -319,7 +348,7 @@ export default function SearchDetail() {
       <div className="mx-auto max-w-[1440px] px-5 pb-8 pt-6 md:px-10 md:pb-10 md:pt-8 lg:px-16">
          <Link href="/searches" data-testid="link-back-home" className="inline-flex min-h-11 items-center gap-2 text-sm text-stone transition-colors hover:text-ink"><ArrowLeft size={15}/> Toutes mes recherches</Link>
         {search.isLoading ? <div className="mt-12 space-y-4"><Skeleton className="h-12 w-2/3 bg-sage"/><Skeleton className="h-5 w-1/3 bg-sage"/></div> : data ? <>
-           <div className="mt-6 flex flex-wrap items-center gap-2 text-sm font-medium text-moss"><span>Location</span><span aria-hidden="true">·</span><span className="text-stone">Recherche n° {data.id}</span></div>
+           <div className="mt-6 text-sm font-medium text-moss">Location</div>
           <div className="mt-5 flex flex-col justify-between gap-7 lg:flex-row lg:items-end"><div><h1 data-testid="text-search-location" className="text-[clamp(2rem,4.2vw,3.4rem)] font-semibold leading-[1.05] tracking-[-.03em]">{data.criteria.location || 'Votre recherche'}</h1><p data-testid="text-search-prompt" className="mt-3 max-w-[700px] text-base leading-relaxed text-stone">“{data.prompt}”</p>{data.status !== 'running' && !refresh.isPending && <SearchPromptEditor key={data.id} prompt={data.prompt} pending={create.isPending} error={relaunchError} editing={editingPrompt} setEditing={setEditingPrompt} onSubmit={onRelaunch}/>}</div>
            <div className="flex shrink-0 flex-wrap gap-3 lg:justify-end"><span data-testid="status-search-detail" role="status" aria-live="polite" className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3.5 py-1.5 text-sm text-ink">{data.status==='running'||refresh.isPending?<span className="pulse-dot size-2 rounded-full bg-lime"/>:data.status==='failed'?<X size={14}/>:<Check size={14}/>} {data.status==='running'||refresh.isPending?'Recherche en cours':data.status==='failed'?'Recherche interrompue':'Recherche terminée'}</span><span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3.5 py-1.5 text-sm text-ink"><Clock3 size={14}/>{formatDate(data.createdAt)}</span></div></div>
         </> : null}
@@ -337,7 +366,7 @@ export default function SearchDetail() {
         {data.status !== 'running' && !refresh.isPending &&
         <div className="mb-9 flex flex-col justify-between gap-6 border-b border-line pb-8 md:flex-row md:items-end">
            <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-3xl font-semibold leading-tight tracking-[-.03em] md:text-4xl">{`${data.count} annonce${data.count>1?'s':''} à explorer`}</h2><p data-testid="text-live-window" className="mt-2 text-xs text-stone">{data.watch ? `Veille quotidienne : les annonces des ${liveDays} derniers jours, puis les nouvelles à chaque relève.` : 'Recherche ponctuelle : les annonces les plus récentes. « Étendre » remonte plus loin.'}</p></div>
-           <div className="flex flex-wrap items-center gap-3">{!editingPrompt && !data.watch && <EditPromptButton onClick={() => setEditingPrompt(true)}/>}{data.status==='completed' && <>{!data.watch && <Button type="button" variant="outline" data-testid="button-refresh" title="Étendre : remonter plus loin dans le temps (annonces plus anciennes)" disabled={data.task === 'extend'} onClick={onRefresh} className="h-10 rounded-lg border-[#dddddd] bg-white px-4 text-xs font-semibold hover:border-ink"><RefreshCw size={15} className="mr-2"/> Étendre</Button>}{mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#b0b0b0] bg-cream px-4 text-xs font-semibold transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><MapIcon size={15} aria-hidden="true"/> Carte <span className="rounded-full bg-sage px-2 py-0.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}{listings.length>0 && <><span className="flex items-center gap-2"><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="recent">Plus récentes</option><option value="score">Pertinence</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></span></>}</>}</div>
+           <div className="flex flex-wrap items-center gap-3">{!editingPrompt && !data.watch && <EditPromptButton onClick={() => setEditingPrompt(true)}/>}{data.status==='completed' && <>{!data.watch && <Button type="button" variant="outline" data-testid="button-refresh" title="Étendre : remonter plus loin dans le temps (annonces plus anciennes)" disabled={data.task === 'extend'} onClick={onRefresh} className="h-10 rounded-lg border-[#dddddd] bg-white px-4 text-xs font-semibold hover:border-ink"><RefreshCw size={15} className="mr-2"/> Étendre</Button>}{mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#b0b0b0] bg-cream px-4 text-xs font-semibold transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><MapIcon size={15} aria-hidden="true"/> Carte <span className="rounded-full bg-sage px-2 py-0.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}{listings.length>0 && <><span className="flex items-center gap-2"><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="recent">Plus récentes</option><option value="score">Meilleure correspondance</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></span></>}</>}</div>
         </div>}
          {data.status==='completed' && !refresh.isPending && <WatchPanel key={`${data.id}-${data.watch}`} search={data} other={watchedOther}/>}
          {(data.status==='running'||refresh.isPending) && <div className="mx-auto max-w-3xl">
@@ -352,18 +381,7 @@ export default function SearchDetail() {
              <aside className="h-fit rounded-2xl border border-line bg-cream p-6 lg:sticky lg:top-6"><span className="font-data text-xs uppercase tracking-[.13em] text-[#717171]">Votre demande</span><h3 className="mt-4 text-[28px] leading-tight">Ce que nous avons cherché pour vous.</h3><div className="mt-6 space-y-3 border-t border-line-soft pt-5 text-xs">{[
                 ['Projet','Location'],['Lieu',data.criteria.location],['Budget min.',data.criteria.minPrice!=null?formatPrice(data.criteria.minPrice):'Non précisé'],['Budget max.',data.criteria.maxPrice!=null?formatPrice(data.criteria.maxPrice):'Non précisé'],['Surface min.',data.criteria.minArea!=null?`${data.criteria.minArea} m²`:'Non précisée'],['Surface max.',data.criteria.maxArea!=null?`${data.criteria.maxArea} m²`:'Non précisé'],['Pièces min.',data.criteria.minRooms!=null?String(data.criteria.minRooms):'Non précisées'],['Pièces max.',data.criteria.maxRooms!=null?String(data.criteria.maxRooms):'Non précisées'],['Rayon',data.criteria.radius?`${data.criteria.radius} km`:'Non précisé'],['Mots-clés',data.criteria.keywords||'Aucun']
              ].map(([label,value])=><div key={label} className="flex justify-between gap-4"><span className="text-[#717171]">{label}</span><strong className="max-w-[155px] text-right font-semibold">{value}</strong></div>)}</div>{!!data.criteria.wishes?.length && <div className="mt-5 border-t border-line-soft pt-5"><span className="text-xs text-[#717171]">Souhaits</span><p className="mt-2 text-xs font-semibold">{data.criteria.wishes.join(' · ')}</p></div>}
-             <details className="group/how mt-6 border-t border-line-soft pt-5">
-               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between text-[13px] font-semibold">Où on cherche les critères <span aria-hidden="true" className="text-stone transition-transform group-open/how:rotate-180">⌄</span></summary>
-               <p className="mt-2 text-xs leading-relaxed text-stone">Cette classification indique où chercher une réponse, pas si une annonce répond au critère.</p>
-               {data.criteria.checks?.length ? <div className="mt-5 space-y-5">{checkGroups.map(group => {
-                 const items = data.criteria.checks?.filter(check => check.availability === group.availability) || [];
-                 return <section key={group.availability} aria-label={group.title}>
-                   <div className={`rounded-lg border px-3 py-2 ${group.tone}`}><strong className="font-data text-xs uppercase tracking-[.07em]">{group.title}</strong><p className="mt-1 text-xs leading-relaxed">{group.detail}</p></div>
-                   {items.length ? <ul className="mt-2 space-y-1.5 pl-3">{items.map(check => <li data-testid={`criterion-classification-${check.id}`} key={check.id} className="border-l-2 border-[#ffe3e8] py-1 pl-3 text-xs font-medium leading-snug">{check.label}</li>)}</ul> : <p className="mt-2 pl-3 text-xs text-[#717171]">Aucun critère dans cette catégorie.</p>}
-                 </section>;
-               })}</div> : <p className="mt-4 text-xs leading-relaxed text-stone">Aucun critère individuel n’a été identifié dans cette demande.</p>}
-             </details>
-             <div className="mt-6 rounded-lg bg-sage p-4 text-xs leading-relaxed text-[#484848]"><Info size={15} className="mb-2"/> Un score de pertinence aide à parcourir les annonces. Une information non précisée n’est pas un critère non satisfait. Vérifiez les détails directement sur la source avant toute décision.</div></aside>
+             <div className="mt-6 rounded-lg bg-sage p-4 text-xs leading-relaxed text-[#484848]"><Info size={15} className="mb-2"/> La jauge de correspondance aide à parcourir les annonces. Une information « à vérifier » n’est pas un critère manqué. Vérifiez les détails directement sur l’annonce avant toute décision.</div></aside>
           </div>}
         </>}
       </>}
@@ -371,7 +389,7 @@ export default function SearchDetail() {
     {data && <ResultsMap listings={listings} places={data.criteria.places} viewedIds={viewedIds} open={mapOpen} onOpenChange={setMapOpen} onPick={pickOnMap}/>}
     {selected.length>0 && <div className="sticky bottom-0 z-20 border-t border-[#b0b0b0] bg-[#ffe3e8] shadow-[0_-12px_40px_rgba(39,37,51,.12)]"><div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-5 py-4 md:px-10 lg:px-16"><div className="flex items-center gap-3"><Layers2 size={18}/><span className="text-sm font-semibold">{selected.length} annonce{selected.length>1?'s':''} à comparer</span><span className="hidden text-xs text-[#484848] sm:inline">Jusqu’à 3 annonces</span></div><div className="flex items-center gap-3"><button data-testid="button-clear-compare" onClick={()=>setSelectedIds([])} className="text-xs font-semibold underline underline-offset-4">Effacer</button><a href="#comparatif" data-testid="link-show-compare" className="inline-flex h-9 items-center gap-2 rounded-lg bg-brand px-4 text-xs font-semibold text-[#ffe3e8]">Voir le comparatif <ArrowRight size={14}/></a></div></div></div>}
     {selected.length>0 && <section id="comparatif" className="scroll-mt-8 bg-sage"><div className="mx-auto max-w-[1440px] px-5 py-14 md:px-10 lg:px-16"><div className="mb-7 flex items-end justify-between"><div><Eyebrow number="02">En regard</Eyebrow><h2 className="mt-4 text-4xl font-semibold tracking-tight">Comparer pour choisir</h2></div><button data-testid="button-close-compare" onClick={()=>setSelectedIds([])} aria-label="Fermer le comparatif" className="grid size-9 place-items-center rounded-full border border-[#c4c4c4] hover:bg-[#ffe3e8]"><X size={16}/></button></div><div className="overflow-x-auto rounded-xl border border-[#dddddd] bg-cream"><table className="w-full min-w-[560px] border-collapse text-left text-xs"><thead><tr><th className="w-28 p-5 text-[#717171]">Critère</th>{selected.map(item=><th key={item.id} className="min-w-[175px] p-5 text-sm font-semibold">{item.title}</th>)}</tr></thead><tbody>{[
-      ['Prix',(item:HousingListing)=>formatPrice(item.price)],['Surface',(item:HousingListing)=>item.area!=null?`${item.area} m²`:'Non précisée'],['Pièces',(item:HousingListing)=>item.rooms!=null?String(item.rooms):'Non précisées'],['Lieu',(item:HousingListing)=>item.location||'Non précisé'],['Pertinence',(item:HousingListing)=>`${Math.round(item.score)}/100`]
+      ['Prix',(item:HousingListing)=>formatPrice(item.price)],['Surface',(item:HousingListing)=>item.area!=null?`${item.area} m²`:'Non précisée'],['Pièces',(item:HousingListing)=>item.rooms!=null?String(item.rooms):'Non précisées'],['Lieu',(item:HousingListing)=>item.location||'Non précisé'],['Correspondance',(item:HousingListing)=>`${matchLabel(item.score)} · ${Math.round(item.score)}/100`]
     ].map(([label,getValue])=><tr key={label as string} className="border-t border-[#dddddd]"><th className="p-5 font-medium text-[#717171]">{label as string}</th>{selected.map(item=><td key={item.id} className="p-5 font-semibold">{(getValue as (item:HousingListing)=>string)(item)}</td>)}</tr>)}<tr className="border-t border-[#dddddd]"><th className="p-5 text-[#717171]">Source</th>{selected.map(item=><td key={item.id} className="p-5"><a data-testid={`link-compare-source-${item.id}`} href={item.url} target="_blank" rel="noopener noreferrer" onClick={() => { if (!markListingViewed(item.url)) setInteractionError('Impossible de mémoriser les annonces consultées dans ce navigateur.'); }} className="inline-flex items-center gap-1 font-semibold underline underline-offset-4">Voir l’annonce <ExternalLink size={12}/></a></td>)}</tr></tbody></table></div><p className="mt-4 text-xs text-[#717171]">Les informations absentes sont indiquées comme telles. Comparez aussi les preuves et la description complète de chaque annonce.</p></div></section>}
   </main>;
 }

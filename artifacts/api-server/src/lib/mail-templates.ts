@@ -18,6 +18,8 @@ export type DigestListing = {
   location: string | null;
   image: string | null;
   aiSummary: string | null;
+  /** Fiche de l'annonce sur le site (elle s'ouvre directement). */
+  link: string;
 };
 
 const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
@@ -57,7 +59,8 @@ ${body}
 const button = (href: string, label: string) =>
   `<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="border-radius:8px;background:${BRAND};"><a href="${escape(href)}" style="display:inline-block;padding:13px 20px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:8px;">${escape(label)}</a></td></tr></table>`;
 
-function card(listing: DigestListing, href: string) {
+function card(listing: DigestListing) {
+  const href = listing.link;
   const image = listing.image
     ? `<tr><td style="padding:0 0 10px 0;"><a href="${escape(href)}"><img src="${escape(listing.image)}" alt="" width="512" style="display:block;width:100%;max-width:512px;height:auto;max-height:280px;object-fit:cover;border-radius:12px;border:0;"></a></td></tr>` : "";
   const summary = listing.aiSummary ? `<tr><td style="padding:4px 0 0 0;font-size:14px;line-height:1.5;color:#484848;">${escape(shorten(listing.aiSummary, 180))}</td></tr>` : "";
@@ -66,6 +69,7 @@ ${image}
 <tr><td style="font-size:16px;font-weight:600;line-height:1.35;"><a href="${escape(href)}" style="color:${INK};text-decoration:none;">${escape(shorten(listing.title, 90))}</a></td></tr>
 <tr><td style="padding:4px 0 0 0;font-size:14px;color:${STONE};">${escape(facts(listing))}</td></tr>
 ${summary}
+<tr><td style="padding:8px 0 0 0;font-size:14px;font-weight:600;"><a href="${escape(href)}" style="color:${INK};text-decoration:underline;">Voir ce logement</a></td></tr>
 </table></td></tr>`;
 }
 
@@ -76,6 +80,7 @@ export type DigestInput = {
   /** Toutes les nouvelles annonces de la relève (5 montrées au plus). */
   listings: DigestListing[];
   partial: boolean;
+  /** Tous les résultats de la veille. */
   searchUrl: string;
   unsubscribeUrl: string;
   email: string;
@@ -89,22 +94,22 @@ export function watchDigest(input: DigestInput): MailContent {
   const shown = input.listings.slice(0, DIGEST_MAX);
   const headline = `${plural(count, "nouveau logement", "nouveaux logements")} à ${input.location}`;
   const intro = `Relève de ${hourLabel(input.passAt)} de votre veille quotidienne « ${shorten(input.prompt, 80)} ».`;
-  const more = count > shown.length ? `Et ${plural(count - shown.length, "autre", "autres")} sur le site.` : "";
+  const more = count > shown.length ? `Et ${plural(count - shown.length, "autre nouveauté", "autres nouveautés")} sur le site.` : "";
   const partial = input.partial
     ? "Recherche très large : cette relève n’a pas pu tout lire, des annonces ont pu lui échapper. Affinez votre demande pour ne rien manquer." : "";
-  const cta = count > 1 ? `Voir les ${count} nouveautés` : "Voir la nouveauté";
+  const cta = "Voir tous les résultats";
   const footerText = `Vous recevez cet e-mail à ${input.email} parce qu’une veille quotidienne est active sur Vite mon logement. Pour l’arrêter, ouvrez la recherche et choisissez « Arrêter ».`;
   const html = layout(`${headline}. ${intro}`, `
 <tr><td style="padding:12px 24px 0 24px;font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.02em;">${escape(headline)}</td></tr>
 <tr><td style="padding:6px 24px 0 24px;font-size:14px;line-height:1.5;color:${STONE};">${escape(intro)}</td></tr>
 ${partial ? `<tr><td style="padding:12px 24px 0 24px;"><div style="background:#f7f7f7;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;color:#484848;">${escape(partial)}</div></td></tr>` : ""}
-${shown.map(listing => card(listing, input.searchUrl)).join("\n")}
+${shown.map(listing => card(listing)).join("\n")}
 ${more ? `<tr><td style="padding:14px 24px 0 24px;font-size:14px;color:${STONE};">${escape(more)}</td></tr>` : ""}
 <tr><td style="padding:20px 24px 24px 24px;">${button(input.searchUrl, cta)}</td></tr>`,
   `${escape(footerText)}<br><a href="${escape(input.unsubscribeUrl)}" style="color:${STONE};">Ne plus recevoir ces e-mails</a>`);
   const text = [
     headline, intro, partial, "",
-    ...shown.flatMap(listing => [`• ${listing.title}`, `  ${facts(listing)}`, ...(listing.aiSummary ? [`  ${shorten(listing.aiSummary, 180)}`] : []), ""]),
+    ...shown.flatMap(listing => [`• ${listing.title}`, `  ${facts(listing)}`, ...(listing.aiSummary ? [`  ${shorten(listing.aiSummary, 180)}`] : []), `  Voir ce logement : ${listing.link}`, ""]),
     more, `${cta} : ${input.searchUrl}`, "", "—", footerText, `Ne plus recevoir ces e-mails : ${input.unsubscribeUrl}`,
   ].filter((line, index, lines) => line !== "" || lines[index - 1] !== "").join("\n");
   return { subject: headline, html, text };

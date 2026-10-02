@@ -13,6 +13,7 @@ import type { HousingSearchSummaryStage } from './housingSearchSummaryStage';
 import type { HousingSearchSummaryStatus } from './housingSearchSummaryStatus';
 import type { HousingSearchSummaryTask } from './housingSearchSummaryTask';
 import type { HousingSearchSummaryWatch } from './housingSearchSummaryWatch';
+import type { ReadProgress } from './readProgress';
 
 export interface HousingSearchSummary {
   id: number;
@@ -54,6 +55,8 @@ export interface HousingSearchSummary {
      * @nullable
      */
   lastWatchStatus?: HousingSearchSummaryLastWatchStatus;
+  /** Reading in progress (page being read, maximum pages for this pass), null when nothing is being read */
+  readProgress?: ReadProgress | null;
   /** Listings of the followed search found since the last visit */
   unseenCount: number;
 }

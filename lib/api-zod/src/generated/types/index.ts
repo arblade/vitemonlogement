@@ -40,6 +40,7 @@ export * from './housingSearchSummaryTask';
 export * from './housingSearchSummaryWatch';
 export * from './listingRoute';
 export * from './listingRoutes';
+export * from './readProgress';
 export * from './routeSegment';
 export * from './routeSegmentLine';
 export * from './travelMode';

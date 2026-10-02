@@ -4,6 +4,7 @@ import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
+import { intEnv } from "../../lib/env";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
 
@@ -159,6 +160,17 @@ async function unseenCount(row: SearchRow) {
 
 const iso = (ms: number | null | undefined) => ms == null || ms <= 0 ? null : new Date(ms).toISOString();
 
+/**
+ * Lecture en cours (pages de 35 annonces) : la page lue et le nombre de pages au plus. Une seule page pour une recherche
+ * ponctuelle ou « Étendre » ; jusqu'à READ_MAX_PAGES pour la création ou une relève de veille.
+ */
+function readProgress(row: SearchRow) {
+  if (!row.passState) return null;
+  const state = JSON.parse(row.passState) as { mode: string; pagesRead: number };
+  const maxPages = state.mode === "backfill" || state.mode === "watch" ? intEnv("READ_MAX_PAGES", 3) : 1;
+  return { page: Math.min(maxPages, state.pagesRead + 1), maxPages };
+}
+
 /** État de suivi exposé au navigateur : « active », « paused » (arrêtée faute de visite) ou null. */
 const watchState = (row: SearchRow) => row.watched === 1 ? "active" as const : row.watched === 2 ? "paused" as const : null;
 
@@ -188,6 +200,7 @@ async function summary(row: SearchRow) {
     lastVisitedAt: iso(row.lastVisitedAt),
     lastWatchAt: iso(row.lastWatchAt),
     lastWatchStatus: (row.lastWatchStatus as "ok" | "partial" | "failed" | null) ?? null,
+    readProgress: readProgress(row),
     unseenCount: await unseenCount(row),
   };
 }

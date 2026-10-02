@@ -98,7 +98,8 @@ export async function compose(row: Row, now = Date.now()): Promise<Composed> {
   const fresh = search.listings.filter(listing => listing.firstSeenAt === payload.passAt);
   if (!fresh.length) return { skip: "aucune nouvelle annonce" };
   // Les annonces déjà analysées d'abord (résumé, prix vérifié), dans l'ordre du site.
-  const ordered = [...fresh.filter(listing => listing.analyzed !== false), ...fresh.filter(listing => listing.analyzed === false)];
+  const ordered = [...fresh.filter(listing => listing.analyzed !== false), ...fresh.filter(listing => listing.analyzed === false)]
+    .map(listing => ({ ...listing, link: `${searchUrl}?annonce=${listing.id}` }));
   const content = watchDigest({
     location, prompt: search.prompt, passAt: digestLabelAt(search.watchTimes, payload.passAt!), listings: ordered, partial: search.lastWatchStatus === "partial",
     searchUrl, unsubscribeUrl: unsubscribe, email: user.email,
