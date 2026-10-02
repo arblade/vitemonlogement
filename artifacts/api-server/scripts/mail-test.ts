@@ -4,7 +4,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { mailConfigured, publicOrigin, sendMail } from "../src/lib/mail";
-import { watchDigest, watchFailing, watchPaused, type DigestListing } from "../src/lib/mail-templates";
+import { passwordReset, watchDigest, watchFailing, watchPaused, type DigestListing } from "../src/lib/mail-templates";
 
 const sample: DigestListing[] = [
   { title: "Appartement T2 lumineux, balcon, proche métro Gambetta", price: 690, area: 42, rooms: 2, location: "Lille Wazemmes", image: "https://picsum.photos/seed/vml1/800/500", aiSummary: "T2 au 3e étage avec ascenseur, séjour lumineux exposé sud et petit balcon. Cuisine équipée, cave. Libre au 1er novembre." },
@@ -23,7 +23,8 @@ if (first === "--preview") {
   mkdirSync(dir, { recursive: true });
   const paused = watchPaused({ location: "Lille", idleDays: 7, searchUrl: `${base}/searches/1`, unsubscribeUrl: `${base}/api/mail/unsubscribe?u=0&t=exemple`, email: "vous@exemple.fr" });
   const failing = watchFailing({ searchId: 1, location: "Lille", failures: 3, error: "Apify run did not succeed", searchUrl: `${base}/searches/1` });
-  for (const [name, mail] of [["releve", digest], ["pause", paused], ["alerte", failing]] as const) {
+  const reset = passwordReset({ email: "vous@exemple.fr", resetUrl: `${base}/?reset=exemple` });
+  for (const [name, mail] of [["releve", digest], ["pause", paused], ["alerte", failing], ["mot-de-passe", reset]] as const) {
     writeFileSync(path.join(dir, `${name}.html`), mail.html);
     writeFileSync(path.join(dir, `${name}.txt`), `${mail.subject}\n\n${mail.text}`);
   }

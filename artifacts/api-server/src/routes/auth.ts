@@ -5,6 +5,13 @@ import { isProduction } from "../lib/env";
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH, verifyPassword } from "../lib/passwords";
 import { clientIp, consume } from "../lib/quota";
 import { createUser, findUserByEmail, getUser, isValidEmail, normalizeEmail } from "../lib/users";
+import { enqueueMail } from "../lib/mail-outbox";
+import { readResetToken } from "../lib/password-reset";
+import { hashPassword } from "../lib/passwords";
+import { users } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { db } from "../lib/database";
+import { wakeWorker } from "../lib/worker-registry";
 
 const router: IRouter = Router();
 const ATTEMPTS = 10; // par IP (et par e-mail pour la connexion) et par 15 minutes : freine la force brute, y compris sur le code d'invitation
@@ -66,6 +73,36 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   if (!user || !valid) { res.status(401).json({ error: "E-mail ou mot de passe incorrect." }); return; }
   setSessionCookie(res, issueSession(Date.now(), visitorIdForUser(user.id)));
   res.json({ authenticated: true, required: true, email: user.email, mailAlerts: user.mailOptOutAt == null });
+});
+
+// Mot de passe oublié : même réponse que le compte existe ou non (on ne révèle pas qui est inscrit). Un e-mail au plus
+// toutes les 5 minutes par compte ; tentatives limitées par IP et par adresse.
+router.post("/auth/forgot", async (req, res): Promise<void> => {
+  if (!passwordConfigured()) { res.status(503).json({ error: NOT_CONFIGURED }); return; }
+  const email = normalizeEmail(field(req.body, "email"));
+  if (!isValidEmail(email)) { res.status(400).json({ error: "Adresse e-mail invalide." }); return; }
+  if (!await withinAttempts(req, res, `forgot:${clientIp(req)}`, `forgot-email:${emailKey(email)}`)) return;
+  const user = await findUserByEmail(email);
+  if (user) {
+    const now = Date.now();
+    await enqueueMail("password-reset", `password-reset:${user.id}:${Math.floor(now / 300_000)}`, { userId: user.id }, now);
+    wakeWorker();
+  }
+  res.json({ sent: true });
+});
+
+// Nouveau mot de passe depuis le lien de l'e-mail : le lien ne sert qu'une fois ; la personne est connectée.
+router.post("/auth/reset", async (req, res): Promise<void> => {
+  if (!passwordConfigured()) { res.status(503).json({ error: NOT_CONFIGURED }); return; }
+  if (!await withinAttempts(req, res, `reset:${clientIp(req)}`)) return;
+  const password = field(req.body, "password");
+  if (password.length < PASSWORD_MIN_LENGTH) { res.status(400).json({ error: `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.` }); return; }
+  if (password.length > PASSWORD_MAX_LENGTH) { res.status(400).json({ error: "Mot de passe trop long." }); return; }
+  const user = await readResetToken(field(req.body, "token"));
+  if (!user) { res.status(400).json({ error: "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau." }); return; }
+  await db().update(users).set({ passwordHash: await hashPassword(password) }).where(eq(users.id, user.id));
+  setSessionCookie(res, issueSession(Date.now(), visitorIdForUser(user.id)));
+  res.json({ authenticated: true, email: user.email, mailAlerts: user.mailOptOutAt == null });
 });
 
 router.post("/auth/logout", (_req, res) => {

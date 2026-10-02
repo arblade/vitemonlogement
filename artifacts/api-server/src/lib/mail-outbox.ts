@@ -8,10 +8,13 @@ import { db } from "./database";
 import { logger } from "./logger";
 import { checkSignature, signFor } from "./auth";
 import { mailConfigured, publicOrigin, sendMail, type Mail } from "./mail";
-import { watchDigest, watchFailing, watchPaused } from "./mail-templates";
+import { passwordReset, watchDigest, watchFailing, watchPaused } from "./mail-templates";
+import { issueResetToken } from "./password-reset";
+import { isProduction } from "./env";
+import { currentParisSlotAt } from "./paris-time";
 import { getSearch, getSearchRow, watchIdleDays, type Criteria } from "../routes/housing/store";
 
-export type MailKind = "watch" | "watch-paused" | "watch-failing";
+export type MailKind = "watch" | "watch-paused" | "watch-failing" | "password-reset";
 
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 3_600_000];
 const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
@@ -19,6 +22,8 @@ const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
 const CLAIM_MS = 10 * 60_000;
 /** Un récapitulatif de relève qui n'a pas pu partir dans ce délai n'est plus envoyé (le suivant prend le relais). */
 const DIGEST_STALE_MS = 10 * 3_600_000;
+/** Lien de mot de passe : inutile de l'envoyer s'il n'a pas pu partir dans ce délai (l'utilisateur redemandera). */
+const RESET_STALE_MS = 30 * 60_000;
 
 export async function enqueueMail(kind: MailKind, key: string, fields: { userId?: number | null; searchId?: number | null; payload?: object } = {}, now = Date.now()) {
   await db().insert(mailOutbox).values({
@@ -68,6 +73,12 @@ export async function compose(row: Row, now = Date.now()): Promise<Composed> {
   }
   const user = await recipient(row.userId);
   if (!user) return { skip: "compte supprimé" };
+  if (row.kind === "password-reset") {
+    // Demandé à l'instant par l'utilisateur : envoyé même s'il s'est désinscrit des e-mails de veille.
+    if (now - row.createdAt > RESET_STALE_MS) return { skip: "trop tard" };
+    const resetUrl = `${publicOrigin()}/?reset=${issueResetToken(user, now)}`;
+    return { mail: { to: user.email, ...passwordReset({ email: user.email, resetUrl }), idempotencyKey: row.key } };
+  }
   if (user.mailOptOutAt != null) return { skip: "désinscrit" };
   const owned = row.searchId == null ? undefined : await getSearchRow(row.searchId);
   const search = owned?.ownerId === user.id ? await getSearch(owned.id) : null;
@@ -89,10 +100,19 @@ export async function compose(row: Row, now = Date.now()): Promise<Composed> {
   // Les annonces déjà analysées d'abord (résumé, prix vérifié), dans l'ordre du site.
   const ordered = [...fresh.filter(listing => listing.analyzed !== false), ...fresh.filter(listing => listing.analyzed === false)];
   const content = watchDigest({
-    location, prompt: search.prompt, passAt: payload.passAt!, listings: ordered, partial: search.lastWatchStatus === "partial",
+    location, prompt: search.prompt, passAt: digestLabelAt(search.watchTimes, payload.passAt!), listings: ordered, partial: search.lastWatchStatus === "partial",
     searchUrl, unsubscribeUrl: unsubscribe, email: user.email,
   });
   return { mail: { to: user.email, ...content, headers, idempotencyKey: row.key } };
+}
+
+/**
+ * Heure annoncée dans le récapitulatif (« Relève de 8 h ») : l'heure choisie, pas celle du départ réel, décalé de
+ * quelques minutes (voir watchSpreadSeconds) ; un rattrapage bien plus tard (serveur arrêté) dit sa vraie heure.
+ */
+export function digestLabelAt(times: readonly string[], passAt: number) {
+  const slot = currentParisSlotAt(times, passAt);
+  return slot && passAt - slot.at < 15 * 60_000 ? slot.at : passAt;
 }
 
 /** Envoie les e-mails en attente (appelé à chaque tour du worker). Renvoie le nombre d'e-mails traités. */
@@ -113,7 +133,9 @@ export async function processOutbox(now = Date.now(), limit = 10) {
         continue;
       }
       if (!mailConfigured()) {
-        logger.info({ kind: row.kind, to: composed.mail.to, subject: composed.mail.subject }, "E-mail not sent: RESEND_API_KEY is not set");
+        // En développement, le texte est dans les journaux (lien de mot de passe utilisable sans Resend) ; jamais en production.
+        logger.info({ kind: row.kind, to: composed.mail.to, subject: composed.mail.subject, ...(isProduction() ? {} : { text: composed.mail.text }) },
+          "E-mail not sent: RESEND_API_KEY is not set");
         await db().update(t).set({ status: "skipped", error: "RESEND_API_KEY absente" }).where(eq(t.id, row.id));
         continue;
       }

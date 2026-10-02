@@ -466,6 +466,18 @@ export async function watchedSearch(ownerId: number) {
   return row ? summary(row) : null;
 }
 
+/**
+ * Étalement des relèves (secondes) : toutes les veilles de 8 h ne partent pas à la même seconde (Apify limite les runs
+ * simultanés, le worker en traite 2 à la fois). Chaque veille garde son décalage, stable, entre 0 et cette valeur ;
+ * l'heure affichée reste celle choisie (8 h). WATCH_SPREAD_SECONDS=0 : pas d'étalement.
+ */
+export function watchSpreadSeconds() {
+  const value = Number.parseInt(process.env.WATCH_SPREAD_SECONDS ?? "", 10);
+  return Number.isFinite(value) && value >= 0 ? value : 300;
+}
+/** Décalage (ms) de la veille `id` : réparti sur toute la plage, le même à chaque relève. */
+export const watchOffsetMs = (id: number, spread = watchSpreadSeconds()) => spread ? ((id * 37) % spread) * 1000 : 0;
+
 /** Jours sans visite après lesquels une veille quotidienne se met en pause (elle ne coûte plus rien). */
 export const watchIdleDays = () => Number.parseInt(process.env.WATCH_IDLE_DAYS ?? "", 10) || 7;
 
@@ -476,7 +488,11 @@ export const watchIdleDays = () => Number.parseInt(process.env.WATCH_IDLE_DAYS ?
  */
 export async function scheduleDueWatches(now = Date.now()) {
   const t = housingSearches;
-  const due = and(eq(t.watched, 1), sql`${t.nextWatchAt} <= ${now}`);
+  const spread = watchSpreadSeconds();
+  // Même calcul que watchOffsetMs, en SQL.
+  const due = and(eq(t.watched, 1), spread
+    ? sql`${t.nextWatchAt} + ((${t.id} * 37) % ${spread}) * 1000 <= ${now}`
+    : sql`${t.nextWatchAt} <= ${now}`);
   const idle = now - watchIdleDays() * 86_400_000;
   const paused = await db().update(t).set({ watched: 2, nextWatchAt: null })
     .where(and(due, sql`COALESCE(${t.lastVisitedAt}, 0) < ${idle}`))

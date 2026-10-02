@@ -140,6 +140,22 @@ ${lines.map(line => `<tr><td style="padding:8px 24px 0 24px;font-size:14px;line-
   return { subject, html, text: [subject, "", ...lines, "", input.searchUrl].join("\n") };
 }
 
+/** Lien pour choisir un nouveau mot de passe (demandé sur l'écran de connexion). */
+export function passwordReset(input: { email: string; resetUrl: string }): MailContent {
+  const subject = "Choisir un nouveau mot de passe";
+  const intro = `Une demande de nouveau mot de passe a été faite pour le compte ${input.email} sur Vite mon logement.`;
+  const validity = "Le lien est valable 1 heure et ne sert qu’une fois.";
+  const ignore = "Si vous n’êtes pas à l’origine de cette demande, ignorez cet e-mail : votre mot de passe actuel reste valable.";
+  const html = layout(intro, `
+<tr><td style="padding:12px 24px 0 24px;font-size:22px;font-weight:700;line-height:1.3;letter-spacing:-0.02em;">${escape(subject)}</td></tr>
+<tr><td style="padding:8px 24px 0 24px;font-size:15px;line-height:1.55;color:#484848;">${escape(intro)} ${escape(validity)}</td></tr>
+<tr><td style="padding:20px 24px 0 24px;">${button(input.resetUrl, "Choisir un nouveau mot de passe")}</td></tr>
+<tr><td style="padding:20px 24px 24px 24px;font-size:13px;line-height:1.5;color:${STONE};">${escape(ignore)}</td></tr>`,
+  "E-mail envoyé à votre demande par Vite mon logement.");
+  const text = [subject, "", intro, validity, "", `Choisir un nouveau mot de passe : ${input.resetUrl}`, "", ignore].join("\n");
+  return { subject, html, text };
+}
+
 /** Page de désinscription (servie par le serveur, sans connexion) : un bouton, pas d'action au simple chargement. */
 export function unsubscribePage(state: "confirm" | "done" | "invalid", action = "") {
   const content = state === "confirm"

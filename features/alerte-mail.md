@@ -12,6 +12,7 @@ le dit (« Un e-mail vous est envoyé à *adresse d'inscription* à chaque relè
 |---|---|---|
 | **Récapitulatif de relève** | après **chaque relève** (8 h, 18 h…) qui trouve **au moins une** nouvelle annonce ; rien sinon | « 3 nouveaux logements à Lille », heure de la relève, **5 annonces au plus** (photo, loyer, surface, pièces, lieu, résumé de l'IA ; analysées d'abord, dans l'ordre du site), « Et N autres », bouton « Voir les N nouveautés » vers la recherche ; avertissement si la relève est « partielle » |
 | **Veille en pause** | quand la veille se met en pause (7 jours sans visite) | bouton « Reprendre ma veille » |
+| **Mot de passe oublié** (03/10) | à la demande, depuis l'écran de connexion (un toutes les 5 min au plus par compte) | lien « Choisir un nouveau mot de passe », valable 1 heure, à usage unique ; envoyé même si le compte s'est désinscrit des e-mails de veille ; plus envoyé après 30 min en file |
 | **Alerte d'exploitation** | 3 relèves d'affilée en échec sur une veille (une fois par série) | à `ALERT_EMAIL` seulement, si elle est posée |
 
 - **Pas de seuil de score** (conformément à la réserve ci-dessous) : toutes les nouvelles annonces comptent.

@@ -332,6 +332,42 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
   }
 });
 
+test("mot de passe oublié (mobile puis desktop) : demande du lien, confirmation, lien expiré refusé avec un moyen d'en redemander un", async () => {
+  for (const name of ["mobile", "desktop"]) {
+    const context = await newContext(name);
+    try {
+      const page = await context.newPage();
+      await page.goto(base + "/");
+      await page.waitForSelector("[data-testid=button-forgot-password]");
+      await page.fill("[data-testid=input-email]", "dev@example.com");
+      await page.click("[data-testid=button-forgot-password]");
+      assert.match(await text(page, "h1"), /Mot de passe oublié/, name);
+      assert.equal(await page.inputValue("[data-testid=input-email]"), "dev@example.com", `${name} : adresse reprise`);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/oubli-${name}.png` });
+      await page.click("[data-testid=button-send-reset]");
+      await page.waitForSelector("[data-testid=panel-forgot-sent]");
+      assert.match(await text(page, "[data-testid=panel-forgot-sent]"), /Si un compte existe pour dev@example\.com[\s\S]*valable 1 heure/, name);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/oubli-envoye-${name}.png` });
+      // Lien expiré (ou déjà utilisé) : refusé, et l'on peut en redemander un.
+      await page.goto(base + "/?reset=1.1000000000.ancien");
+      await page.waitForSelector("[data-testid=button-save-password]");
+      await page.fill("[data-testid=input-password]", "nouveau-mdp-1");
+      await page.fill("[data-testid=input-password-confirm]", "nouveau-mdp-1");
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/oubli-nouveau-${name}.png` });
+      await page.click("[data-testid=button-save-password]");
+      await page.waitForSelector("[data-testid=status-login-error]");
+      assert.match(await text(page, "[data-testid=status-login-error]"), /expiré ou a déjà servi/, name);
+      await page.click("[data-testid=button-new-reset-link]");
+      assert.match(await text(page, "h1"), /Mot de passe oublié/, name);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${name} : pas de défilement horizontal`);
+      const forgot = await page.locator("[data-testid=button-send-reset]").boundingBox();
+      assert.ok(forgot.height >= 32, name);
+    } finally {
+      await context.close();
+    }
+  }
+});
+
 test("désinscription des e-mails (mobile puis desktop) : sans connexion, un bouton à toucher, puis la confirmation ; lien falsifié refusé", async () => {
   const token = createHmac("sha256", "e2e").update("unsubscribe:1").digest("base64url"); // signé comme le serveur (SESSION_SECRET=e2e)
   for (const name of ["mobile", "desktop"]) {

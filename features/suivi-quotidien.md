@@ -270,6 +270,11 @@ simulation : 743 annonces lues au lieu de 809 (≈ 0,74 $ d'Apify pour 10 jours 
 relève sans historique, rattrapage, rythme qui change du week-end à la semaine). La simulation l'impose désormais
 (lecture ≤ 2 × nouveautés, page 1 relue ≤ 5 fois).
 
+**Relèves étalées (03/10)** : chaque veille part avec un décalage stable de 0 à 5 minutes après l'heure choisie
+(`WATCH_SPREAD_SECONDS`, 300 par défaut ; 0 = à l'heure pile), pour que toutes les veilles de 8 h ne lancent pas leurs
+runs Apify à la même seconde. L'heure affichée et celle du récapitulatif restent « 8 h ». Testé (décalages distincts,
+stables, pas de départ avant) et joué dans la simulation.
+
 **À savoir** : une annonce ancienne, jamais vue par cette veille (plus vieille que les 4 jours de départ), qui remonte en
 tête est montrée comme **nouvelle** (adresse jamais vue). Seules les remontées d'annonces déjà connues ne le sont pas.
 

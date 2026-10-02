@@ -94,3 +94,13 @@ test("gabarit du récapitulatif : texte de l'annonce échappé, singulier, faits
   assert.equal(facts(listing), "1 250 €/mois · 40 m² · 2 pièces · Lille");
   assert.equal(facts({ ...listing, price: null, area: null, rooms: 1, location: null }), "1 pièce");
 });
+
+test("heure annoncée dans le récapitulatif : celle choisie (8 h), même si la relève est partie à 8 h 04 ; un rattrapage dit sa vraie heure", async () => {
+  const { digestLabelAt } = await import("../lib/mail-outbox");
+  const { hourLabel } = await import("../lib/mail-templates");
+  const times = ["08:00", "18:00"];
+  assert.equal(hourLabel(digestLabelAt(times, Date.parse("2026-10-23T06:04:37Z"))), "8 h");
+  assert.equal(hourLabel(digestLabelAt(times, Date.parse("2026-10-23T16:02:00Z"))), "18 h");
+  assert.equal(hourLabel(digestLabelAt(times, Date.parse("2026-10-23T09:12:00Z"))), "11 h 12", "rattrapage à 11 h 12");
+  assert.equal(hourLabel(digestLabelAt(["07:30"], Date.parse("2026-10-23T05:33:00Z"))), "7 h 30");
+});

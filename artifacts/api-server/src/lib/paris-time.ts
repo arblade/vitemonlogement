@@ -39,6 +39,11 @@ export const isClockTime = (value: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v
 
 /** Créneau (« 08:00 »…) dont la dernière occurrence est la plus récente à `at` ou avant : celui que la relève couvre. */
 export function currentParisSlot(times: readonly string[], at: number): string | null {
+  return currentParisSlotAt(times, at)?.time ?? null;
+}
+
+/** Même chose, avec l'instant de cette occurrence du créneau. */
+export function currentParisSlotAt(times: readonly string[], at: number): { time: string; at: number } | null {
   let best: { time: string; at: number } | null = null;
   for (const time of times.filter(isClockTime)) {
     let occurrence = nextParisTime([time], at - 50 * 3_600_000);
@@ -46,7 +51,7 @@ export function currentParisSlot(times: readonly string[], at: number): string |
     for (let next = nextParisTime([time], occurrence); next != null && next <= at; next = nextParisTime([time], occurrence)) occurrence = next;
     if (occurrence <= at && (!best || occurrence > best.at)) best = { time, at: occurrence };
   }
-  return best?.time ?? null;
+  return best;
 }
 
 /** Prochain passage strictement après `after`, parmi des heures de Paris (« 08:00 », « 18:00 »). */

@@ -91,6 +91,7 @@ before(async () => {
   process.env.OPENAI_BASE_URL = `${origin}/v1`;
   process.env.OPENAI_API_KEY = "test";
   process.env.RESEND_BASE_URL = origin;
+  process.env.WATCH_SPREAD_SECONDS = "0"; // relèves à l'heure pile ici ; l'étalement a son propre test (et la simulation)
   process.env.PUBLIC_URL = "https://vitemonlogement.fr";
   const { useMemoryDatabase } = await import("../../test/helpers");
   await useMemoryDatabase();
@@ -570,4 +571,33 @@ test("mise en pause faute de visite : un e-mail pour la reprendre", async () => 
   assert.equal(mails[0].body.subject, "Votre veille quotidienne à Lille est en pause");
   assert.ok(mails[0].body.html.includes(`https://vitemonlogement.fr/searches/${id}`));
   assert.ok(mails[0].body.html.includes("Reprendre ma veille"));
+});
+
+test("relèves étalées : à 8 h, chaque veille part avec son propre décalage (0 à 5 min), toujours le même", async () => {
+  const { createUser } = await import("../../lib/users");
+  const { createSearch, scheduleDueWatches, watchOffsetMs } = await import("./store");
+  process.env.WATCH_SPREAD_SECONDS = "300";
+  try {
+    const ids: number[] = [];
+    for (const email of ["etale-1@example.com", "etale-2@example.com", "etale-3@example.com"]) {
+      const user = (await createUser(email, "motdepasse-1"))!;
+      const id = await createSearch("Un T2 à Lille, 900 € max", user.id);
+      ids.push(id);
+    }
+    const eight = Date.UTC(2026, 9, 23, 6, 0); // 8 h à Paris
+    for (const id of ids) await setRow(id, { status: "completed", task: null, watched: 1, watchTimes: '["08:00"]', nextWatchAt: eight, lastVisitedAt: eight });
+    const offsets = ids.map(id => watchOffsetMs(id));
+    assert.equal(new Set(offsets).size, 3, `décalages distincts : ${offsets}`);
+    assert.ok(offsets.every(offset => offset >= 0 && offset < 300_000));
+    for (const [i, id] of ids.entries()) {
+      await scheduleDueWatches(eight + offsets[i] - 1000);
+      assert.equal((await row(id)).task, null, "pas avant son décalage");
+      await scheduleDueWatches(eight + offsets[i]);
+      assert.equal((await row(id)).task, "watch", "à son décalage");
+    }
+    assert.equal(watchOffsetMs(ids[0]), offsets[0], "stable d'une relève à l'autre");
+    assert.equal(watchOffsetMs(ids[0], 0), 0, "WATCH_SPREAD_SECONDS=0 : pas d'étalement");
+  } finally {
+    process.env.WATCH_SPREAD_SECONDS = "0";
+  }
 });

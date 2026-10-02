@@ -40,3 +40,8 @@ services:
       # À poser à https://vitemonlogement.fr quand le domaine pointera sur Render.
       - key: PUBLIC_URL
         sync: false
+      # Facultatifs : expéditeur et adresse de réponse des e-mails (défaut : alertes@vitemonlogement.fr).
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_REPLY_TO
+        sync: false

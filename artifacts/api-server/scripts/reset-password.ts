@@ -1,4 +1,4 @@
-// Réinitialisation manuelle d'un mot de passe (pas de récupération par e-mail).
+// Réinitialisation manuelle d'un mot de passe (secours : les utilisateurs ont « Mot de passe oublié ? », par e-mail).
 // Usage : DATABASE_URL=... pnpm --filter @workspace/api-server run user:reset-password <email> <nouveau-mot-de-passe>
 import { eq } from "drizzle-orm";
 import { openDatabase, users } from "@workspace/db";

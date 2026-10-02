@@ -167,6 +167,22 @@ async function idle() {
   }
   throw new Error("Le worker n'a pas terminé");
 }
+/**
+ * Relèves étalées (0 à 5 min après l'heure choisie) : fait tourner le worker, 6 s par tour, jusqu'à ce que la veille
+ * parte (tâche posée, passage reprogrammé ou mise en pause), puis jusqu'à ce qu'il n'y ait plus rien à faire.
+ */
+async function untilWatchStarts() {
+  const { createWorker } = await import("../../lib/worker");
+  const worker = createWorker({ owner: "simulation" });
+  const start = await row();
+  for (let i = 0; i < 60; i++) {
+    await worker.tick();
+    const now = await row();
+    if (now.task || now.watched !== start.watched || now.nextWatchAt !== start.nextWatchAt) return idle();
+    mock.timers.setTime(Date.now() + 6_000);
+  }
+  throw new Error("La relève n'est pas partie dans les 6 minutes");
+}
 const setClock = (value: string | number) => mock.timers.setTime(typeof value === "number" ? value : utc(value));
 
 let searchId = 0;
@@ -215,7 +231,7 @@ async function pass(slot: string, check: PassCheck) {
   reads = [];
   const mailsBefore = mails.length;
   failApify = Boolean(check.apifyDown);
-  await idle();
+  await untilWatchStarts();
   failApify = false;
   const after = await row();
   const listings = (await getSearch(searchId))!.listings;
@@ -230,7 +246,8 @@ async function pass(slot: string, check: PassCheck) {
     return;
   }
   assert.equal(after.lastWatchStatus, "ok", label);
-  assert.ok(Math.abs(after.lastWatchAt! - now) < MIN, `${label} : heure de la relève`);
+  // Relèves étalées (WATCH_SPREAD_SECONDS, 5 min par défaut) : départ dans les 5 minutes suivant l'heure choisie.
+  assert.ok(after.lastWatchAt! >= now && after.lastWatchAt! - now < 5 * MIN, `${label} : heure de la relève`);
 
   // 1. Exactement les nouvelles annonces du modèle, ni plus ni moins.
   const fresh = listings.filter(listing => listing.firstSeenAt === after.lastWatchAt).map(listing => listing.title).sort();
@@ -366,7 +383,7 @@ test("veille quotidienne sur 10 jours : curseur, nouveautés exactes, pannes, re
   setClock("2026-11-01T07:00:00Z");
   reads = [];
   const beforePause = mails.length;
-  await idle();
+  await untilWatchStarts();
   assert.equal((await row()).watched, 2, "en pause");
   assert.equal(reads.length, 0, "en pause : rien n'est lu (ni payé)");
   assert.deepEqual(mails.slice(beforePause).map(mail => mail.subject), ["Votre veille quotidienne à Lille est en pause"]);

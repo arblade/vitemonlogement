@@ -195,3 +195,69 @@ describe('AuthGate : e-mails de la veille quotidienne', () => {
     expect(screen.getByTestId('mails')).toHaveTextContent('coupés');
   });
 });
+
+describe('AuthGate : mot de passe oublié', () => {
+  const atUrl = (path: string) => window.history.replaceState(null, '', path);
+
+  it('« Mot de passe oublié ? » : l’adresse saisie est reprise, le lien est demandé, puis « Regardez vos e-mails »', async () => {
+    atUrl('/');
+    const user = userEvent.setup();
+    const calls = mockFetch([loggedOut, { method: 'POST', match: /\/api\/auth\/forgot$/, respond: () => ({ body: { sent: true } }) }]);
+    renderGate();
+    await screen.findByRole('heading', { name: 'Connexion' });
+    await fill(user, { 'Adresse e-mail': 'Moi@Example.com' });
+    await user.click(screen.getByTestId('button-forgot-password'));
+    expect(screen.getByRole('heading', { name: 'Mot de passe oublié' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Adresse e-mail')).toHaveValue('Moi@Example.com');
+    await user.click(screen.getByTestId('button-send-reset'));
+    expect(await screen.findByTestId('panel-forgot-sent')).toHaveTextContent('Si un compte existe pour moi@example.com, un e-mail vient de partir');
+    expect(screen.getByTestId('panel-forgot-sent')).toHaveTextContent('valable 1 heure');
+    expect(calls.find(call => call.url.endsWith('/auth/forgot'))?.body).toEqual({ email: 'Moi@Example.com' });
+    await user.click(screen.getByTestId('button-back-to-login'));
+    expect(screen.getByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
+  });
+
+  it('trop de demandes : le message du serveur s’affiche', async () => {
+    atUrl('/');
+    const user = userEvent.setup();
+    mockFetch([loggedOut, { method: 'POST', match: /\/api\/auth\/forgot$/, respond: () => ({ status: 429, body: { error: 'Trop de tentatives. Réessayez plus tard.' } }) }]);
+    renderGate();
+    await screen.findByRole('heading', { name: 'Connexion' });
+    await user.click(screen.getByTestId('button-forgot-password'));
+    await fill(user, { 'Adresse e-mail': 'moi@example.com' });
+    await user.click(screen.getByTestId('button-send-reset'));
+    expect(await screen.findByTestId('status-login-error')).toHaveTextContent('Trop de tentatives');
+  });
+
+  it('lien de l’e-mail (/?reset=…) : nouveau mot de passe, puis connecté ; le lien disparaît de l’adresse', async () => {
+    atUrl('/?reset=12.9999999999.signature');
+    const user = userEvent.setup();
+    const calls = mockFetch([loggedOut, { method: 'POST', match: /\/api\/auth\/reset$/, respond: () => ({ body: { authenticated: true, email: 'moi@example.com', mailAlerts: true } }) }]);
+    renderGate();
+    expect(await screen.findByRole('heading', { name: 'Nouveau mot de passe' })).toBeInTheDocument();
+    await fill(user, { 'Nouveau mot de passe': 'nouveau-mdp-1', 'Confirmer le mot de passe': 'autre-chose-1' });
+    await user.click(screen.getByTestId('button-save-password'));
+    expect(screen.getByTestId('status-login-error')).toHaveTextContent('ne correspondent pas');
+    expect(calls.some(call => call.url.endsWith('/auth/reset'))).toBe(false);
+    await user.clear(screen.getByLabelText('Confirmer le mot de passe'));
+    await fill(user, { 'Confirmer le mot de passe': 'nouveau-mdp-1' });
+    await user.click(screen.getByTestId('button-save-password'));
+    expect(await screen.findByTestId('who')).toHaveTextContent('moi@example.com');
+    expect(calls.find(call => call.url.endsWith('/auth/reset'))?.body).toEqual({ token: '12.9999999999.signature', password: 'nouveau-mdp-1' });
+    expect(window.location.search).toBe('');
+  });
+
+  it('lien expiré ou déjà utilisé : le message le dit, « Demander un nouveau lien » ramène au formulaire', async () => {
+    atUrl('/?reset=12.1.vieux');
+    const user = userEvent.setup();
+    mockFetch([loggedOut, { method: 'POST', match: /\/api\/auth\/reset$/, respond: () => ({ status: 400, body: { error: 'Ce lien a expiré ou a déjà servi. Demandez-en un nouveau.' } }) }]);
+    renderGate();
+    await screen.findByRole('heading', { name: 'Nouveau mot de passe' });
+    await fill(user, { 'Nouveau mot de passe': 'nouveau-mdp-1', 'Confirmer le mot de passe': 'nouveau-mdp-1' });
+    await user.click(screen.getByTestId('button-save-password'));
+    expect(await screen.findByTestId('status-login-error')).toHaveTextContent('Ce lien a expiré ou a déjà servi');
+    await user.click(screen.getByTestId('button-new-reset-link'));
+    expect(screen.getByRole('heading', { name: 'Mot de passe oublié' })).toBeInTheDocument();
+    expect(window.location.search).toBe('');
+  });
+});

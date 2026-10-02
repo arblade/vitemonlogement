@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 
 export const UNAUTHORIZED_EVENT = 'vml:unauthorized';
 
-type State = 'loading' | 'login' | 'register' | 'open' | 'error';
+type State = 'loading' | 'login' | 'register' | 'forgot' | 'forgot-sent' | 'reset' | 'open' | 'error';
 /** `mailAlerts` : e-mails de la veille quotidienne (actifs sauf désinscription). */
 type AuthContextValue = { email: string | null; mailAlerts: boolean; setMailAlerts: (on: boolean) => Promise<void>; logout: () => Promise<void> };
 /** Exporté pour les tests (compte connecté simulé). */
@@ -17,10 +17,13 @@ const inputClass = 'w-full rounded-xl border border-line bg-paper px-4 py-3 text
 
 /** Code d'invitation présent dans l'URL (/?invite=CODE) : il ouvre le formulaire d'inscription. */
 const inviteFromUrl = () => new URLSearchParams(window.location.search).get('invite');
+/** Lien « mot de passe oublié » reçu par e-mail (/?reset=JETON). */
+const resetFromUrl = () => new URLSearchParams(window.location.search).get('reset');
 function stripInviteFromUrl() {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has('invite')) return;
+  if (!url.searchParams.has('invite') && !url.searchParams.has('reset')) return;
   url.searchParams.delete('invite');
+  url.searchParams.delete('reset');
   window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -41,9 +44,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [mailAlerts, setMailAlertsState] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(inviteFromUrl);
+  const [resetToken, setResetToken] = useState<string | null>(resetFromUrl);
   const [busy, setBusy] = useState(false);
 
   const check = useCallback(async () => {
+    if (resetFromUrl()) return setState('reset'); // le lien de l'e-mail passe avant tout : choisir le nouveau mot de passe
     try {
       const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
       if (response.ok) {
@@ -124,6 +129,56 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
   };
 
+  const goTo = (next: State) => { setMessage(''); setPassword(''); setConfirm(''); setState(next); };
+
+  const requestReset = async (event: FormEvent) => {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/auth/forgot', {
+        method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }),
+      });
+      if (response.ok) { setState('forgot-sent'); return; }
+      setMessage(await readError(response, 'Envoi impossible. Réessayez dans un instant.'));
+    } catch {
+      setMessage('Impossible de joindre le serveur.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveNewPassword = async (event: FormEvent) => {
+    event.preventDefault();
+    if (busy) return;
+    if (password !== confirm) { setMessage('Les deux mots de passe ne correspondent pas.'); return; }
+    if (password.length < PASSWORD_MIN_LENGTH) { setMessage(`Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`); return; }
+    setBusy(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/auth/reset', {
+        method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: resetToken, password }),
+      });
+      if (response.ok) {
+        const data = await response.json().catch(() => null) as { email?: string; mailAlerts?: boolean } | null;
+        queryClient.clear();
+        setSessionEmail(data?.email ?? null);
+        setMailAlertsState(data?.mailAlerts !== false);
+        setPassword(''); setConfirm('');
+        setResetToken(null);
+        stripInviteFromUrl();
+        setState('open');
+        return;
+      }
+      setMessage(await readError(response, 'Enregistrement impossible.'));
+    } catch {
+      setMessage('Impossible de joindre le serveur.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (state === 'open') return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
   if (state === 'loading') return <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-stone" role="status">Chargement…</div>;
   const registering = state === 'register';
@@ -138,6 +193,49 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <p>{message}</p>
             <button type="button" onClick={() => { setState('loading'); void check(); }} className="min-h-11 font-semibold underline underline-offset-4">Réessayer</button>
           </div>
+        : state === 'forgot-sent'
+        ? <div data-testid="panel-forgot-sent" className="space-y-4">
+            <h1 className="text-2xl font-semibold tracking-[-.03em]">Regardez vos e-mails</h1>
+            <p className="text-sm leading-relaxed text-stone">Si un compte existe pour <strong className="break-words font-semibold text-ink">{email.trim().toLowerCase()}</strong>, un e-mail vient de partir avec un lien pour choisir un nouveau mot de passe. Il est valable 1 heure. Pensez à regarder dans les indésirables.</p>
+            <button type="button" data-testid="button-back-to-login" onClick={() => goTo('login')} className="min-h-11 w-full text-sm text-stone underline underline-offset-4">Retour à la connexion</button>
+          </div>
+        : state === 'forgot'
+        ? <form onSubmit={requestReset} className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-[-.03em]">Mot de passe oublié</h1>
+              <p className="mt-1 text-sm text-stone">Indiquez l’adresse de votre compte : vous recevrez un lien pour en choisir un nouveau.</p>
+            </div>
+            <div>
+              <label htmlFor="email" className="mb-1.5 block text-sm font-semibold">Adresse e-mail</label>
+              <input id="email" data-testid="input-email" type="email" autoComplete="email" autoFocus required value={email} onChange={event => setEmail(event.target.value)} className={inputClass}/>
+            </div>
+            {message && <p role="alert" data-testid="status-login-error" className="text-sm text-[#b42318]">{message}</p>}
+            <Button type="submit" data-testid="button-send-reset" disabled={busy || !email} className="h-12 w-full rounded-full bg-brand text-base font-semibold text-paper hover:bg-brand-dark disabled:opacity-40">
+              {busy ? 'Envoi…' : 'Recevoir le lien'}
+            </Button>
+            <button type="button" onClick={() => goTo('login')} className="min-h-11 w-full text-sm text-stone underline underline-offset-4">Retour à la connexion</button>
+          </form>
+        : state === 'reset'
+        ? <form onSubmit={saveNewPassword} className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-[-.03em]">Nouveau mot de passe</h1>
+              <p className="mt-1 text-sm text-stone">Choisissez votre nouveau mot de passe : vous serez connecté juste après.</p>
+            </div>
+            <div>
+              <label htmlFor="password" className="mb-1.5 block text-sm font-semibold">Nouveau mot de passe</label>
+              <input id="password" data-testid="input-password" type="password" autoComplete="new-password" autoFocus required minLength={PASSWORD_MIN_LENGTH} value={password} onChange={event => setPassword(event.target.value)} className={inputClass}/>
+              <p className="mt-1.5 text-xs text-stone">{PASSWORD_MIN_LENGTH} caractères minimum.</p>
+            </div>
+            <div>
+              <label htmlFor="confirm" className="mb-1.5 block text-sm font-semibold">Confirmer le mot de passe</label>
+              <input id="confirm" data-testid="input-password-confirm" type="password" autoComplete="new-password" required value={confirm} onChange={event => setConfirm(event.target.value)} className={inputClass}/>
+            </div>
+            {message && <p role="alert" data-testid="status-login-error" className="text-sm text-[#b42318]">{message}</p>}
+            <Button type="submit" data-testid="button-save-password" disabled={busy || !password || !confirm} className="h-12 w-full rounded-full bg-brand text-base font-semibold text-paper hover:bg-brand-dark disabled:opacity-40">
+              {busy ? 'Enregistrement…' : 'Enregistrer et me connecter'}
+            </Button>
+            <button type="button" data-testid="button-new-reset-link" onClick={() => { setResetToken(null); stripInviteFromUrl(); goTo('forgot'); }} className="min-h-11 w-full text-sm text-stone underline underline-offset-4">Demander un nouveau lien</button>
+          </form>
         : <form onSubmit={submit} className="space-y-4">
             <div>
               <h1 className="text-2xl font-semibold tracking-[-.03em]">{registering ? 'Créer votre compte' : 'Connexion'}</h1>
@@ -151,6 +249,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
               <label htmlFor="password" className="mb-1.5 block text-sm font-semibold">Mot de passe</label>
               <input id="password" data-testid="input-password" type="password" autoComplete={registering ? 'new-password' : 'current-password'} required minLength={registering ? PASSWORD_MIN_LENGTH : undefined} value={password} onChange={event => setPassword(event.target.value)} className={inputClass}/>
               {registering && <p className="mt-1.5 text-xs text-stone">{PASSWORD_MIN_LENGTH} caractères minimum.</p>}
+              {!registering && <button type="button" data-testid="button-forgot-password" onClick={() => goTo('forgot')} className="mt-1 inline-flex min-h-11 items-center text-sm text-stone underline underline-offset-4 hover:text-ink">Mot de passe oublié ?</button>}
             </div>
             {registering && <div>
               <label htmlFor="confirm" className="mb-1.5 block text-sm font-semibold">Confirmer le mot de passe</label>
