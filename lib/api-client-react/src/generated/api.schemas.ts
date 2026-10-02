@@ -255,6 +255,19 @@ export const HousingSearchSummaryWatch = {
   paused: 'paused',
 } as const;
 
+/**
+ * Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)
+ * @nullable
+ */
+export type HousingSearchSummaryLastWatchStatus = typeof HousingSearchSummaryLastWatchStatus[keyof typeof HousingSearchSummaryLastWatchStatus] | null;
+
+
+export const HousingSearchSummaryLastWatchStatus = {
+  ok: 'ok',
+  partial: 'partial',
+  failed: 'failed',
+} as const;
+
 export interface HousingSearchSummary {
   id: number;
   prompt: string;
@@ -290,6 +303,11 @@ export interface HousingSearchSummary {
      * @nullable
      */
   lastWatchAt?: string | null;
+  /**
+     * Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)
+     * @nullable
+     */
+  lastWatchStatus?: HousingSearchSummaryLastWatchStatus;
   /** Listings of the followed search found since the last visit */
   unseenCount: number;
 }

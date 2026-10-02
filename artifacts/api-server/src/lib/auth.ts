@@ -35,6 +35,14 @@ function secret() {
 
 const sign = (payload: string) => createHmac("sha256", secret()).update(payload).digest("base64url");
 
+/** Signature d'une valeur pour un usage précis (lien de désinscription des e-mails…), avec le secret de session. */
+export const signFor = (purpose: string, value: string) => sign(`${purpose}:${value}`);
+export function checkSignature(purpose: string, value: string, signature: unknown) {
+  if (typeof signature !== "string") return false;
+  const expected = signFor(purpose, value);
+  return signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+
 /** Identifiant de session d'un compte : « u12 ». Il sert aussi de clé du quota par utilisateur (checkQuotas). */
 export const visitorIdForUser = (userId: number) => `u${userId}`;
 export function userIdFromVisitor(visitorId: string): number | null {

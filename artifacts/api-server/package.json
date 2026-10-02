@@ -9,6 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "user:reset-password": "node --import tsx ./scripts/reset-password.ts",
     "data:communes": "node ./scripts/build-communes.mjs",
+    "mail:test": "node --import tsx ./scripts/mail-test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --import ./src/test/offline.ts --test \"src/**/*.test.ts\" \"src/**/*.test.mjs\"",
     "test:prod": "node --import tsx --import ./src/prod/setup.ts --test --test-timeout=300000 \"src/prod/*.prod.ts\""

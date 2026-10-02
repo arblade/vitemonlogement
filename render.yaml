@@ -30,3 +30,13 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      # E-mails de la veille quotidienne (Resend). Sans clé : rien ne part, le site fonctionne pareil.
+      - key: RESEND_API_KEY
+        sync: false
+      # Facultatif : reçoit une alerte quand une veille échoue 3 relèves d'affilée.
+      - key: ALERT_EMAIL
+        sync: false
+      # Facultatif : adresse du site dans les liens des e-mails (par défaut l'adresse onrender.com fournie par Render).
+      # À poser à https://vitemonlogement.fr quand le domaine pointera sur Render.
+      - key: PUBLIC_URL
+        sync: false

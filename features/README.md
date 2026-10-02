@@ -4,7 +4,7 @@ Résumés des études de features menées le 30/09/2026. Un fichier par feature.
 
 | Feature | Statut | Fichier |
 |---|---|---|
-| Alerte mail | Non commencée (il faut un domaine d'envoi et un compte Resend) ; piste de sélection par score en réflexion, non retenue | [alerte-mail.md](alerte-mail.md) |
+| Alerte mail | **Implémentée le 02/10 (develop)** : e-mail à chaque relève de la veille quotidienne qui trouve du nouveau (5 annonces max), e-mail de mise en pause, alerte d'exploitation, désinscription en un clic ; actif dès que `RESEND_API_KEY` est posée (mise en service dans le fichier) | [alerte-mail.md](alerte-mail.md) |
 | Comptes multi-utilisateurs | Implémenté (inscription sur invitation, favoris en base) | [comptes-multi-utilisateurs.md](comptes-multi-utilisateurs.md) |
 | Critères de trajet (transport / voiture) | Temps et tracé de trajet vers les lieux cités affichés dans la fiche (code prêt, actif dès que `GOOGLE_MAPS_API_KEY` est posée) ; filtre « moins de 30 min » pas encore fait | [criteres-de-trajet.md](criteres-de-trajet.md) |
 | Base de villes pré-intégrée | Serveur implémenté ; autocomplétion front à faire | [base-de-villes.md](base-de-villes.md) |
@@ -16,8 +16,8 @@ Résumés des études de features menées le 30/09/2026. Un fichier par feature.
 La carte est sur `develop` ; le reste est aussi sur `main`.
 
 ## Tests (à lancer à chaque fois : voir `CLAUDE.md`)
-- `pnpm test` : serveur (`node:test`, 94 + 4 `todo` connus) et front (Vitest, 97).
-- `pnpm test:e2e` : scénario navigateur mobile puis desktop (12).
+- `pnpm test` : serveur (`node:test`, 186 + 4 `todo` connus) et front (Vitest, 174). Un test front (« 20 annonces d’abord… », chargement progressif) échoue parfois quand serveur et front tournent en même temps (course sur l’indicateur), déjà avant le 02/10 ; il passe seul.
+- `pnpm test:e2e` : scénario navigateur mobile puis desktop (18).
 - `pnpm test:prod` : vrais Apify/OpenAI, sur demande explicite seulement (non validé : crédit OpenAI épuisé lors du dernier essai).
 | Logements entiers seulement (parkings, colocations) | Corrigé le 01/10 après signalement : recherche Le Bon Coin limitée aux appartements et maisons avec fourchette de pièces, parkings écartés, chambres et colocations écartées par l'analyse IA (citation exigée) ; recherche par département à corriger | [enquete-parkings-colocations.md](enquete-parkings-colocations.md) |
 | Autres sources d'annonces (SeLoger, PAP) | Branchées et testées le 01/10, mais **désactivées en dur** (`ACTIVE_EXTRA_SOURCES = []` dans `sources.ts`) : trop cher pour l'instant, seul Le Bon Coin est interrogé ; location uniquement (double verrou testé), annonces alternées et dédoublonnées, source affichée | [sources-seloger-pap.md](sources-seloger-pap.md) |

@@ -13,7 +13,7 @@ if (!process.env.E2E_SKIP_BUILD) {
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
 
-const { OPENAI_API_KEY: _a, APIFY_TOKEN: _b, DATABASE_URL: _c, ...env } = process.env;
+const { OPENAI_API_KEY: _a, APIFY_TOKEN: _b, DATABASE_URL: _c, RESEND_API_KEY: _d, ...env } = process.env;
 const server = spawn("node", ["--import", "tsx", "scripts/e2e-server.ts"], {
   cwd: path.join(root, "artifacts/api-server"), stdio: ["ignore", "pipe", "pipe"],
   env: { ...env, PORT: port, APP_PASSWORD: "Arblade", SESSION_SECRET: "e2e", TRUST_PROXY: "1", NODE_ENV: "development", WORKER_INTERVAL_MS: "3600000", FRONTEND_DIST: path.join(root, "artifacts/logiscope/dist/public") },

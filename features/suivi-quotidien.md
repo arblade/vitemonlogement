@@ -215,6 +215,34 @@ Captures : `maquettes/suivi-1-accueil-nouveautes-*`, `suivi-2-recherche-ponctuel
   nouvelle annonce » en tête de liste. Heure de la relève gardée en base (`last_watch_at`, migration 0008).
 Captures : `maquettes/suivi-v3-*`.
 
+## Revue et corrections du 02/10 (sur `develop`)
+**Ne jamais relire une page déjà lue.** Un numéro de page Le Bon Coin ne désigne rien de fixe : chaque nouveauté décale la
+liste vers le bas (la « page 3 » d'hier est la « page 4 » d'aujourd'hui). La relève repère donc ce qu'elle a déjà lu par
+une **date** (le curseur) : elle repart de la page 1 et descend jusqu'au curseur, sans jamais relire les pages des relèves
+précédentes. Il restait trois relectures payées, corrigées :
+1. **Bas de la dernière page** : les pages 2 et 3 étaient lues en entier (35). Elles sont maintenant dimensionnées d'après
+   le rythme de la page précédente (35 annonces sur X heures) et ce qu'il reste jusqu'à la borne, + 30 % (10 à 35).
+   Vaut aussi pour la création de la veille (4 jours).
+2. **Page 1 lue en partie puis relue** : au-delà de 25 annonces attendues, la page 1 est lue en entier d'emblée
+   (`PARTIAL_MAX`) ; l'acteur ne sait pas « commencer à la 21e », la relecture coûtait plus que le surplus.
+3. **Débit gonflé** : une page relue était comptée deux fois dans le débit observé, qui ne faisait que monter. Corrigé ;
+   relève tronquée : le débit ne peut que monter (minimum observé).
+
+**Robustesse**
+- Panne de l'IA pendant une relève ou la création de la veille : la lecture est enregistrée **avant** l'analyse
+  (curseur, heure de la relève) ; les annonces sont analysées à l'affichage. Avant, le curseur restait bloqué et chaque
+  relève suivante relisait jusqu'à 3 pages.
+- **Issue de la relève** (`last_watch_status`) : « ok », « partial » (plafond de 3 pages, ou page suivante en échec : des
+  annonces ont pu échapper) ou « failed » (rien lu, nouvel essai au créneau suivant). Affichée sur la ligne de la veille
+  (« Recherche très large… affinez », « La dernière relève n'a pas abouti… »). Relèves en échec d'affilée comptées
+  (`watch_failures`) : alerte e-mail au 3e.
+- **Mise en pause** : e-mail « Votre veille quotidienne est en pause » avec « Reprendre ».
+- « Étendre » : une dernière page lue en partie n'est pas comptée comme lue.
+- E-mail à chaque relève qui trouve du nouveau : voir [alerte-mail.md](alerte-mail.md).
+
+Exemple mesuré sur le faux marché des tests : création de veille sur un marché à une annonce toutes les 2 h, 35 + 19
+annonces lues au lieu de 35 + 35.
+
 ## Points ouverts (à décider)
 1. Prévenir par e-mail, par push, ou seulement dans l'app pour commencer ?
 2. Plafond de veilles quotidiennes par compte (2 ?) et durée avant arrêt automatique (7 jours sans visite ?).

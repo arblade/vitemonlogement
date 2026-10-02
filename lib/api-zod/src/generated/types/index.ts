@@ -32,6 +32,7 @@ export * from './housingSearchRequest';
 export * from './housingSearchRequestBatch';
 export * from './housingSearchRequestSource';
 export * from './housingSearchSummary';
+export * from './housingSearchSummaryLastWatchStatus';
 export * from './housingSearchSummaryPhase';
 export * from './housingSearchSummaryStage';
 export * from './housingSearchSummaryStatus';

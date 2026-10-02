@@ -15,6 +15,14 @@ let market: Ad[] = [];
 let reads: { page: number; limit: number }[] = [];
 let llmListings = 0;
 const runs = new Map<string, unknown[]>();
+/** Pannes simulées : runs Apify en échec à partir de cette page ; IA refusée (clé invalide) pour les analyses. */
+let failFromPage: number | null = null;
+let llmDown = false;
+const failedRuns = new Set<string>();
+/** E-mails reçus par le faux Resend, et statuts à renvoyer (un par appel, puis 200). */
+type SentMail = { body: { from: string; to: string[]; subject: string; html: string; text: string; headers?: Record<string, string> }; idempotencyKey: string | undefined; authorization: string | undefined };
+let mails: SentMail[] = [];
+let resendStatuses: number[] = [];
 let fake: Server;
 let owner = 0;
 
@@ -42,10 +50,17 @@ before(async () => {
         reads.push({ page, limit: input.limit });
         const id = `run-${runs.size + 1}`;
         runs.set(id, sorted().slice((page - 1) * 35, (page - 1) * 35 + input.limit).map(record));
+        if (failFromPage != null && page >= failFromPage) failedRuns.add(id);
         return json({ data: { id } });
       }
       const run = url.match(/^\/v2\/actor-runs\/(run-\d+)/);
-      if (run) return json({ data: { status: "SUCCEEDED", defaultDatasetId: run[1] } });
+      if (run) return json({ data: { status: failedRuns.has(run[1]) ? "FAILED" : "SUCCEEDED", defaultDatasetId: run[1] } });
+      if (req.method === "POST" && url === "/emails") {
+        mails.push({ body: JSON.parse(body), idempotencyKey: req.headers["idempotency-key"] as string | undefined, authorization: req.headers.authorization });
+        const status = resendStatuses.shift() ?? 200;
+        res.statusCode = status;
+        return json(status === 200 ? { id: `mail-${mails.length}` } : { name: "internal_server_error", message: "Panne simulée" });
+      }
       const dataset = url.match(/^\/v2\/datasets\/(run-\d+)\/items/);
       if (dataset) return json(runs.get(dataset[1]) ?? []);
       if (url.endsWith("/chat/completions")) {
@@ -53,6 +68,9 @@ before(async () => {
         let content: unknown;
         if (request.messages[0].content.includes("Interprète une demande")) {
           content = { location: "Lille", intent: "rent", maxPrice: 900, radius: 5, keywords: "", uncertainChecks: [], places: [] };
+        } else if (llmDown) {
+          res.statusCode = 401;
+          return json({ error: { message: "Incorrect API key provided", type: "invalid_request_error", code: "invalid_api_key" } });
         } else {
           const { listings } = JSON.parse(request.messages[1].content) as { listings: { id: number; title: string; wantGeneral: boolean }[] };
           llmListings += listings.length;
@@ -72,6 +90,8 @@ before(async () => {
   process.env.APIFY_TOKEN = "test";
   process.env.OPENAI_BASE_URL = `${origin}/v1`;
   process.env.OPENAI_API_KEY = "test";
+  process.env.RESEND_BASE_URL = origin;
+  process.env.PUBLIC_URL = "https://vitemonlogement.fr";
   const { useMemoryDatabase } = await import("../../test/helpers");
   await useMemoryDatabase();
   const { createUser } = await import("../../lib/users");
@@ -82,7 +102,12 @@ after(async () => {
   const { closeDatabase } = await import("../../lib/database");
   await closeDatabase();
 });
-beforeEach(() => { reads = []; llmListings = 0; });
+beforeEach(() => {
+  reads = []; llmListings = 0; failFromPage = null; llmDown = false; mails = []; resendStatuses = [];
+  // E-mails : faux Resend ; chaque test qui en a besoin pose la clé.
+  delete process.env.RESEND_API_KEY;
+  delete process.env.ALERT_EMAIL;
+});
 
 /** Fait tourner le worker jusqu'à ce que la recherche soit terminée et sans tâche. */
 async function settle(id: number) {
@@ -132,20 +157,21 @@ test("recherche ponctuelle : les 15 annonces les plus récentes, en une seule le
   assert.ok(Math.abs(done.cursorAt! - search.listings[0].refreshedAt!) < 1000, "curseur : la mise à jour la plus récente lue");
 });
 
-test("création de la veille quotidienne : elle remonte 4 jours (page 1, puis 2), sans compter ces annonces comme nouvelles", async () => {
+test("création de la veille quotidienne : elle remonte 4 jours (page 1, puis juste ce qu'il faut de la page 2), sans compter ces annonces comme nouvelles", async () => {
   market = makeMarket(120, 2); // une annonce toutes les 2 h : 4 jours ≈ 48 annonces
   const id = await followed();
   assert.equal((await row(id)).task, "backfill");
   reads = []; llmListings = 0;
   await settle(id);
-  assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 35 }], "la page 2 atteint 4 jours : on s'arrête");
+  // Page 1 : 35 annonces sur 68 h ; il reste ≈ 28 h jusqu'aux 4 jours, soit ≈ 14 annonces, + 30 % : 19, pas toute la page.
+  assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 19 }], "la page 2 atteint 4 jours : on s'arrête");
   const { getSearch } = await import("./store");
   const search = (await getSearch(id))!;
-  assert.equal(search.listings.length, 70, "tout ce qui est lu (et payé) est gardé, sans doublon avec les 15 déjà là");
+  assert.equal(search.listings.length, 54, "tout ce qui est lu (et payé) est gardé, sans doublon avec les 15 déjà là");
   assert.equal(llmListings, 20, "20 analysées d'emblée, les autres au défilement");
   assert.equal(search.listings.filter(listing => listing.analyzed).length, 35);
   assert.equal(search.unseenCount, 0, "l'utilisateur vient de la créer : rien de « nouveau »");
-  assert.equal((await row(id)).pagesRead, 2);
+  assert.equal((await row(id)).pagesRead, 1, "la page 2, lue en partie, n'est pas comptée : « Étendre » la lirait en entier");
 });
 
 test("création de la veille quotidienne : au plus 3 pages (105 annonces), même si 4 jours ne sont pas atteints", async () => {
@@ -331,4 +357,217 @@ test("« Étendre » sur une recherche ponctuelle : la page 1 en entier, puis la
   assert.deepEqual(reads, [{ page: 1, limit: 35 }, { page: 2, limit: 35 }]);
   assert.equal((await getSearch(id))!.listings.length, 70);
   assert.equal((await row(id)).pagesRead, 2);
+});
+
+// --- Lecture au plus juste, pannes, état de la relève --------------------------------------------------------------
+
+/** Veille quotidienne dont le dernier passage date d'environ `hoursAgo` heures (marché ancien, puis curseur). */
+async function watchedSince(hoursAgo: number, start: number, watchRate: number) {
+  market = makeMarket(20, 6, start).map(ad => ({ ...ad, postedAt: ad.postedAt - hoursAgo * HOUR, updatedAt: ad.updatedAt - hoursAgo * HOUR }));
+  const id = await followed(["08:00"]);
+  await settle(id);
+  await setRow(id, { nextWatchAt: Date.now() - 1000, lastVisitedAt: Date.now(), watchRate });
+  return id;
+}
+/** `count` nouvelles annonces, une toutes les `everyMinutes` minutes, la plus récente il y a une minute. */
+const arrivals = (count: number, everyMinutes: number, start: number, title?: (i: number) => string) => Array.from({ length: count }, (_, i) => {
+  const at = Date.now() - 60_000 - i * everyMinutes * 60_000;
+  return { n: start + i, postedAt: at, updatedAt: at, ...(title ? { title: title(i) } : {}) };
+});
+/** Une relève : l'heure est passée, le worker la fait. */
+async function pass(id: number) {
+  const { scheduleDueWatches } = await import("./store");
+  await setRow(id, { nextWatchAt: Date.now() - 1000 });
+  reads = [];
+  await scheduleDueWatches();
+  return settle(id);
+}
+
+test("relève : plus de 25 annonces attendues → la page entière d'emblée, jamais lue en partie puis relue", async () => {
+  const id = await watchedSince(3, 10_000, 7); // 7 par heure depuis ≈ 3 h 10, + 30 % : ≈ 29 attendues
+  market = [...arrivals(30, 4, 10_100), ...market];
+  await pass(id);
+  assert.deepEqual(reads, [{ page: 1, limit: 35 }]);
+  const { getSearch } = await import("./store");
+  assert.equal((await getSearch(id))!.unseenCount, 30);
+});
+
+test("relève : une page relue en entier n'est pas comptée deux fois dans le débit observé", async () => {
+  const id = await watchedSince(3, 11_000, 0.5); // débit sous-estimé : 10 lues, il en faut plus
+  const cursor = (await row(id)).cursorAt!;
+  market = [...arrivals(30, 4, 11_100), ...market];
+  await pass(id);
+  assert.deepEqual(reads, [{ page: 1, limit: 10 }, { page: 1, limit: 35 }]);
+  const after = await row(id);
+  const expected = 30 / ((after.lastWatchAt! - cursor) / HOUR); // 30 nouvelles depuis le curseur, pas 40
+  assert.ok(Math.abs(after.watchRate! - expected) < 0.3, `débit ${after.watchRate} ≠ ${expected}`);
+});
+
+test("relève : la page 2 n'est lue que pour ce qu'il reste jusqu'au curseur", async () => {
+  const id = await watchedSince(3, 12_000, 20);
+  market = [...arrivals(45, 4, 12_100), ...market]; // la page 1 couvre ≈ 2 h 20 ; il reste ≈ 50 min, ≈ 13 annonces
+  await pass(id);
+  assert.equal(reads.length, 2);
+  assert.deepEqual(reads[0], { page: 1, limit: 35 });
+  assert.equal(reads[1].page, 2);
+  assert.ok(reads[1].limit >= 10 && reads[1].limit < 35, `page 2 : ${reads[1].limit} annonces, pas toute la page`);
+  const { getSearch } = await import("./store");
+  assert.equal((await getSearch(id))!.unseenCount, 45, "aucune nouveauté perdue");
+  assert.equal((await row(id)).lastWatchStatus, "ok");
+});
+
+test("panne de l'IA pendant une relève : la lecture est gardée (curseur, heure, état), les annonces seront analysées à l'affichage", async () => {
+  const id = await watchedSince(3, 13_000, 2);
+  const before = await row(id);
+  market = [...arrivals(5, 10, 13_100), ...market];
+  llmDown = true;
+  await pass(id);
+  const after = await row(id);
+  assert.equal(after.task, null);
+  assert.equal(after.lastWatchStatus, "ok");
+  assert.ok(after.cursorAt! > before.cursorAt!, "le curseur avance : le passage suivant ne relira pas ces pages");
+  assert.ok(after.lastWatchAt! > 0);
+  assert.ok(after.nextWatchAt! > Date.now());
+  const { getSearch } = await import("./store");
+  const search = (await getSearch(id))!;
+  assert.equal(search.unseenCount, 5);
+  assert.equal(search.listings.filter(listing => listing.firstSeenAt === after.lastWatchAt && listing.analyzed === false).length, 5);
+});
+
+test("relève arrêtée au plafond de 3 pages : « partielle » (des annonces ont pu échapper), le débit ne baisse pas", async () => {
+  const id = await watchedSince(72, 14_000, 1);
+  market = [...arrivals(150, 20, 14_100), ...market];
+  await pass(id);
+  assert.deepEqual(reads.map(read => read.page), [1, 2, 3]);
+  const after = await row(id);
+  assert.equal(after.lastWatchStatus, "partial");
+  assert.ok(after.watchRate! >= 1);
+  const { getSearch } = await import("./store");
+  assert.equal((await getSearch(id))!.lastWatchStatus, "partial", "exposé au navigateur");
+});
+
+test("page suivante en échec : les pages lues sont gardées, la relève est « partielle »", async () => {
+  const id = await watchedSince(48, 15_000, 3);
+  market = [...arrivals(80, 20, 15_100), ...market];
+  failFromPage = 2;
+  await pass(id);
+  assert.deepEqual(reads.map(read => read.page), [1, 2]);
+  assert.equal((await row(id)).lastWatchStatus, "partial");
+  const { getSearch } = await import("./store");
+  assert.equal((await getSearch(id))!.unseenCount, 35);
+});
+
+test("relève en échec : dite sur la page, reprogrammée ; au 3e échec d'affilée, le propriétaire du site est prévenu une fois", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  process.env.ALERT_EMAIL = "admin@example.com";
+  const id = await watchedSince(3, 16_000, 2);
+  failFromPage = 1;
+  await pass(id);
+  let after = await row(id);
+  assert.equal(after.lastWatchStatus, "failed");
+  assert.equal(after.watchFailures, 1);
+  assert.ok(after.nextWatchAt! > Date.now(), "nouvel essai au créneau suivant");
+  assert.equal(mails.length, 0);
+  await pass(id);
+  await pass(id);
+  assert.equal((await row(id)).watchFailures, 3);
+  assert.equal(mails.length, 1);
+  assert.deepEqual(mails[0].body.to, ["admin@example.com"]);
+  assert.match(mails[0].body.subject, /3 relèves en échec/);
+  await pass(id);
+  assert.equal(mails.length, 1, "une seule alerte par série d'échecs");
+  failFromPage = null;
+  market = [...arrivals(2, 10, 16_100), ...market];
+  await pass(id);
+  after = await row(id);
+  assert.equal(after.lastWatchStatus, "ok");
+  assert.equal(after.watchFailures, 0, "une relève réussie remet le compteur à zéro");
+});
+
+// --- E-mails de la veille quotidienne (faux Resend) -----------------------------------------------------------------
+
+test("relève avec du nouveau : un e-mail récapitulatif à l'adresse du compte (5 annonces au plus, liens vers le site)", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  const id = await watchedSince(3, 17_000, 2);
+  market = [...arrivals(7, 10, 17_100), ...market];
+  await pass(id);
+  assert.equal(mails.length, 1);
+  const [mail] = mails;
+  const after = await row(id);
+  assert.deepEqual(mail.body.to, ["suivi-lecture@example.com"]);
+  assert.equal(mail.body.from, "Vite mon logement <alertes@vitemonlogement.fr>");
+  assert.equal(mail.authorization, "Bearer re_test");
+  assert.equal(mail.idempotencyKey, `watch:${id}:${after.lastWatchAt}`, "même relève, même clé : jamais deux e-mails");
+  assert.equal(mail.body.subject, "7 nouveaux logements à Lille");
+  assert.ok(mail.body.html.includes(`https://vitemonlogement.fr/searches/${id}`));
+  assert.ok(mail.body.html.includes("Voir les 7 nouveautés"));
+  assert.ok(mail.body.html.includes("Et 2 autres sur le site."));
+  assert.ok(mail.body.html.includes("Logement lumineux."), "le résumé de l'IA");
+  assert.equal((mail.body.html.match(/Appartement T2 n° 171\d\d/g) ?? []).length, 5, "5 annonces montrées, pas 7");
+  assert.match(mail.body.text, /Relève de \d{1,2} h/);
+  assert.match(mail.body.headers!["List-Unsubscribe"], /^<https:\/\/vitemonlogement\.fr\/api\/mail\/unsubscribe\?u=\d+&t=[\w-]+>$/);
+  assert.equal(mail.body.headers!["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
+  // Relève suivante sans rien de nouveau : pas d'e-mail.
+  await pass(id);
+  assert.equal(mails.length, 1);
+});
+
+test("désinscrit des e-mails : plus d'e-mail, la veille continue ; réinscrit : les e-mails reprennent", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  const { setMailOptOut } = await import("../../lib/mail-outbox");
+  const id = await watchedSince(3, 18_000, 2);
+  await setMailOptOut(owner, true);
+  market = [...arrivals(2, 10, 18_100), ...market];
+  await pass(id);
+  assert.equal(mails.length, 0);
+  const { getSearch } = await import("./store");
+  assert.equal((await getSearch(id))!.unseenCount, 2, "la pastille du site, elle, continue");
+  await setMailOptOut(owner, false);
+  market = [...arrivals(1, 10, 18_200), ...market];
+  await pass(id);
+  assert.equal(mails.length, 1);
+  assert.equal(mails[0].body.subject, "1 nouveau logement à Lille");
+});
+
+test("Resend en panne : nouvel essai plus tard avec la même clé, jamais deux e-mails", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  const { processOutbox } = await import("../../lib/mail-outbox");
+  const id = await watchedSince(3, 19_000, 2);
+  market = [...arrivals(2, 10, 19_100), ...market];
+  resendStatuses = [500];
+  await pass(id);
+  assert.equal(mails.length, 1, "premier essai refusé");
+  assert.equal(await processOutbox(Date.now()), 0, "pas tout de suite");
+  assert.equal(await processOutbox(Date.now() + 61_000), 1);
+  assert.equal(mails.length, 2);
+  assert.equal(mails[1].idempotencyKey, mails[0].idempotencyKey);
+  assert.equal(await processOutbox(Date.now() + 3 * HOUR), 0, "envoyé : plus rien à faire");
+  assert.equal(mails.length, 2);
+});
+
+test("sans clé Resend : rien ne part, le site fonctionne pareil", async () => {
+  const { db } = await import("../../lib/database");
+  const { mailOutbox } = await import("@workspace/db");
+  const id = await watchedSince(3, 20_000, 2);
+  market = [...arrivals(2, 10, 20_100), ...market];
+  await pass(id);
+  assert.equal(mails.length, 0);
+  const [queued] = await db().select().from(mailOutbox).where(eq(mailOutbox.key, `watch:${id}:${(await row(id)).lastWatchAt}`));
+  assert.equal(queued.status, "skipped");
+  assert.equal(queued.error, "RESEND_API_KEY absente");
+});
+
+test("mise en pause faute de visite : un e-mail pour la reprendre", async () => {
+  process.env.RESEND_API_KEY = "re_test";
+  const { scheduleDueWatches } = await import("./store");
+  const { processOutbox } = await import("../../lib/mail-outbox");
+  const id = await watchedSince(3, 21_000, 2);
+  await setRow(id, { lastVisitedAt: Date.now() - 8 * 24 * HOUR });
+  await scheduleDueWatches();
+  assert.equal((await row(id)).watched, 2);
+  await processOutbox();
+  assert.equal(mails.length, 1);
+  assert.equal(mails[0].body.subject, "Votre veille quotidienne à Lille est en pause");
+  assert.ok(mails[0].body.html.includes(`https://vitemonlogement.fr/searches/${id}`));
+  assert.ok(mails[0].body.html.includes("Reprendre ma veille"));
 });

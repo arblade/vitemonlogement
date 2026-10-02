@@ -118,6 +118,7 @@ export const ListHousingSearchesResponseItem = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 export const ListHousingSearchesResponse = zod.array(ListHousingSearchesResponseItem)
@@ -189,6 +190,7 @@ export const CreateHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -296,6 +298,7 @@ export const GetHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -414,6 +417,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -524,6 +528,7 @@ export const RefreshHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }).and(zod.object({
   "listings": zod.array(zod.object({
@@ -643,6 +648,7 @@ export const WatchHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -711,6 +717,7 @@ export const UnwatchHousingSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 })
 
@@ -786,6 +793,7 @@ export const GetWatchedSearchResponse = zod.object({
   "nextWatchAt": zod.string().nullish(),
   "lastVisitedAt": zod.string().nullish(),
   "lastWatchAt": zod.string().nullish().describe('Start of the last pass of the followed search (its listings are separated from older ones)'),
+  "lastWatchStatus": zod.union([zod.literal('ok'),zod.literal('partial'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)'),
   "unseenCount": zod.number().int().describe('Listings of the followed search found since the last visit')
 }),zod.null()])
 })

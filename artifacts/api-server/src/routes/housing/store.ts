@@ -3,6 +3,7 @@ import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
 import { nextParisTime } from "../../lib/paris-time";
+import { enqueueMail } from "../../lib/mail-outbox";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
 
@@ -186,6 +187,7 @@ async function summary(row: SearchRow) {
     nextWatchAt: row.watched === 1 ? iso(row.nextWatchAt) : null,
     lastVisitedAt: iso(row.lastVisitedAt),
     lastWatchAt: iso(row.lastWatchAt),
+    lastWatchStatus: (row.lastWatchStatus as "ok" | "partial" | "failed" | null) ?? null,
     unseenCount: await unseenCount(row),
   };
 }
@@ -396,7 +398,7 @@ export async function setPass(id: number, fields: Partial<Pick<SearchRow, "passS
 }
 
 /** Fin d'une lecture (première recherche ou tâche) : la recherche est prête, la tâche suivante éventuelle est l'analyse demandée. */
-export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt" | "lastWatchAt">> = {}) {
+export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cursorAt" | "pagesRead" | "watchRate" | "nextWatchAt" | "error" | "lastVisitedAt" | "lastWatchAt" | "lastWatchStatus" | "watchFailures">> = {}) {
   const next = await hasRequestedAnalysis(id) ? "analyze" : null;
   await db().update(housingSearches).set({
     status: "completed", stage: "ready", runId: null, passState: null, task: next, analyzed: 1, attempts: 0, nextCheckAt: 0, error: null, ...fields,
@@ -407,15 +409,22 @@ export async function finishPass(id: number, fields: Partial<Pick<SearchRow, "cu
  * Tâche abandonnée (échec répété) : la recherche reste consultable telle quelle. `message` : affiché à l'utilisateur
  * (« Étendre »), null pour un passage automatique (rien à lui dire, le suivant réessaiera).
  */
-export async function clearTask(id: number, message: string | null = null) {
+export async function clearTask(id: number, message: string | null = null, now = Date.now()) {
   const row = await getSearchRow(id);
   const times = row?.watchTimes ? JSON.parse(row.watchTimes) as string[] : [];
+  const failedWatch = row?.task === "watch";
   await db().update(housingSearches).set({
     task: null, runId: null, passState: null, attempts: 0, nextCheckAt: 0, error: message,
-    // Un passage suivi qui échoue est reprogrammé au créneau suivant.
-    ...(row?.task === "watch" && row.watched === 1 ? { nextWatchAt: nextParisTime(times, Date.now()) } : {}),
+    // Un passage suivi qui échoue est reprogrammé au créneau suivant ; l'échec est dit sur la page de la veille.
+    ...(failedWatch && row.watched === 1 ? { nextWatchAt: nextParisTime(times, now) } : {}),
+    ...(failedWatch ? { lastWatchStatus: "failed", watchFailures: sql`${housingSearches.watchFailures} + 1` } : {}),
   }).where(eq(housingSearches.id, id));
+  // Au 3e échec d'affilée, le propriétaire du site est prévenu (une fois par série).
+  if (failedWatch && row.watchFailures + 1 === WATCH_FAILURE_ALERT) await enqueueMail("watch-failing", `watch-failing:${id}:${now}`, { searchId: id });
 }
+
+/** Relèves en échec d'affilée qui déclenchent l'alerte au propriétaire du site. */
+export const WATCH_FAILURE_ALERT = 3;
 
 /** « Étendre » : lire la page suivante (plus ancienne). false si une tâche est déjà en cours. */
 export async function requestExtend(id: number) {
@@ -469,8 +478,13 @@ export async function scheduleDueWatches(now = Date.now()) {
   const t = housingSearches;
   const due = and(eq(t.watched, 1), sql`${t.nextWatchAt} <= ${now}`);
   const idle = now - watchIdleDays() * 86_400_000;
-  await db().update(t).set({ watched: 2, nextWatchAt: null })
-    .where(and(due, sql`COALESCE(${t.lastVisitedAt}, 0) < ${idle}`));
+  const paused = await db().update(t).set({ watched: 2, nextWatchAt: null })
+    .where(and(due, sql`COALESCE(${t.lastVisitedAt}, 0) < ${idle}`))
+    .returning({ id: t.id, ownerId: t.ownerId });
+  // L'utilisateur est prévenu par e-mail : sinon il croirait sa veille toujours active.
+  for (const row of paused) {
+    if (row.ownerId != null) await enqueueMail("watch-paused", `watch-paused:${row.id}:${now}`, { userId: row.ownerId, searchId: row.id });
+  }
   await db().update(t).set({ task: "watch", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
     .where(and(due, isNull(t.task), eq(t.status, "completed")));
 }

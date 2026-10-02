@@ -1,53 +1,67 @@
 # Alerte mail
 
-**Statut :** étude terminée, rien de codé. Doc complet : « Étude – Alerte mail ».
-**Source :** conversation « Alerte mail pour nouveaux logements » (30/09/2026)
+**Statut : implémenté le 02/10/2026 sur `develop`, actif dès que `RESEND_API_KEY` est posée sur Render.**
+Étude initiale : 30/09/2026 (voir plus bas, « Étude d'origine »).
 
-## Demande
-Envoyer automatiquement un mail à l'utilisateur avec les nouveaux logements qu'il n'a pas encore vus, sous forme de résumé succinct avec un lien pour basculer sur l'application.
+## Ce qui est fait
+Les e-mails accompagnent la **veille quotidienne** (une par compte, voir [suivi-quotidien.md](suivi-quotidien.md)).
+Il n'y a pas de case à cocher : créer une veille quotidienne suffit, et la fenêtre « Créer une veille quotidienne »
+le dit (« Un e-mail vous est envoyé à *adresse d'inscription* à chaque relève qui trouve de nouveaux logements »).
 
-## Conclusion de l'étude
-Réalisable en 3 à 4 jours, sans nouveau service : le worker actuel relance la recherche, une table mémorise les annonces déjà signalées, et un mail de 5 annonces maximum renvoie vers `/searches/:id`.
+| E-mail | Quand | Contenu |
+|---|---|---|
+| **Récapitulatif de relève** | après **chaque relève** (8 h, 18 h…) qui trouve **au moins une** nouvelle annonce ; rien sinon | « 3 nouveaux logements à Lille », heure de la relève, **5 annonces au plus** (photo, loyer, surface, pièces, lieu, résumé de l'IA ; analysées d'abord, dans l'ordre du site), « Et N autres », bouton « Voir les N nouveautés » vers la recherche ; avertissement si la relève est « partielle » |
+| **Veille en pause** | quand la veille se met en pause (7 jours sans visite) | bouton « Reprendre ma veille » |
+| **Alerte d'exploitation** | 3 relèves d'affilée en échec sur une veille (une fois par série) | à `ALERT_EMAIL` seulement, si elle est posée |
 
-## Ce qui existe déjà
-- Relance d'une recherche (`beginRefresh`) : réutilisée telle quelle.
-- Worker serveur (boucle de 3 s, verrous par bail en base) : on y ajoute un déclencheur « alertes dues ».
-- Cache d'analyses `listing_analyses` : une alerte ne paie le LLM que pour les annonces nouvelles.
-- Page `/searches/:id` : sert de lien de retour.
+- **Pas de seuil de score** (conformément à la réserve ci-dessous) : toutes les nouvelles annonces comptent.
+- **Désinscription** : lien « Ne plus recevoir ces e-mails » dans chaque e-mail, plus les en-têtes `List-Unsubscribe`
+  (désinscription en un clic de Gmail et Yahoo, exigée pour ne pas finir en spam). Lien signé (`SESSION_SECRET`), utilisable
+  sans être connecté ; ouvrir le lien affiche un bouton, rien ne change tant qu'on ne l'a pas touché (un antivirus qui
+  visite le lien ne désinscrit personne). La veille continue (pastille du site). Sur la page de la veille : « E-mails
+  désactivés · Réactiver les e-mails ».
+- **Jamais deux fois** : file d'envoi en base (`mail_outbox`) avec une clé unique par e-mail (`watch:<recherche>:<heure de
+  relève>`), reprise jusqu'à 5 fois (1 min, 5 min, 30 min, 2 h) en cas d'erreur Resend, même clé envoyée à Resend comme clé
+  d'idempotence. Un récapitulatif qui n'a pas pu partir en 10 h est abandonné (le suivant prend le relais).
+- **Composé au moment de l'envoi** (après l'analyse de la relève) : une veille arrêtée, un compte désinscrit, une annonce
+  masquée par l'IA entre-temps ne partent pas.
+- **Sans clé Resend**, rien ne part : l'e-mail est noté dans les journaux (« E-mail not sent: RESEND_API_KEY is not set »)
+  et marqué « non envoyé » dans la file. Le site fonctionne pareil.
 
-## Ce qui manque
-- Détection des nouveautés (pas de date d'apparition des annonces).
-- Identité utilisateur / e-mail, planification, envoi de mail, quotas d'alertes.
+## Mise en service (à faire une fois)
+1. Créer le compte Resend, puis **Domains → Add domain** : `vitemonlogement.fr`, région **EU (Ireland)**.
+2. Chez le registraire du domaine, ajouter les enregistrements DNS affichés par Resend : **MX** et **TXT (SPF)** sur le
+   sous-domaine `send`, **TXT (DKIM)** sur `resend._domainkey`. Conseillé : un **TXT DMARC** sur `_dmarc` avec
+   `v=DMARC1; p=none;`. Ils ne touchent ni le site ni une éventuelle messagerie du domaine. Attendre « Verified ».
+3. **API Keys → Create** : permission « Sending access », limitée au domaine. La coller dans Render
+   (service `vitemonlogement` → Environment) sous le nom **`RESEND_API_KEY`**. Render redéploie.
+4. Facultatif : `ALERT_EMAIL` (votre adresse, pour les alertes d'exploitation) ; `MAIL_FROM` pour changer l'expéditeur
+   (par défaut `Vite mon logement <alertes@vitemonlogement.fr>`) ; `MAIL_REPLY_TO`.
+5. Liens des e-mails : par défaut l'adresse `onrender.com` du service (Render la fournit, `RENDER_EXTERNAL_URL`). Quand le
+   domaine pointera sur Render, poser `PUBLIC_URL=https://vitemonlogement.fr`.
+6. Essai : `pnpm --filter @workspace/api-server mail:test vous@exemple.fr` (avec la clé dans l'environnement) envoie un
+   récapitulatif d'exemple. `mail:test --preview <dossier>` écrit les e-mails en HTML sans rien envoyer.
 
-## Parcours
-1. Bouton « Recevoir une alerte mail » sur une recherche terminée : e-mail + fréquence (quotidienne par défaut, hebdomadaire en option).
-2. Mail de confirmation (double opt-in) avec lien signé.
-3. À chaque cycle, mail uniquement s'il y a au moins une nouveauté (5 annonces max).
-4. Désinscription en un clic et gestion de l'alerte depuis chaque mail.
+Offre gratuite Resend : 3 000 e-mails par mois, 100 par jour, soit ≈ 45 comptes à 2 relèves fructueuses par jour.
 
-## Modèle de données
-- `mail_alerts` : recherche, e-mail, fréquence, statut, jeton haché, `next_run_at`, verrou, compteurs d'échecs.
-- `alert_deliveries` : clé (alerte, annonce) pour ne jamais notifier deux fois.
+## Technique
+- `artifacts/api-server/src/lib/mail.ts` : envoi (API REST Resend, sans dépendance), `publicOrigin()`.
+- `lib/mail-templates.ts` : gabarits HTML (tableaux, styles en ligne, 560 px) et texte ; page de désinscription.
+- `lib/mail-outbox.ts` : file, composition, envoi par le worker (après le travail sur les recherches, à chaque tour),
+  ménage à 30 jours. `routes/mail.ts` : désinscription (`GET`/`POST /api/mail/unsubscribe`), `PUT /api/mail/preferences`.
+- Base : migration `0009_mails_et_releves` (table `mail_outbox`, `users.mail_opt_out_at`), vérifiée sur PGlite et sur un
+  vrai Postgres (base existante en 0008 avec une veille, puis 0009).
+- Tests : `suivi.test.ts` (faux Resend : récapitulatif, rien sans nouveauté, désinscrit, panne puis reprise avec la même
+  clé, sans clé, pause, alerte), `routes/mail.test.ts` (désinscription, lien falsifié, réactivation, gabarits),
+  front (fenêtre, ligne de la veille, réactivation), navigateur mobile puis desktop (fenêtre, e-mails coupés puis
+  réactivés, page de désinscription).
+- Captures : `maquettes/mail-*.png`.
 
-## Fournisseur d'e-mail
-Resend recommandé (offre gratuite : 3 000 mails/mois, 100/jour). Le SMTP direct est possible sur Render payant (le blocage ne touche que les services gratuits). Brevo, Postmark et SES non vérifiés. Prérequis hors code : un domaine d'envoi avec SPF et DKIM.
-
-## Risques
-- **Coût Apify :** jusqu'à environ 6 $/mois par alerte quotidienne (0,10 $ par run, 2 runs max par cycle). Maximum déduit de la configuration, pas mesuré.
-- Création d'alertes en masse, envoi à une adresse tierce, RGPD, doublons : parades listées dans le doc.
-
-## Plan en 4 étapes
-1. Socle : migration, `sendMail`, gabarits, jetons signés.
-2. API : routes création/lecture/suppression, confirmation, désinscription, quotas.
-3. Cycle : verrou d'alerte, déclencheur worker, détection, envoi avec reprise.
-4. Interface : bouton, formulaire, état de l'alerte, mise en avant des nouveautés (`?new=1`).
-
-## Questions ouvertes
-- Domaine d'envoi disponible ?
-- Fréquence : quotidienne seule ou aussi hebdomadaire ?
-- Une alerte par recherche et par adresse, ou regroupement ?
-- Inclure la phase élargie ou seulement la ciblée ?
-- Plafond d'alertes actives (proposition : 10).
+## Étude d'origine (30/09/2026)
+Réalisable sans nouveau service : le worker relance la recherche, une table mémorise les annonces déjà signalées.
+Resend retenu (offre gratuite 3 000 e-mails par mois) ; le SMTP direct est possible sur Render payant.
+La détection des nouveautés, la planification et l'identité utilisateur sont venues avec la veille quotidienne et les
+comptes ; le double opt-in n'a pas été retenu (comptes sur invitation, e-mail lié à la veille que l'on crée soi-même).
 
 ## Piste de réflexion : sélection des annonces envoyées (backlog, 30/09/2026)
 

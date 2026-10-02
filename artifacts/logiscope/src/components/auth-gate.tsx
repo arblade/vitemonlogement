@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 export const UNAUTHORIZED_EVENT = 'vml:unauthorized';
 
 type State = 'loading' | 'login' | 'register' | 'open' | 'error';
-type AuthContextValue = { email: string | null; logout: () => Promise<void> };
-const AuthContext = createContext<AuthContextValue>({ email: null, logout: async () => undefined });
+/** `mailAlerts` : e-mails de la veille quotidienne (actifs sauf désinscription). */
+type AuthContextValue = { email: string | null; mailAlerts: boolean; setMailAlerts: (on: boolean) => Promise<void>; logout: () => Promise<void> };
+/** Exporté pour les tests (compte connecté simulé). */
+export const AuthContext = createContext<AuthContextValue>({ email: null, mailAlerts: true, setMailAlerts: async () => undefined, logout: async () => undefined });
 export const useAuth = () => useContext(AuthContext);
 
 const PASSWORD_MIN_LENGTH = 8;
@@ -37,6 +39,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [mailAlerts, setMailAlertsState] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(inviteFromUrl);
   const [busy, setBusy] = useState(false);
 
@@ -44,8 +47,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
     try {
       const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
       if (response.ok) {
-        const data = await response.json().catch(() => null) as { email?: string } | null;
+        const data = await response.json().catch(() => null) as { email?: string; mailAlerts?: boolean } | null;
         setSessionEmail(data?.email ?? null);
+        setMailAlertsState(data?.mailAlerts !== false);
         stripInviteFromUrl();
         return setState('open');
       }
@@ -80,7 +84,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
     setSessionEmail(null);
     setState('login');
   }, [queryClient]);
-  const auth = useMemo(() => ({ email: sessionEmail, logout }), [sessionEmail, logout]);
+  const setMailAlerts = useCallback(async (on: boolean) => {
+    const response = await fetch('/api/mail/preferences', {
+      method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ alerts: on }),
+    });
+    if (!response.ok) throw new Error(await readError(response, 'Réglage impossible.'));
+    setMailAlertsState(on);
+  }, []);
+  const auth = useMemo(() => ({ email: sessionEmail, mailAlerts, setMailAlerts, logout }), [sessionEmail, mailAlerts, setMailAlerts, logout]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -96,9 +107,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
         body: JSON.stringify(registering ? { code: inviteCode, email, password } : { email, password }),
       });
       if (response.ok) {
-        const data = await response.json().catch(() => null) as { email?: string } | null;
+        const data = await response.json().catch(() => null) as { email?: string; mailAlerts?: boolean } | null;
         queryClient.clear();
         setSessionEmail(data?.email ?? email.trim().toLowerCase());
+        setMailAlertsState(data?.mailAlerts !== false);
         setPassword(''); setConfirm('');
         stripInviteFromUrl();
         setState('open');

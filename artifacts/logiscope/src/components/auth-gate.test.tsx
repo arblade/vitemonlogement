@@ -161,3 +161,37 @@ describe('AuthGate : inscription par lien d’invitation', () => {
     expect(screen.getByRole('heading', { name: 'Connexion' })).toBeInTheDocument();
   });
 });
+
+describe('AuthGate : e-mails de la veille quotidienne', () => {
+  function Mails() {
+    const { mailAlerts, setMailAlerts } = useAuth();
+    return <div><p data-testid="mails">{mailAlerts ? 'actifs' : 'coupés'}</p><button onClick={() => void setMailAlerts(true).catch(() => undefined)}>Réactiver</button></div>;
+  }
+  const renderMails = () => render(<QueryClientProvider client={new QueryClient()}><AuthGate><Mails/></AuthGate></QueryClientProvider>);
+
+  it('le serveur dit si le compte s’est désinscrit ; « Réactiver » l’enregistre, puis l’interface suit', async () => {
+    const user = userEvent.setup();
+    const calls = mockFetch([
+      { match: /\/api\/auth\/me$/, respond: () => ({ body: { authenticated: true, email: 'moi@example.com', mailAlerts: false } }) },
+      { method: 'PUT', match: /\/api\/mail\/preferences$/, respond: () => ({ body: { mailAlerts: true } }) },
+    ]);
+    renderMails();
+    expect(await screen.findByTestId('mails')).toHaveTextContent('coupés');
+    await user.click(screen.getByRole('button', { name: 'Réactiver' }));
+    await waitFor(() => expect(screen.getByTestId('mails')).toHaveTextContent('actifs'));
+    expect(calls.find(call => call.method === 'PUT')?.body).toEqual({ alerts: true });
+  });
+
+  it('réglage refusé par le serveur : l’interface ne change pas', async () => {
+    const user = userEvent.setup();
+    mockFetch([
+      { match: /\/api\/auth\/me$/, respond: () => ({ body: { authenticated: true, email: 'moi@example.com', mailAlerts: false } }) },
+      { method: 'PUT', match: /\/api\/mail\/preferences$/, respond: () => ({ status: 500, body: { error: 'panne' } }) },
+    ]);
+    renderMails();
+    expect(await screen.findByTestId('mails')).toHaveTextContent('coupés');
+    await user.click(screen.getByRole('button', { name: 'Réactiver' }));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(screen.getByTestId('mails')).toHaveTextContent('coupés');
+  });
+});

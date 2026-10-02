@@ -5,7 +5,8 @@ import {
   getGetHousingSearchQueryKey, getGetWatchedSearchQueryKey, getListHousingSearchesQueryKey, useUnwatchHousingSearch, useWatchHousingSearch,
   type HousingSearchDetail, type HousingSearchSummary,
 } from '@workspace/api-client-react';
-import { BellRing, History, Info, PauseCircle, Repeat, Search, X } from 'lucide-react';
+import { BellRing, History, Info, Mail, PauseCircle, Repeat, Search, X } from 'lucide-react';
+import { useAuth } from '@/components/auth-gate';
 import { hoursLabel, nextPass } from '@/lib/dates';
 
 const DEFAULT_TIMES = ['08:00', '18:00'];
@@ -18,13 +19,17 @@ const placeOf = (search: HousingSearchSummary) => search.criteria?.location || s
  * Recherche ponctuelle ou veille quotidienne. Ponctuelle : une ligne qui le dit, et le bouton « Créer une recherche
  * suivie ». Ce bouton ouvre une fenêtre qui explique ce qui va se passer (4 jours d'annonces tout de suite, puis les
  * nouvelles aux heures choisies, pastille, pause après 7 jours) et prévient si une autre veille quotidienne sera remplacée.
- * Suivie : une ligne discrète (heures, prochain passage, Modifier, Arrêter) ; en pause : Reprendre.
+ * Suivie : une ligne discrète (heures, prochain passage, Modifier, Arrêter), l'issue de la dernière relève si elle n'a pas
+ * tout lu, et les e-mails (envoyés à chaque relève qui trouve du nouveau ; réactivables après une désinscription) ;
+ * en pause : Reprendre.
  */
 export function WatchPanel({ search, other }: { search: HousingSearchDetail; other: HousingSearchSummary | null }) {
   const queryClient = useQueryClient();
   const unwatch = useUnwatchHousingSearch();
+  const { email, mailAlerts, setMailAlerts } = useAuth();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
+  const [mailBusy, setMailBusy] = useState(false);
   const apply = (summary: HousingSearchSummary) => {
     queryClient.setQueryData(getGetHousingSearchQueryKey(search.id), (old: HousingSearchDetail | undefined) => old && { ...old, ...summary });
     void queryClient.invalidateQueries({ queryKey: getGetHousingSearchQueryKey(search.id) });
@@ -35,6 +40,13 @@ export function WatchPanel({ search, other }: { search: HousingSearchDetail; oth
     setError('');
     try { apply(await unwatch.mutateAsync({ id: search.id })); }
     catch { setError('Impossible d’arrêter la veille quotidienne pour le moment. Réessayez.'); }
+  };
+  const enableMails = async () => {
+    setError('');
+    setMailBusy(true);
+    try { await setMailAlerts(true); }
+    catch { setError('Impossible de réactiver les e-mails pour le moment. Réessayez.'); }
+    finally { setMailBusy(false); }
   };
   const dialog = <WatchDialog open={open} onOpenChange={setOpen} search={search} replaced={other && other.id !== search.id ? other : null} onDone={apply}/>;
   const smallButton = 'inline-flex h-9 items-center rounded-lg border border-[#dddddd] bg-white px-3 text-xs font-semibold hover:border-ink disabled:opacity-50';
@@ -47,6 +59,15 @@ export function WatchPanel({ search, other }: { search: HousingSearchDetail; oth
         <button type="button" data-testid="button-edit-watch" onClick={() => setOpen(true)} className={smallButton}>Modifier les heures</button>
         <button type="button" data-testid="button-unwatch" disabled={unwatch.isPending} onClick={() => void stop()} className={smallButton}>Arrêter</button>
       </span>
+      {search.lastWatchStatus === 'failed' && <p data-testid="text-watch-outcome" className="flex w-full gap-2 text-xs leading-relaxed text-[#484848]"><Info size={14} aria-hidden="true" className="mt-px shrink-0 text-stone"/>
+        La dernière relève n’a pas abouti. Nouvel essai au prochain passage.</p>}
+      {search.lastWatchStatus === 'partial' && <p data-testid="text-watch-outcome" className="flex w-full gap-2 text-xs leading-relaxed text-[#484848]"><Info size={14} aria-hidden="true" className="mt-px shrink-0 text-stone"/>
+        Recherche très large : la dernière relève n’a pas pu tout lire, des annonces ont pu lui échapper. Affinez votre demande pour ne rien manquer.</p>}
+      {mailAlerts
+        ? <p data-testid="text-watch-mail" className="flex w-full items-center gap-2 text-xs text-stone"><Mail size={14} aria-hidden="true" className="shrink-0"/>
+          <span className="min-w-0 break-words">E-mail{email ? <> à <strong className="font-semibold text-ink">{email}</strong></> : ''} à chaque relève qui trouve du nouveau</span></p>
+        : <p data-testid="text-watch-mail" className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone"><span className="flex items-center gap-2"><Mail size={14} aria-hidden="true" className="shrink-0"/>E-mails désactivés</span>
+          <button type="button" data-testid="button-enable-mails" disabled={mailBusy} onClick={() => void enableMails()} className={smallButton}>Réactiver les e-mails</button></p>}
       {error && <p role="alert" className="w-full text-xs text-[#b42318]">{error}</p>}
       {dialog}
     </div>;
@@ -81,6 +102,7 @@ function WatchDialog({ open, onOpenChange, search, replaced, onDone }: {
   onDone: (summary: HousingSearchSummary) => void;
 }) {
   const watch = useWatchHousingSearch();
+  const { email, mailAlerts } = useAuth();
   const editing = search.watch === 'active';
   const [times, setTimes] = useState<string[]>(search.watchTimes.length ? [...search.watchTimes, ''].slice(0, 2) : DEFAULT_TIMES);
   const [error, setError] = useState('');
@@ -108,6 +130,9 @@ function WatchDialog({ open, onOpenChange, search, replaced, onDone }: {
           {step(History, <><strong>Dès le début</strong>, toutes les annonces des 4 derniers jours sont récupérées.</>)}
           {step(Repeat, <><strong>Puis chaque jour</strong>, aux heures choisies ci-dessous : seulement les nouvelles annonces.</>)}
           {step(BellRing, <>Une <strong>pastille rose</strong> vous les signale dès que vous ouvrez le site.</>)}
+          {step(Mail, mailAlerts
+            ? <>Un <strong>e-mail</strong> vous est envoyé à <strong className="break-words">{email ?? 'votre adresse d’inscription'}</strong> à chaque relève qui trouve de nouveaux logements.</>
+            : <>Les <strong>e-mails</strong> sont désactivés pour votre compte : vous pourrez les réactiver depuis la veille.</>)}
         </ul>}
         <div className="mt-5 flex flex-wrap gap-3">
           {[0, 1].map(index => <label key={index} className="flex flex-col gap-1 text-xs text-stone">{index === 0 ? 'Premier passage' : 'Second (facultatif)'}

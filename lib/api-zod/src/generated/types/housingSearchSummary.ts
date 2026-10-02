@@ -7,6 +7,7 @@
  */
 import type { HousingCriteria } from './housingCriteria';
 import type { HousingSearchRequest } from './housingSearchRequest';
+import type { HousingSearchSummaryLastWatchStatus } from './housingSearchSummaryLastWatchStatus';
 import type { HousingSearchSummaryPhase } from './housingSearchSummaryPhase';
 import type { HousingSearchSummaryStage } from './housingSearchSummaryStage';
 import type { HousingSearchSummaryStatus } from './housingSearchSummaryStatus';
@@ -48,6 +49,11 @@ export interface HousingSearchSummary {
      * @nullable
      */
   lastWatchAt?: string | null;
+  /**
+     * Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)
+     * @nullable
+     */
+  lastWatchStatus?: HousingSearchSummaryLastWatchStatus;
   /** Listings of the followed search found since the last visit */
   unseenCount: number;
 }

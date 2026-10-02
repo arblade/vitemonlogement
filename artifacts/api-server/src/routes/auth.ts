@@ -65,7 +65,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   const valid = user ? await verifyPassword(field(req.body, "password"), user.passwordHash) : (await verifyPassword("x", "scrypt$16384$8$1$AAAAAAAAAAAAAAAAAAAAAA$AAAA"), false);
   if (!user || !valid) { res.status(401).json({ error: "E-mail ou mot de passe incorrect." }); return; }
   setSessionCookie(res, issueSession(Date.now(), visitorIdForUser(user.id)));
-  res.json({ authenticated: true, required: true, email: user.email });
+  res.json({ authenticated: true, required: true, email: user.email, mailAlerts: user.mailOptOutAt == null });
 });
 
 router.post("/auth/logout", (_req, res) => {
@@ -84,7 +84,7 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   const userId = session ? userIdFromVisitor(session.visitorId) : null;
   const user = userId === null ? undefined : await getUser(userId);
   if (!user) { res.status(401).json({ authenticated: false, required: true }); return; }
-  res.json({ authenticated: true, required: true, email: user.email });
+  res.json({ authenticated: true, required: true, email: user.email, mailAlerts: user.mailOptOutAt == null });
 });
 
 export default router;

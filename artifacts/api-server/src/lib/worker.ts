@@ -7,6 +7,7 @@ import { db } from "./database";
 import { claimNextSearch, releaseSearch } from "./queue";
 import { scheduleDueWatches } from "../routes/housing/store";
 import { intEnv } from "./env";
+import { processOutbox, purgeOutbox } from "./mail-outbox";
 
 export type WorkerOptions = {
   intervalMs?: number;
@@ -54,10 +55,13 @@ export function createWorker(options: WorkerOptions = {}) {
       running.push(work(id));
     }
     await Promise.all(running);
+    // E-mails après les recherches : une relève qui vient de finir a déjà analysé ses annonces.
+    await processOutbox().catch(error => logger.error({ err: error }, "Unable to process the mail outbox"));
     if (Date.now() - lastPurge > 3_600_000) {
       lastPurge = Date.now();
       await db().delete(usageCounters).where(lt(usageCounters.windowStart, Date.now() - 2 * 86_400_000))
         .catch(error => logger.error({ err: error }, "Unable to purge usage counters"));
+      await purgeOutbox().catch(error => logger.error({ err: error }, "Unable to purge the mail outbox"));
     }
   }
 

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthContext } from '@/components/auth-gate';
 import type { HousingListing } from '@workspace/api-client-react';
 import { Route, Router } from 'wouter';
 import { memoryLocation } from 'wouter/memory-location';
@@ -37,9 +38,11 @@ const favoriteRoutes = (initial: object[] = []): FetchRoute[] => [
   { method: 'DELETE', match: /\/api\/favorites\?url=/, respond: () => ({ status: 204 }) },
 ];
 
+/** Compte connecté simulé : adresse et e-mails de la veille. */
+const account = { email: 'marie@example.com' as string | null, mailAlerts: true, setMailAlerts: vi.fn(async () => undefined), logout: async () => undefined };
 function renderPage(path = '/searches/1') {
   const { hook } = memoryLocation({ path });
-  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Router hook={hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider>);
+  return render(<AuthContext.Provider value={account}><QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><Router hook={hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider></AuthContext.Provider>);
 }
 const cardOrder = () => screen.getAllByTestId(/^card-listing-\d+$/).map(card => card.getAttribute('data-testid')!.replace('card-listing-', ''));
 
@@ -47,6 +50,7 @@ beforeEach(() => {
   resetListingInteractionsCache();
   api.state.data = search(); api.state.isLoading = false; api.state.isError = false;
   api.refresh.mockReset(); api.create.mockReset();
+  account.email = 'marie@example.com'; account.mailAlerts = true; account.setMailAlerts.mockClear();
   mockFetch(favoriteRoutes());
 });
 
@@ -520,7 +524,7 @@ describe('Page résultats : chargement progressif', () => {
     expect(screen.getByTestId('results-loader')).toBeInTheDocument();
     // L'IA a fini : la page relue les montre.
     api.state.data = many(30);
-    view.rerender(view.container.firstChild ? <QueryClientProvider client={new QueryClient()}><Router hook={memoryLocation({ path: '/searches/1' }).hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider> : <></>);
+    view.rerender(view.container.firstChild ? <AuthContext.Provider value={account}><QueryClientProvider client={new QueryClient()}><Router hook={memoryLocation({ path: '/searches/1' }).hook}><Route path="/searches/:id" component={SearchDetail}/></Router></QueryClientProvider></AuthContext.Provider> : <></>);
     await waitFor(() => expect(cards()).toBe(30));
   });
 
@@ -589,9 +593,10 @@ describe('Page résultats : veille quotidienne et lecture progressive', () => {
     await user.click(screen.getByTestId('button-watch'));
     const dialog = await screen.findByTestId('dialog-watch');
     const explanation = within(dialog).getByTestId('watch-explanation');
-    for (const point of ['Dès le début, toutes les annonces des 4 derniers jours sont récupérées.', 'seulement les nouvelles annonces', 'pastille rose']) expect(explanation).toHaveTextContent(point);
+    for (const point of ['Dès le début, toutes les annonces des 4 derniers jours sont récupérées.', 'seulement les nouvelles annonces', 'pastille rose',
+      'Un e-mail vous est envoyé à marie@example.com à chaque relève qui trouve de nouveaux logements.']) expect(explanation).toHaveTextContent(point);
     for (const gone of ['remontée', 'republiée', '7 jours', 'ne coûte rien', '105']) expect(explanation).not.toHaveTextContent(gone);
-    expect(within(explanation).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(explanation).getAllByRole('listitem')).toHaveLength(4);
     expect(within(dialog).getByTestId('input-watch-time-0')).toHaveValue('08:00');
     expect(within(dialog).getByTestId('input-watch-time-1')).toHaveValue('18:00');
     expect(calls.some(call => call.method === 'PUT')).toBe(false);
@@ -886,5 +891,75 @@ describe('Page résultats : carte des logements', () => {
     api.state.data = search({ status: 'running', stage: 'searching', listings: placed });
     renderPage();
     expect(screen.queryByTestId('button-open-results-map')).not.toBeInTheDocument();
+  });
+});
+
+describe('Veille quotidienne : e-mails et issue de la dernière relève', () => {
+  const routes = (): FetchRoute[] => [
+    ...favoriteRoutes(),
+    { match: /\/api\/housing\/watch$/, respond: () => ({ body: { search: null } }) },
+    { method: 'POST', match: /\/api\/housing\/searches\/1\/visit$/, respond: () => ({ status: 204 }) },
+  ];
+  const active = (overrides = {}) => search({ watch: 'active', watchTimes: ['08:00'], nextWatchAt: new Date(Date.now() + 3_600_000).toISOString(), ...overrides });
+
+  it('la fenêtre dit « votre adresse d’inscription » si l’adresse n’est pas connue, et ne promet pas d’e-mail à un compte désinscrit', async () => {
+    const user = userEvent.setup();
+    mockFetch(routes());
+    account.email = null;
+    const { unmount } = renderPage();
+    await user.click(screen.getByTestId('button-watch'));
+    expect(within(await screen.findByTestId('watch-explanation')).getByText(/votre adresse d’inscription/)).toBeInTheDocument();
+    unmount();
+    account.email = 'marie@example.com'; account.mailAlerts = false;
+    renderPage();
+    await user.click(screen.getByTestId('button-watch'));
+    const explanation = await screen.findByTestId('watch-explanation');
+    expect(explanation).toHaveTextContent('Les e-mails sont désactivés pour votre compte');
+    expect(explanation).not.toHaveTextContent('vous est envoyé');
+  });
+
+  it('veille active : l’adresse qui reçoit les e-mails est rappelée', () => {
+    mockFetch(routes());
+    api.state.data = active();
+    renderPage();
+    expect(screen.getByTestId('text-watch-mail')).toHaveTextContent('E-mail à marie@example.com à chaque relève qui trouve du nouveau');
+    expect(screen.queryByTestId('button-enable-mails')).not.toBeInTheDocument();
+  });
+
+  it('e-mails désactivés (lien de désinscription) : « Réactiver les e-mails » les relance', async () => {
+    const user = userEvent.setup();
+    mockFetch(routes());
+    account.mailAlerts = false;
+    api.state.data = active();
+    renderPage();
+    expect(screen.getByTestId('text-watch-mail')).toHaveTextContent('E-mails désactivés');
+    await user.click(screen.getByTestId('button-enable-mails'));
+    expect(account.setMailAlerts).toHaveBeenCalledWith(true);
+  });
+
+  it('réactivation impossible : un message, pas d’erreur muette', async () => {
+    const user = userEvent.setup();
+    mockFetch(routes());
+    account.mailAlerts = false;
+    account.setMailAlerts.mockRejectedValueOnce(new Error('panne'));
+    api.state.data = active();
+    renderPage();
+    await user.click(screen.getByTestId('button-enable-mails'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Impossible de réactiver les e-mails');
+  });
+
+  it('dernière relève en échec ou incomplète : dit sur la ligne de la veille ; rien quand tout va bien', () => {
+    mockFetch(routes());
+    api.state.data = active({ lastWatchStatus: 'failed' });
+    const { unmount } = renderPage();
+    expect(screen.getByTestId('text-watch-outcome')).toHaveTextContent('La dernière relève n’a pas abouti. Nouvel essai au prochain passage.');
+    unmount();
+    api.state.data = active({ lastWatchStatus: 'partial' });
+    const second = renderPage();
+    expect(screen.getByTestId('text-watch-outcome')).toHaveTextContent('Recherche très large');
+    second.unmount();
+    api.state.data = active({ lastWatchStatus: 'ok' });
+    renderPage();
+    expect(screen.queryByTestId('text-watch-outcome')).not.toBeInTheDocument();
   });
 });

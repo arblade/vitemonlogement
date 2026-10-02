@@ -47,6 +47,11 @@ export const housingSearches = pgTable("housing_searches", {
   lastWatchAt: bigint("last_watch_at", { mode: "number" }),
   // Dernière ouverture de la recherche par son propriétaire (ms) : ce qui est arrivé après est « non vu ».
   lastVisitedAt: bigint("last_visited_at", { mode: "number" }),
+  // Issue de la dernière relève : « ok », « partial » (plafond de pages atteint ou page suivante en échec : des annonces
+  // ont pu échapper) ou « failed » (rien lu). NULL : pas encore de relève.
+  lastWatchStatus: text("last_watch_status"),
+  // Relèves en échec d'affilée (remis à 0 par une relève réussie) : au 3e, le propriétaire du site est prévenu.
+  watchFailures: integer("watch_failures").notNull().default(0),
 }, table => [index("housing_searches_status_idx").on(table.status), index("housing_searches_owner_idx").on(table.ownerId)]);
 
 export const housingListings = pgTable("housing_listings", {

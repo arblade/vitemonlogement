@@ -2,6 +2,7 @@
 // Mobile d'abord (usage principal), puis desktop. Les étapes se suivent : elles partagent le même serveur.
 import assert from "node:assert/strict";
 import test, { after, before } from "node:test";
+import { createHmac } from "node:crypto";
 import { chromium } from "playwright-core";
 
 const base = process.env.E2E_BASE_URL ?? "http://localhost:4180";
@@ -288,11 +289,21 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
       assert.match(await text(page, "[data-testid=card-watch]"), /Pour être prévenu des nouvelles annonces de cette recherche chaque jour, activez la veille quotidienne\./, name);
       await page.click("[data-testid=button-watch]");
       await page.waitForSelector("[data-testid=dialog-watch]");
-      assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose/, name);
+      assert.match(await text(page, "[data-testid=watch-explanation]"), /4 derniers jours[\s\S]*nouvelles annonces[\s\S]*pastille rose[\s\S]*Un e-mail vous est envoyé à \S+@\S+ à chaque relève qui trouve de nouveaux logements\./, name);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-fenetre-${name}.png` });
       await page.click("[data-testid=button-confirm-watch]");
       await page.waitForSelector("[data-testid=text-watch-status]:has-text('chaque jour à')");
       assert.match(await text(page, "[data-testid=text-watch-status]"), /Veille quotidienne · chaque jour à 8 h et 18 h · prochain passage (aujourd’hui|demain) à (08|18):00/, name);
+      assert.match(await text(page, "[data-testid=text-watch-mail]"), /E-mail à \S+@\S+ à chaque relève qui trouve du nouveau/, name);
+      // Désinscrit (lien d'un e-mail) : la ligne le dit, « Réactiver les e-mails » les relance.
+      assert.equal((await page.request.put(`${base}/api/mail/preferences`, { data: { alerts: false } })).status(), 200, name);
+      await page.reload();
+      await page.waitForSelector("[data-testid=button-enable-mails]");
+      assert.match(await text(page, "[data-testid=text-watch-mail]"), /E-mails désactivés/, name);
+      if (process.env.E2E_SCREENSHOTS) { await page.locator("[data-testid=card-watch]").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-mails-coupes-${name}.png` }); }
+      await page.click("[data-testid=button-enable-mails]");
+      await page.waitForSelector("[data-testid=text-watch-mail]:has-text('à chaque relève')");
+      if (process.env.E2E_SCREENSHOTS) { await page.locator("[data-testid=card-watch]").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-active-${name}.png` }); }
       // Veille quotidienne : ni « Modifier ma demande » ni « Étendre ».
       assert.equal(await page.locator("[data-testid=button-edit-prompt], [data-testid=button-refresh]").count(), 0, `${name} : pas de boutons de recherche ponctuelle`);
       // La pastille vient du serveur ; on simule ici 2 annonces trouvées par un passage (le passage lui-même : tests serveur).
@@ -318,6 +329,31 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
     }
   } finally {
     await wide.close();
+  }
+});
+
+test("désinscription des e-mails (mobile puis desktop) : sans connexion, un bouton à toucher, puis la confirmation ; lien falsifié refusé", async () => {
+  const token = createHmac("sha256", "e2e").update("unsubscribe:1").digest("base64url"); // signé comme le serveur (SESSION_SECRET=e2e)
+  for (const name of ["mobile", "desktop"]) {
+    const context = await newContext(name); // aucun cookie : on arrive depuis la messagerie
+    try {
+      const page = await context.newPage();
+      const bad = await page.goto(`${base}/api/mail/unsubscribe?u=1&t=faux`);
+      assert.equal(bad.status(), 400, name);
+      assert.match(await text(page, "h1"), /Lien invalide/, name);
+      await page.goto(`${base}/api/mail/unsubscribe?u=1&t=${token}`);
+      assert.match(await text(page, "h1"), /Ne plus recevoir les e-mails/, name);
+      const button = await page.locator("button").boundingBox();
+      assert.ok(button.height >= 32, `${name} : bouton touchable (${button.height} px)`);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${name} : pas de défilement horizontal`);
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/desinscription-${name}.png` });
+      await page.click("button");
+      await page.waitForSelector("h1:has-text('C’est fait')");
+      if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/desinscription-faite-${name}.png` });
+      assert.equal((await page.request.put(`${base}/api/mail/preferences`, { data: { alerts: true } })).status(), 401, `${name} : réactiver exige d'être connecté`);
+    } finally {
+      await context.close();
+    }
   }
 });
 

@@ -395,6 +395,10 @@ components:
         lastWatchAt:
           description: Start of the last pass of the followed search (its listings are separated from older ones)
           type: ["string", "null"]
+        lastWatchStatus:
+          description: Outcome of the last pass — ok, partial (page cap reached or a later page failed, listings may have been missed) or failed (nothing read)
+          type: ["string", "null"]
+          enum: [ok, partial, failed, null]
         unseenCount:
           description: Listings of the followed search found since the last visit
           type: integer
