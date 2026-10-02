@@ -454,11 +454,17 @@ export async function startWatching(id: number, ownerId: number, times: string[]
       .where(and(eq(housingSearches.ownerId, ownerId), ne(housingSearches.id, id)));
     await tx.update(housingSearches).set({ watched: 1, watchTimes: JSON.stringify(times), nextWatchAt, lastVisitedAt: now })
       .where(and(eq(housingSearches.id, id), eq(housingSearches.ownerId, ownerId)));
-    // Une recherche ponctuelle n'a lu que les 15 plus récentes : la veille quotidienne commence par remonter 4 jours.
-    await tx.update(housingSearches).set({ task: "backfill", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
-      .where(and(eq(housingSearches.id, id), eq(housingSearches.pagesRead, 0), eq(housingSearches.status, "completed"),
-        sql`(${housingSearches.task} IS NULL OR ${housingSearches.task} = 'analyze')`));
   });
+  // Une recherche ponctuelle n'a lu que les 15 plus récentes : la veille quotidienne commence par remonter 4 jours.
+  // Recherche encore en cours (demande modifiée d'une veille) : la remontée suivra sa fin (voir reader.ts, finish).
+  await requestBackfill(id);
+}
+
+/** Remontée de 4 jours d'une veille quotidienne qui n'a encore rien lu au-delà de la recherche ponctuelle. */
+export async function requestBackfill(id: number) {
+  await db().update(housingSearches).set({ task: "backfill", passState: null, runId: null, nextCheckAt: 0, attempts: 0 })
+    .where(and(eq(housingSearches.id, id), eq(housingSearches.watched, 1), eq(housingSearches.pagesRead, 0), eq(housingSearches.status, "completed"),
+      sql`(${housingSearches.task} IS NULL OR ${housingSearches.task} = 'analyze')`));
 }
 
 export async function stopWatching(id: number, ownerId: number) {

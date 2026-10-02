@@ -37,6 +37,12 @@ router.post("/housing/searches", costlyRateLimit, async (req, res): Promise<void
   const input = CreateHousingSearchBody.safeParse(req.body);
   if (!input.success) { res.status(400).json({ error: input.error.message }); return; }
   const id = await createSearch(input.data.prompt.trim(), req.userId!);
+  // Demande modifiée d'une veille quotidienne : la veille passe sur la nouvelle recherche, aux mêmes heures.
+  const from = input.data.watchFrom == null ? undefined : await getOwnedSearchRow(input.data.watchFrom, req.userId!);
+  if (from && from.watched > 0) {
+    const times = from.watchTimes ? JSON.parse(from.watchTimes) as string[] : ["08:00", "18:00"];
+    await startWatching(id, req.userId!, times, nextParisTime(times, Date.now())!);
+  }
   res.status(201).json(CreateHousingSearchResponse.parse(await getPublicSearch(id)));
   wakeWorker(); // le worker serveur prend le relais ; le navigateur ne fait que suivre l'avancement
 });

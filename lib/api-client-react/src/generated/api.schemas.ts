@@ -160,6 +160,8 @@ export interface HousingSearchInput {
      * @maxLength 1000
      */
   prompt: string;
+  /** Search whose daily watch moves to this new search (same times), when the user edits a watched search */
+  watchFrom?: number;
 }
 
 export interface AnalysisRequest {

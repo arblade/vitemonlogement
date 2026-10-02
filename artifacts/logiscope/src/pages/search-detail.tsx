@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAnalyzeHousingSearch, useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, getGetWatchedSearchQueryKey, useRefreshHousingSearch, useVisitHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingCriterionResult, type HousingFeature, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, BellRing, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BellRing, ChevronDown, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorNotice, Eyebrow, formatDate, formatPrice } from '@/components/site-shell';
@@ -307,8 +307,7 @@ export default function SearchDetail() {
   const selected = listings.filter(item=>selectedIds.includes(item.id));
   const toggle = (listingId: number) => setSelectedIds(current=>current.includes(listingId)?current.filter(id=>id!==listingId):current.length<3?[...current,listingId]:current);
   const resultsSection = listings.length > 0 && <section aria-label="Annonces trouvées">
-    <h3 className="mb-2 text-xl font-semibold">Vos annonces · {listings.length}</h3>
-    <p className="mb-5 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
+    <p className="mb-4 text-xs text-stone">{freshCount} annonce{freshCount > 1 ? 's' : ''} non consultée{freshCount > 1 ? 's' : ''}. Celles déjà ouvertes sont grisées.</p>
     {data?.task === 'backfill' && <BackfillProgress page={data.readProgress?.page ?? 1} maxPages={data.readProgress?.maxPages ?? 3} found={data.count}/>}
     {newCount > 0 && <p data-testid="text-new-count" className="mb-5 inline-flex items-center gap-2 rounded-lg bg-lime-wash px-3 py-2 text-sm font-semibold text-brand-dark"><BellRing size={15} aria-hidden="true"/>{newCount} nouvelle{newCount > 1 ? 's' : ''} annonce{newCount > 1 ? 's' : ''} depuis votre dernière visite</p>}
     {releaseEnd === 0 && releaseAt && <ReleaseLine testId="separator-release" text={`Relève ${releaseAt} : aucune nouvelle annonce`}/>}
@@ -325,7 +324,9 @@ export default function SearchDetail() {
     if (create.isPending) return;
     setRelaunchError('');
     try {
-      const updated = await create.mutateAsync({ data: { prompt } });
+      // Veille quotidienne : elle suit la nouvelle demande (mêmes heures), côté serveur, en une seule opération.
+      const updated = await create.mutateAsync({ data: { prompt, ...(data?.watch ? { watchFrom: data.id } : {}) } });
+      if (data?.watch) void queryClient.invalidateQueries({ queryKey: getGetWatchedSearchQueryKey() });
       queryClient.setQueryData(getGetHousingSearchQueryKey(updated.id), updated);
       void queryClient.invalidateQueries({ queryKey: getListHousingSearchesQueryKey() });
       setSelectedIds([]);
@@ -344,18 +345,31 @@ export default function SearchDetail() {
 
   if (!validId) return <main className="mx-auto min-h-[70dvh] max-w-[1100px] px-5 py-24"><Eyebrow number="—">Adresse introuvable</Eyebrow><h1 className="mt-5 text-5xl font-semibold tracking-tight">Cette recherche n’existe pas.</h1><Link href="/" data-testid="link-back-invalid" className="mt-8 inline-flex items-center gap-2 underline underline-offset-4"><ArrowLeft size={16}/> Retour à l’accueil</Link></main>;
   return <main className="min-h-[75dvh]">
-    <section className="border-b border-line-soft">
-      <div className="mx-auto max-w-[1440px] px-5 pb-8 pt-6 md:px-10 md:pb-10 md:pt-8 lg:px-16">
-         <Link href="/searches" data-testid="link-back-home" className="inline-flex min-h-11 items-center gap-2 text-sm text-stone transition-colors hover:text-ink"><ArrowLeft size={15}/> Toutes mes recherches</Link>
-        {search.isLoading ? <div className="mt-12 space-y-4"><Skeleton className="h-12 w-2/3 bg-sage"/><Skeleton className="h-5 w-1/3 bg-sage"/></div> : data ? <>
-           <div className="mt-6 text-sm font-medium text-moss">Location</div>
-          <div className="mt-5 flex flex-col justify-between gap-7 lg:flex-row lg:items-end"><div><h1 data-testid="text-search-location" className="text-[clamp(2rem,4.2vw,3.4rem)] font-semibold leading-[1.05] tracking-[-.03em]">{data.criteria.location || 'Votre recherche'}</h1><p data-testid="text-search-prompt" className="mt-3 max-w-[700px] text-base leading-relaxed text-stone">“{data.prompt}”</p>{data.status !== 'running' && !refresh.isPending && <SearchPromptEditor key={data.id} prompt={data.prompt} pending={create.isPending} error={relaunchError} editing={editingPrompt} setEditing={setEditingPrompt} onSubmit={onRelaunch}/>}</div>
-           <div className="flex shrink-0 flex-wrap gap-3 lg:justify-end"><span data-testid="status-search-detail" role="status" aria-live="polite" className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3.5 py-1.5 text-sm text-ink">{data.status==='running'||refresh.isPending?<span className="pulse-dot size-2 rounded-full bg-lime"/>:data.status==='failed'?<X size={14}/>:<Check size={14}/>} {data.status==='running'||refresh.isPending?'Recherche en cours':data.status==='failed'?'Recherche interrompue':'Recherche terminée'}</span><span className="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3.5 py-1.5 text-sm text-ink"><Clock3 size={14}/>{formatDate(data.createdAt)}</span></div></div>
+    <section>
+      <div className="mx-auto max-w-[1440px] px-5 pt-2 md:px-10 md:pt-6 lg:px-16">
+        <Link href="/searches" data-testid="link-back-home" className="inline-flex min-h-11 items-center gap-2 text-sm text-stone transition-colors hover:text-ink"><ArrowLeft size={15}/> Mes recherches</Link>
+        {search.isLoading ? <div className="mt-3 space-y-3"><Skeleton className="h-8 w-2/3 bg-sage"/><Skeleton className="h-4 w-1/2 bg-sage"/></div> : data ? <>
+          {/* En-tête compact (mobile d'abord) : ville et nombre d'annonces sur une ligne, la demande repliée, puis les actions. */}
+          <h1 data-testid="text-search-location" className="text-[26px] font-semibold leading-tight tracking-[-.03em] md:text-[40px]">{data.criteria.location || 'Votre recherche'}{data.status === 'completed' && <span data-testid="text-listing-count" className="font-normal text-stone"> · {data.count} annonce{data.count>1?'s':''}</span>}</h1>
+          <details data-testid="details-search-prompt" className="group/prompt mt-0.5 max-w-[760px]">
+            <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-sm text-stone"><span data-testid="text-search-prompt" className="min-w-0 truncate group-open/prompt:whitespace-normal">“{data.prompt}”</span><ChevronDown size={15} aria-hidden="true" className="shrink-0 transition-transform group-open/prompt:rotate-180"/></summary>
+            <p data-testid="text-live-window" className="pb-2 text-xs leading-relaxed text-stone">{data.watch ? `Veille quotidienne : les annonces des ${liveDays} derniers jours, puis les nouvelles à chaque relève.` : 'Recherche ponctuelle : les annonces les plus récentes. « Étendre » remonte plus loin.'} Lancée le {formatDate(data.createdAt)}.</p>
+          </details>
+          {(data.status !== 'completed' || refresh.isPending) && <span data-testid="status-search-detail" role="status" aria-live="polite" className="mt-2 inline-flex items-center gap-2 rounded-full border border-line px-3 py-1 text-xs">{data.status==='failed' && !refresh.isPending ? <><X size={13}/> Recherche interrompue</> : <><span className="pulse-dot size-2 rounded-full bg-lime"/> Recherche en cours</>}</span>}
+          {data.status !== 'running' && !refresh.isPending && <div className="mt-3 space-y-2.5">
+            <div data-testid="results-actions" className="-mx-5 flex items-center gap-2 overflow-x-auto px-5 pb-0.5 [scrollbar-width:none] md:mx-0 md:px-0">
+              {!editingPrompt && <EditPromptButton onClick={() => setEditingPrompt(true)}/>}
+              {data.status === 'completed' && mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[#dddddd] bg-white px-3.5 text-xs font-semibold transition-colors hover:border-ink disabled:opacity-50"><MapIcon size={14} aria-hidden="true"/> Carte <span className="rounded-full bg-sage px-1.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}
+              {data.status === 'completed' && !data.watch && <button type="button" data-testid="button-refresh" title="Étendre : remonter plus loin dans le temps (annonces plus anciennes)" disabled={data.task === 'extend'} onClick={onRefresh} className="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-[#dddddd] bg-white px-3.5 text-xs font-semibold transition-colors hover:border-ink disabled:opacity-50"><RefreshCw size={14} aria-hidden="true"/> Étendre</button>}
+            </div>
+            {data.status === 'completed' && listings.length>0 && <label className="relative flex h-10 w-fit max-w-full items-center rounded-lg border border-[#dddddd] bg-white text-xs font-semibold"><span className="pl-3.5 pr-1.5 font-normal text-stone">Trier par</span><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-full appearance-none bg-transparent pr-8 font-semibold outline-none"><option value="recent">Plus récentes</option><option value="score">Meilleure correspondance</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select><ChevronDown size={14} aria-hidden="true" className="pointer-events-none absolute right-3"/></label>}
+          </div>}
+          {data.status !== 'running' && !refresh.isPending && <SearchPromptEditor key={data.id} prompt={data.prompt} watching={data.watch != null} pending={create.isPending} error={relaunchError} editing={editingPrompt} setEditing={setEditingPrompt} onSubmit={onRelaunch}/>}
         </> : null}
       </div>
     </section>
 
-    <div className="mx-auto max-w-[1440px] px-5 py-10 md:px-10 md:py-14 lg:px-16">
+    <div className="mx-auto max-w-[1440px] px-5 pb-10 pt-5 md:px-10 md:pt-7 lg:px-16">
       {search.isError && <div className="max-w-2xl"><ErrorNotice message="Impossible de retrouver cette recherche. Vérifiez votre connexion puis réessayez." retry={()=>search.refetch()}/><Link href="/" data-testid="link-error-home" className="mt-7 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4"><ArrowLeft size={15}/> Revenir à l’accueil</Link></div>}
       {search.isLoading && <div className="mx-auto max-w-3xl"><SearchProgress stage="interpreting"/></div>}
       {data && <>
@@ -363,11 +377,6 @@ export default function SearchDetail() {
           {showDebug && <SearchRequestDebug requests={data.searchRequests} focusedMatches={data.focusedMatches} status={data.status}/>}
         </>}
         {interactionError && <p role="alert" className="mb-5 text-sm text-brick">{interactionError}</p>}
-        {data.status !== 'running' && !refresh.isPending &&
-        <div className="mb-9 flex flex-col justify-between gap-6 border-b border-line pb-8 md:flex-row md:items-end">
-           <div><Eyebrow number="01">Le résultat</Eyebrow><h2 data-testid="text-listing-count" className="mt-4 text-3xl font-semibold leading-tight tracking-[-.03em] md:text-4xl">{`${data.count} annonce${data.count>1?'s':''} à explorer`}</h2><p data-testid="text-live-window" className="mt-2 text-xs text-stone">{data.watch ? `Veille quotidienne : les annonces des ${liveDays} derniers jours, puis les nouvelles à chaque relève.` : 'Recherche ponctuelle : les annonces les plus récentes. « Étendre » remonte plus loin.'}</p></div>
-           <div className="flex flex-wrap items-center gap-3">{!editingPrompt && !data.watch && <EditPromptButton onClick={() => setEditingPrompt(true)}/>}{data.status==='completed' && <>{!data.watch && <Button type="button" variant="outline" data-testid="button-refresh" title="Étendre : remonter plus loin dans le temps (annonces plus anciennes)" disabled={data.task === 'extend'} onClick={onRefresh} className="h-10 rounded-lg border-[#dddddd] bg-white px-4 text-xs font-semibold hover:border-ink"><RefreshCw size={15} className="mr-2"/> Étendre</Button>}{mappableCount>0 && <button type="button" data-testid="button-open-results-map" onClick={()=>setMapOpen(true)} className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#b0b0b0] bg-cream px-4 text-xs font-semibold transition-colors hover:bg-sage focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c13515]"><MapIcon size={15} aria-hidden="true"/> Carte <span className="rounded-full bg-sage px-2 py-0.5 text-xs" aria-label={`${mappableCount} logement${mappableCount>1?'s':''} sur la carte`}>{mappableCount}</span></button>}{listings.length>0 && <><span className="flex items-center gap-2"><label htmlFor="sort-results" className="font-data text-xs uppercase tracking-[.08em] text-stone">Trier par</label><select id="sort-results" data-testid="select-sort" value={sort} onChange={e=>setSort(e.target.value as typeof sort)} className="h-10 rounded-lg border border-[#dddddd] bg-cream px-3 text-xs font-semibold outline-none focus:ring-2 focus:ring-[#ff385c]"><option value="recent">Plus récentes</option><option value="score">Meilleure correspondance</option><option value="price">Prix croissant</option><option value="area">Surface décroissante</option></select></span></>}</>}</div>
-        </div>}
          {data.status==='completed' && !refresh.isPending && <WatchPanel key={`${data.id}-${data.watch}`} search={data} other={watchedOther}/>}
          {(data.status==='running'||refresh.isPending) && <div className="mx-auto max-w-3xl">
            <SearchProgress stage={data.stage ?? 'interpreting'}/>

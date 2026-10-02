@@ -134,7 +134,8 @@ export const createHousingSearchBodyPromptMax = 1000;
 
 
 export const CreateHousingSearchBody = zod.object({
-  "prompt": zod.string().min(createHousingSearchBodyPromptMin).max(createHousingSearchBodyPromptMax)
+  "prompt": zod.string().min(createHousingSearchBodyPromptMin).max(createHousingSearchBodyPromptMax),
+  "watchFrom": zod.number().int().optional().describe('Search whose daily watch moves to this new search (same times), when the user edits a watched search')
 })
 
 export const createHousingSearchResponseOneCriteriaRadiusMin = 0;

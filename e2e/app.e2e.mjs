@@ -207,8 +207,13 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       }
       assert.match(await page.getAttribute("[data-testid=button-edit-prompt]", "class"), /bg-brand/, `${name} : « Modifier ma demande » en principal`);
       assert.doesNotMatch(await page.getAttribute("[data-testid=button-refresh]", "class"), /bg-brand/, `${name} : « Étendre » en secondaire`);
-      const [edit, refresh] = await Promise.all(["button-edit-prompt", "button-refresh"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));
-      assert.ok(edit.x < refresh.x || edit.y < refresh.y, `${name} : « Modifier ma demande » avant « Étendre »`);
+      // En-tête compact : Modifier, Carte, Étendre sur une rangée, dans cet ordre ; le tri en dessous ; la première annonce
+      // commence dans le premier écran, même sur mobile.
+      const [edit, map, refresh, sort] = await Promise.all(["button-edit-prompt", "button-open-results-map", "button-refresh", "select-sort"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));
+      assert.ok(edit.x < map.x && map.x < refresh.x && Math.round(edit.y) === Math.round(refresh.y), `${name} : Modifier, Carte, Étendre`);
+      assert.ok(sort.y > edit.y + edit.height - 1, `${name} : le tri sous les boutons`);
+      const first = await page.locator("[data-testid=card-listing-1]").boundingBox();
+      assert.ok(first.y < page.viewportSize().height * 0.75, `${name} : première annonce dans le premier écran (${Math.round(first.y)} px)`);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
@@ -309,7 +314,8 @@ test("veille quotidienne (mobile puis desktop) : la fenêtre explique, on la cr�
       await page.waitForSelector("[data-testid=text-watch-mail]:has-text('à chaque relève')");
       if (process.env.E2E_SCREENSHOTS) { await page.locator("[data-testid=card-watch]").scrollIntoViewIfNeeded(); await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/suivie-active-${name}.png` }); }
       // Veille quotidienne : ni « Modifier ma demande » ni « Étendre ».
-      assert.equal(await page.locator("[data-testid=button-edit-prompt], [data-testid=button-refresh]").count(), 0, `${name} : pas de boutons de recherche ponctuelle`);
+      assert.equal(await page.locator("[data-testid=button-refresh]").count(), 0, `${name} : pas d'« Étendre » sur une veille`);
+      assert.equal(await page.locator("[data-testid=button-edit-prompt]").count(), 1, `${name} : « Modifier » reste possible sur une veille`);
       // La pastille vient du serveur ; on simule ici 2 annonces trouvées par un passage (le passage lui-même : tests serveur).
       await page.route(/\/api\/housing\/watch$/, async route => {
         const data = await (await route.fetch()).json();

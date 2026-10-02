@@ -625,3 +625,28 @@ test("progression exposée pendant la mise en place de la veille : page lue, pag
   }
   assert.deepEqual([...new Set(seen)], ["1/3", "2/3", "3/3"]);
 });
+
+test("demande d'une veille modifiée : la nouvelle recherche, suivie dès sa création, remonte ses 4 jours une fois terminée", async () => {
+  market = makeMarket(120, 2, 10_500);
+  const first = await followed();
+  await settle(first);
+  const { createSearch, startWatching, getSearch } = await import("./store");
+  const id = await createSearch("Un T2 à Lille, 950 € max, avec balcon", owner);
+  await startWatching(id, owner, ["08:00", "18:00"], Date.now() + HOUR);
+  assert.equal((await row(id)).task, null, "pas de remontée tant que la recherche n'est pas terminée");
+  reads = [];
+  await settle(id);
+  assert.deepEqual(reads.map(read => read.limit), [15, 35, 19], "recherche ponctuelle, puis remontée de 4 jours");
+  assert.equal((await row(id)).watched, 1);
+  assert.equal((await row(first)).watched, 0, "une seule veille par compte : elle a suivi la nouvelle demande");
+  assert.equal((await getSearch(id))!.unseenCount, 0, "rien de « nouveau » : l'utilisateur vient de la modifier");
+});
+
+test("recherche ponctuelle (sans veille) : pas de remontée à la fin", async () => {
+  market = makeMarket(120, 2, 10_800);
+  const { createSearch } = await import("./store");
+  const id = await createSearch("Un T2 à Lille, 900 € max", owner);
+  reads = [];
+  await settle(id);
+  assert.deepEqual(reads.map(read => read.limit), [15]);
+});

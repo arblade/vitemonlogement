@@ -16,7 +16,7 @@ import { extraSourceItems, itemRefreshedAt, normalize, positionOf, scoreListing 
 import { matchesKnownBasics } from "./criteria";
 import { actorRequest, canReadPages } from "./housing-search";
 import { interleave, normalizeExtra, startExtraSources } from "./sources";
-import { finishPass, pendingAnalysis, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
+import { finishPass, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
 import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
 import { currentParisSlot, nextParisTime } from "../../lib/paris-time";
@@ -213,6 +213,8 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
     // Relève : ses annonces (première lecture = début du passage) sont séparées des plus anciennes dans la liste.
     ...(state.mode === "watch" ? { lastWatchAt: state.startedAt, lastWatchStatus: truncated ? "partial" : "ok", watchFailures: 0 } : {}),
   });
+  // Demande d'une veille modifiée : la nouvelle recherche, suivie dès sa création, remonte maintenant ses 4 jours.
+  if (state.mode === "initial") await requestBackfill(row.id);
   // E-mail de la relève : composé au moment de l'envoi (après l'analyse ci-dessous), seulement s'il y a du nouveau.
   if (state.mode === "watch" && row.watched === 1 && row.ownerId != null) await enqueueWatchMail(row.id, row.ownerId, state.startedAt);
   logger.info({ searchId: row.id, mode: state.mode, pages: state.pagesRead, reads: state.reads, fresh: state.fresh }, "Reading pass finished");

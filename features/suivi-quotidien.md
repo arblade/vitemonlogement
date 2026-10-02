@@ -270,6 +270,11 @@ simulation : 743 annonces lues au lieu de 809 (≈ 0,74 $ d'Apify pour 10 jours 
 relève sans historique, rattrapage, rythme qui change du week-end à la semaine). La simulation l'impose désormais
 (lecture ≤ 2 × nouveautés, page 1 relue ≤ 5 fois).
 
+**Modifier la demande d'une veille (03/10)** : « Modifier » reste disponible sur une veille quotidienne. La relance crée
+une nouvelle recherche avec `watchFrom` : la veille passe dessus, aux mêmes heures (une seule par compte), et remonte ses
+4 jours dès que la recherche est terminée (`requestBackfill`, appelé à la fin de la lecture « initial »). L'ancienne
+demande redevient une recherche ponctuelle, dans l'historique. Une veille d'un autre compte n'est jamais déplacée.
+
 **Relèves étalées (03/10)** : chaque veille part avec un décalage stable de 0 à 5 minutes après l'heure choisie
 (`WATCH_SPREAD_SECONDS`, 300 par défaut ; 0 = à l'heure pile), pour que toutes les veilles de 8 h ne lancent pas leurs
 runs Apify à la même seconde. L'heure affichée et celle du récapitulatif restent « 8 h ». Testé (décalages distincts,

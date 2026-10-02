@@ -102,3 +102,24 @@ test("analyse demandée en faisant défiler : seules les annonces pas encore ana
   const requested = await db().select({ id: housingListings.id }).from(housingListings).where(eq(housingListings.analysisRequested, 1));
   assert.equal(requested.filter(row => detail.listings.some(listing => listing.id === row.id)).length, 2, "l'annonce déjà analysée n'est pas redemandée");
 });
+
+test("modifier la demande d'une veille : la veille passe sur la nouvelle recherche, aux mêmes heures ; jamais celle d'un autre compte", async () => {
+  const watched = await completedSearch(0);
+  await call(`/housing/searches/${watched}/watch`, { method: "PUT", body: JSON.stringify({ times: ["07:30", "19:00"] }) });
+  const created = await call("/housing/searches", { method: "POST", body: JSON.stringify({ prompt: "Un T2 à Lille, 950 € max, avec balcon", watchFrom: watched }) });
+  assert.equal(created.status, 201);
+  const search = await created.json() as { id: number; watch: string | null; watchTimes: string[] };
+  assert.equal(search.watch, "active");
+  assert.deepEqual(search.watchTimes, ["07:30", "19:00"]);
+  const old = await (await call(`/housing/searches/${watched}`)).json() as { watch: string | null };
+  assert.equal(old.watch, null, "l'ancienne redevient une recherche ponctuelle");
+  // Recherche non suivie, ou d'un autre compte : rien ne bouge.
+  const plain = await completedSearch(0);
+  const fromPlain = await (await call("/housing/searches", { method: "POST", body: JSON.stringify({ prompt: "Un T3 à Lille, 1 100 € max", watchFrom: plain }) })).json() as { watch: string | null };
+  assert.equal(fromPlain.watch, null);
+  const theirs = await completedSearch(1);
+  await call(`/housing/searches/${theirs}/watch`, { method: "PUT", body: JSON.stringify({ times: ["08:00"] }) }, 1);
+  const stolen = await (await call("/housing/searches", { method: "POST", body: JSON.stringify({ prompt: "Un T2 à Lille, 900 € max", watchFrom: theirs }) })).json() as { watch: string | null };
+  assert.equal(stolen.watch, null);
+  assert.equal(((await (await call(`/housing/searches/${theirs}`, {}, 1)).json()) as { watch: string | null }).watch, "active", "la veille de l'autre compte reste intacte");
+});

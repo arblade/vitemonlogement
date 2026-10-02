@@ -333,6 +333,9 @@ components:
       required: [prompt]
       properties:
         prompt: { type: string, minLength: 10, maxLength: 1000 }
+        watchFrom:
+          description: Search whose daily watch moves to this new search (same times), when the user edits a watched search
+          type: integer
     AnalysisRequest:
       type: object
       required: [listingIds]

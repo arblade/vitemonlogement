@@ -60,8 +60,28 @@ describe('Page résultats : contenu', () => {
     renderPage();
     expect(screen.getByTestId('text-search-location')).toHaveTextContent('Lille');
     expect(screen.getByTestId('text-search-prompt')).toHaveTextContent('Un studio à Lille, 700 € max, chat accepté');
-    expect(screen.getByTestId('text-listing-count')).toHaveTextContent('3 annonces à explorer');
-    expect(screen.getByTestId('status-search-detail')).toHaveTextContent('Recherche terminée');
+    expect(screen.getByTestId('text-search-location')).toHaveTextContent('Lille · 3 annonces');
+    expect(screen.queryByTestId('status-search-detail')).not.toBeInTheDocument(); // terminée : rien à dire
+    expect(screen.getByTestId('text-live-window')).toHaveTextContent('Lancée le');
+  });
+
+  it('en-tête compact : Modifier, Carte, Étendre dans cet ordre, puis le tri en dessous', () => {
+    api.state.data = search({ listings: [listing(1, { lat: 50.63, lng: 3.06, geoPrecision: 'streetNumber' }), listing(2)] });
+    renderPage();
+    const actions = screen.getByTestId('results-actions');
+    expect([...actions.querySelectorAll('[data-testid]')].map(item => item.getAttribute('data-testid')).filter(id => id?.startsWith('button-')))
+      .toEqual(['button-edit-prompt', 'button-open-results-map', 'button-refresh']);
+    const sort = screen.getByTestId('select-sort');
+    expect(actions).not.toContainElement(sort);
+    expect(actions.compareDocumentPosition(sort) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const gone of ['Le résultat', 'annonces à explorer', 'Vos annonces', 'Recherche terminée']) expect(document.body).not.toHaveTextContent(gone);
+  });
+
+  it('recherche en cours : l’état le dit, sans actions', () => {
+    api.state.data = search({ status: 'running', stage: 'searching', listings: [], count: 0 });
+    renderPage();
+    expect(screen.getByTestId('status-search-detail')).toHaveTextContent('Recherche en cours');
+    expect(screen.queryByTestId('results-actions')).not.toBeInTheDocument();
   });
 
   it('chaque carte montre prix, surface, pièces et localisation avec une icône, et le critère « non précisé »', () => {
@@ -645,12 +665,12 @@ describe('Page résultats : veille quotidienne et lecture progressive', () => {
     await waitFor(() => expect(calls.some(call => call.method === 'DELETE')).toBe(true));
   });
 
-  it('veille quotidienne : ni « Modifier ma demande » ni « Étendre » ; « nouvelles annonces » en rose sur fond rose clair', () => {
+  it('veille quotidienne : « Modifier » oui, « Étendre » non ; « nouvelles annonces » en rose sur fond rose clair', () => {
     mockFetch(watchRoutes());
     api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'], lastVisitedAt: '2026-10-01T06:00:00Z',
       listings: [listing(1, { firstSeenAt: '2026-10-01T06:05:00Z' })] });
     renderPage();
-    expect(screen.queryByTestId('button-edit-prompt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('button-edit-prompt')).toBeInTheDocument();
     expect(screen.queryByTestId('button-refresh')).not.toBeInTheDocument();
     expect(screen.getByTestId('select-sort')).toBeInTheDocument();
     expect(screen.getByTestId('text-new-count').className).toContain('text-brand-dark');
@@ -1030,5 +1050,33 @@ describe('Mise en place de la veille : progression réelle', () => {
     api.state.data = search({ watch: 'active', watchTimes: ['08:00'], task: null, readProgress: null });
     renderPage();
     expect(screen.queryByTestId('results-backfill')).not.toBeInTheDocument();
+  });
+});
+
+describe('Modifier la demande d’une veille quotidienne', () => {
+  it('le champ prévient que la veille suivra la nouvelle demande ; la relance la déplace (watchFrom), aux mêmes heures', async () => {
+    const user = userEvent.setup();
+    mockFetch(favoriteRoutes());
+    api.create.mockResolvedValue(search({ id: 2, watch: 'active', watchTimes: ['08:00', '18:00'] }));
+    api.state.data = search({ watch: 'active', watchTimes: ['08:00', '18:00'] });
+    renderPage();
+    await user.click(screen.getByTestId('button-edit-prompt'));
+    expect(screen.getByTestId('text-edit-prompt-note')).toHaveTextContent('votre veille quotidienne la suivra, aux mêmes heures');
+    const field = screen.getByTestId('input-edit-prompt');
+    await user.clear(field);
+    await user.type(field, 'Un T2 à Lille, 900 € max, balcon');
+    await user.click(screen.getByTestId('button-relaunch-search'));
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith({ data: { prompt: 'Un T2 à Lille, 900 € max, balcon', watchFrom: 1 } }));
+  });
+
+  it('recherche ponctuelle : pas de watchFrom, message habituel', async () => {
+    const user = userEvent.setup();
+    mockFetch(favoriteRoutes());
+    api.create.mockResolvedValue(search({ id: 2 }));
+    renderPage();
+    await user.click(screen.getByTestId('button-edit-prompt'));
+    expect(screen.getByTestId('text-edit-prompt-note')).toHaveTextContent('Modifiez votre demande et lancez une nouvelle recherche');
+    await user.click(screen.getByTestId('button-relaunch-search'));
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith({ data: { prompt: 'Un studio à Lille, 700 € max, chat accepté' } }));
   });
 });
