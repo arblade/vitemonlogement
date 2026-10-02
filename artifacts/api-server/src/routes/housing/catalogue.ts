@@ -140,6 +140,13 @@ export function catalogueFor(wish: string) {
 /** « sans ascenseur », « pas de rez-de-chaussée », « non meublé » : on veut que la caractéristique soit absente. */
 export const wantsAbsence = (wish: string) => /\b(sans|pas\s+(de|au|d')|non[\s-])/i.test(wish);
 
+/**
+ * « Non » lu dans un champ Le Bon Coin (« Ascenseur : Non », « 0 place(s) ») : souvent une valeur par défaut que le
+ * propriétaire n'a pas remplie. Ce n'est pas une certitude : la description est lue quand même, et un « oui » explicite
+ * y l'emporte. Un « oui » coché, lui, est une déclaration : il fait foi.
+ */
+export const saysNo = (value: string) => /^(non|0 place\(s\)|0)$/i.test(value.trim());
+
 /** Phrase de l'annonce qui contient le mot-clé (preuve affichée), ou null si le sujet n'y apparaît pas. */
 export function sentenceWith(text: string, keyword: RegExp) {
   const sentences = text.split(/(?<=[.!?;])\s+|\n+/).map(value => value.trim()).filter(Boolean);

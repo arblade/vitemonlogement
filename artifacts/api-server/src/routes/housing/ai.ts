@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import type { Criteria, Listing, Feature, Criterion, CriterionResult, Place } from "./store";
-import { checksFor, classifyWish, matchesValue } from "./criteria";
+import { checksFor, classifyWish, isWeakStructured, matchesValue } from "./criteria";
+import { saysNo } from "./catalogue";
 import { canonicalLocation } from "../../lib/places";
 import { analysisEngine, jevDecide, type JevDecide } from "../../lib/jev";
 import { logger } from "../../lib/logger";
@@ -171,6 +172,18 @@ function validVerdict(candidate: { status?: unknown; value?: unknown; evidence?:
   return { status: candidate.status, value: candidate.value.slice(0, 100), evidence: candidate.evidence };
 }
 
+/**
+ * Caractéristiques des champs Le Bon Coin, puis celles lues dans la description. Un « non » des champs (souvent non
+ * rempli) cède devant un « oui » explicite de la description ; un même « non » n'est pas répété.
+ */
+export function mergeFeatures(fromFields: Feature[], fromText: Feature[]) {
+  const key = (label: string) => label.toLocaleLowerCase("fr").trim();
+  const yesInText = new Set(fromText.filter(feature => !saysNo(feature.value)).map(feature => key(feature.label)));
+  const fields = fromFields.filter(feature => !(saysNo(feature.value) && yesInText.has(key(feature.label))));
+  const shown = new Set(fields.map(feature => key(feature.label)));
+  return [...fields, ...fromText.filter(feature => !(saysNo(feature.value) && shown.has(key(feature.label))))];
+}
+
 const ANALYSIS_CONCURRENCY = 4;
 
 export async function analyze(listings: Listing[], criteria: Criteria, deps: AnalyzeDeps = {}) {
@@ -184,7 +197,8 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
   // Ce qui manque encore pour chaque annonce : critères jamais posés au LLM, extraction générale.
   const work: { listing: Listing; known: CachedAnalysis; missing: CriterionResult[]; wantGeneral: boolean }[] = listings.map(listing => {
     const known: CachedAnalysis = cached.get(keyOf(listing).urlKey) ?? { general: null, verdicts: {} };
-    const missing = listing.criterionResults.filter(check => check.status === "unknown" && !(criterionKey(check) in known.verdicts));
+    // Non tranchés, ou tranchés par un « non » des champs (souvent non rempli) : la description est lue quand même.
+    const missing = listing.criterionResults.filter(check => (check.status === "unknown" || isWeakStructured(check)) && !(criterionKey(check) in known.verdicts));
     return { listing, known, missing, wantGeneral: !known.general };
   });
   // Étage 2 (moteur Jev) : Jev tranche le type d'offre, les caractéristiques du catalogue et les critères qui en
@@ -215,7 +229,7 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
     const payload = group.map(({ listing, missing, wantGeneral }) => ({
       id: listing.id, title: listing.title, description: listing.description.slice(0, 4000),
       price: listing.price, area: listing.area, rooms: listing.rooms, location: listing.location,
-      structured: listing.criterionResults.filter(check => check.source === "api"),
+      structured: listing.criterionResults.filter(check => check.source === "api" && !isWeakStructured(check)),
       toVerify: missing.map(({ id, label }) => ({ id, label })), wantGeneral,
       wantFeatures: wantGeneral && !readings.has(listing), wantOffer: wantGeneral && !readings.get(listing)?.offer,
     }));
@@ -251,7 +265,7 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
     const general = added?.general ?? known.general;
     const text = `${listing.title}\n${listing.description}`;
     const criterionResults: CriterionResult[] = listing.criterionResults.map(check => {
-      if (check.status !== "unknown") return check; // Structured API facts are immutable.
+      if (check.status !== "unknown" && !isWeakStructured(check)) return check; // Structured API facts are immutable.
       const verdict = verdicts[criterionKey(check)];
       if (!verdict || verdict.status === "unknown" || !text.includes(verdict.evidence)) return check;
       let status: CriterionResult["status"] = verdict.status;
@@ -277,6 +291,6 @@ export async function analyze(listings: Listing[], criteria: Criteria, deps: Ana
       area: listing.area ?? derivedNumber("area"),
       rooms: listing.rooms ?? derivedNumber("rooms"),
       location: listing.location ?? criterionResults.find(value => value.id === "location" && value.source === "description" && value.status === "confirmed")?.value ?? null,
-      features: [...listing.features.filter(f => f.source === "annonce"), ...(general?.features ?? [])] };
+      features: mergeFeatures(listing.features.filter(f => f.source === "annonce"), general?.features ?? []) };
   });
 }

@@ -1,5 +1,5 @@
 import type { Criteria, Criterion, CriterionResult, Listing } from "./store";
-import { catalogueFeature, catalogueFor, wantsAbsence } from "./catalogue";
+import { catalogueFeature, catalogueFor, saysNo, wantsAbsence } from "./catalogue";
 
 type Basic = Pick<Listing, "price" | "area" | "rooms" | "location">;
 
@@ -42,6 +42,10 @@ export function checksFor(criteria: Criteria): Criterion[] {
   }
   return checks;
 }
+
+/** Critère du catalogue tranché par un « non » des champs Le Bon Coin : à revérifier dans la description (voir saysNo). */
+export const isWeakStructured = (check: CriterionResult) =>
+  check.source === "api" && check.id.startsWith("wish-") && Boolean(catalogueFor(check.label)) && saysNo(check.value);
 
 export function matchesKnownBasics(listing: Basic, criteria: Criteria) {
   return !(

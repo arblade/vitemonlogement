@@ -240,3 +240,70 @@ test("critères tous tranchés par Jev, extraction générale en cache : aucun a
   await analyze([fullListing(second)], second, { llm, jev: jev.decide, cache });
   assert.equal(jev.asked.length, 1, "en cache : Jev n'est pas rappelé");
 });
+
+// --- Un « non » des champs n'est pas une certitude : la description est lue quand même ---------------------------------
+
+const withFields = (criteria: Criteria, description: string, raw: Record<string, unknown>, features: Listing["features"] = []): Listing => ({
+  ...fullListing(criteria), description, features,
+  criterionResults: evaluateStructured(criteria, { price: 600, area: 25, rooms: 1, location: "Lille" }, raw),
+});
+/** Faux LLM qui confirme le parking s'il le lit, et sinon ne sait pas. */
+const parkingLlm = () => {
+  const payloads: { toVerify: { id: string; label: string }[]; structured: { label: string }[] }[] = [];
+  const llm: JsonLlm = async (_system, user) => {
+    const { listings } = JSON.parse(user) as { listings: (typeof payloads[number] & { id: number; wantGeneral: boolean })[] };
+    payloads.push(...listings);
+    return { items: listings.map(item => ({ id: item.id, checks: item.toVerify.map(check => /parking/.test(check.label) && /parking incluse/.test(JSON.stringify(listings))
+      ? { id: check.id, status: "confirmed", value: "1 place", evidence: "Place de parking incluse." } : { id: check.id, status: "unknown", value: "", evidence: "" }),
+      ...(item.wantGeneral ? { summary: null, summaryEvidence: [], features: [] } : {}) })) };
+  };
+  return { llm, payloads };
+};
+
+test("moteur LLM : « 0 place de parking » dans les champs, « place de parking incluse » dans le texte → le texte l'emporte", async () => {
+  const criteria = criteriaOf(["parking"]);
+  const listing = withFields(criteria, "Studio rénové. Place de parking incluse.", { attributes: [{ key: "nb_parkings", value: "0" }] });
+  assert.equal(listing.criterionResults.find(check => check.label === "parking")?.status, "contradicted", "avant lecture : le champ dit non");
+  const { llm, payloads } = parkingLlm();
+  const [result] = await analyze([listing], criteria, { llm, jev: null, cache: memoryAnalysisCache() });
+  assert.deepEqual(payloads[0].toVerify.map(check => check.label), ["parking"], "revérifié dans la description");
+  assert.ok(!payloads[0].structured.some(check => check.label === "parking"), "pas présenté au LLM comme un fait établi");
+  const parking = result.criterionResults.find(check => check.label === "parking")!;
+  assert.equal(parking.status, "confirmed");
+  assert.equal(parking.source, "description");
+  assert.equal(parking.evidence, "Place de parking incluse.");
+});
+
+test("moteur LLM : le texte ne dit rien → le « non » des champs reste affiché", async () => {
+  const criteria = criteriaOf(["parking"]);
+  const listing = withFields(criteria, "Studio rénové, lumineux.", { attributes: [{ key: "nb_parkings", value: "0" }] });
+  const [result] = await analyze([listing], criteria, { llm: parkingLlm().llm, jev: null, cache: memoryAnalysisCache() });
+  const parking = result.criterionResults.find(check => check.label === "parking")!;
+  assert.equal(parking.status, "contradicted");
+  assert.equal(parking.source, "api");
+});
+
+test("moteur Jev : « Ascenseur : Non » dans les champs, « avec ascenseur » dans le texte → Jev relit, le oui remplace le non", async () => {
+  const criteria = criteriaOf(["ascenseur"]);
+  const listing = withFields(criteria, "Immeuble récent avec ascenseur. Studio lumineux.", { attributes: [{ key: "elevator", value_label: "Non" }] },
+    [{ label: "Ascenseur", value: "Non", source: "annonce", evidence: "Indiqué dans l’annonce : « elevator »." }]);
+  const jev = fakeJev({ offer: { choice: "entire", confidence: 0.95 }, elevator: { choice: "yes", confidence: 0.96 } });
+  const { llm, payloads } = fakeLlm();
+  const [result] = await analyze([listing], criteria, { llm, jev: jev.decide, cache: memoryAnalysisCache() });
+  assert.ok(jev.asked[0].includes("elevator"), "le « non » des champs n'empêche pas de demander");
+  assert.deepEqual(payloads[0].toVerify, [], "tranché par Jev : rien de plus pour le LLM");
+  const elevator = result.criterionResults.find(check => check.label === "ascenseur")!;
+  assert.deepEqual([elevator.status, elevator.evidence], ["confirmed", "Immeuble récent avec ascenseur."]);
+  assert.deepEqual(result.features.filter(feature => feature.label === "Ascenseur").map(feature => [feature.value, feature.source]), [["", "ia"]], "plus d'« Ascenseur : Non »");
+});
+
+test("un « oui » des champs fait foi : pas redemandé ; « non » des champs et du texte : affiché une seule fois", async () => {
+  const { decide, asked } = fakeJev({});
+  await readWithJev(listing("Ascenseur et parking.", { features: [
+    { label: "Ascenseur", value: "Oui", source: "annonce", evidence: "" }, { label: "Stationnement", value: "1 place(s)", source: "annonce", evidence: "" },
+  ] } as Partial<Listing>), [], decide);
+  assert.ok(!asked[0].includes("elevator") && !asked[0].includes("parking"));
+  const { mergeFeatures } = await import("./ai");
+  const no = (label: string, source: "annonce" | "ia") => ({ label, value: "Non", source, evidence: "" });
+  assert.deepEqual(mergeFeatures([no("Ascenseur", "annonce")], [no("Ascenseur", "ia")]).map(feature => feature.source), ["annonce"]);
+});

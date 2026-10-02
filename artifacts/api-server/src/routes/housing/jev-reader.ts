@@ -9,7 +9,8 @@
  *  - écarter une annonce (chambre, local) exige 0,90 (JEV_HIDE_CONFIDENCE) ET une phrase qui le montre.
  * « Non précisé » n'est jamais un « non ».
  */
-import { CATALOGUE, catalogueFeature, catalogueFor, sentenceWith, wantsAbsence, type CatalogueFeature } from "./catalogue";
+import { isWeakStructured } from "./criteria";
+import { CATALOGUE, catalogueFeature, catalogueFor, saysNo, sentenceWith, wantsAbsence, type CatalogueFeature } from "./catalogue";
 import { criterionKey, type OfferKind, type Verdict } from "../../lib/analysis-cache";
 import { jevHideConfidence, jevMinConfidence, type JevChoiceQuestion, type JevDecide } from "../../lib/jev";
 import type { CriterionResult, Feature, Listing } from "./store";
@@ -50,14 +51,15 @@ export type JevReading = {
 
 export async function readWithJev(listing: Pick<Listing, "title" | "description" | "features">, checks: CriterionResult[], decide: JevDecide): Promise<JevReading> {
   const text = `${listing.title}\n${listing.description}`;
-  const known = new Set(listing.features.filter(feature => feature.source === "annonce").map(feature => feature.label));
+  // Seul un « oui » des champs fait foi ; un « non » (souvent non rempli) est revérifié dans la description.
+  const known = new Set(listing.features.filter(feature => feature.source === "annonce" && !saysNo(feature.value)).map(feature => feature.label));
   const isKnown = (feature: CatalogueFeature) => (LBC_LABELS[feature.id] ?? [feature.label]).some(label => known.has(label));
   // Caractéristiques à demander : pas déjà données par Le Bon Coin, et dont le sujet apparaît dans l'annonce.
   const asked = new Map<string, CatalogueFeature>();
   for (const feature of CATALOGUE) if (feature.id !== "outdoor" && !isKnown(feature) && feature.keyword.test(text)) asked.set(feature.id, feature);
   // Critères de l'utilisateur qui relèvent du catalogue (« balcon », « chat accepté »…), même composite (« extérieur »).
   const featureOf = (check: CriterionResult) => check.id.startsWith("wish-") ? catalogueFor(check.label) : undefined;
-  const wishes = checks.filter(check => check.status === "unknown" && featureOf(check));
+  const wishes = checks.filter(check => (check.status === "unknown" || isWeakStructured(check)) && featureOf(check));
   for (const check of wishes) { const feature = featureOf(check)!; if (feature.keyword.test(text)) asked.set(feature.id, feature); }
 
   const questions: Record<string, JevChoiceQuestion> = { offer: OFFER_QUESTION };

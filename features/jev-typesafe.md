@@ -133,6 +133,10 @@ Trois étages, du plus sûr au plus cher, autour d'un **catalogue de 33 caracté
    `floor_number`), l'état (`global_condition`), les charges comprises, le chauffage (« Individuel · gaz ») et la date
    de disponibilité. Ils tranchent les critères correspondants (« cave », « chat accepté », « sans ascenseur »,
    « pas de rez-de-chaussée »…) et s'affichent comme caractéristiques. Une case non cochée reste « à vérifier ».
+   **Seul un « oui » des champs fait foi.** Un « non » (« Ascenseur : Non », « 0 place ») est souvent une valeur par
+   défaut que le propriétaire n'a pas remplie : la description est lue quand même (Jev ou LLM), et un « oui » explicite
+   y l'emporte (critère et caractéristique) ; si elle ne dit rien, le « non » des champs reste affiché. Vaut pour les
+   deux moteurs (`isWeakStructured`, `saysNo`, `mergeFeatures`).
 2. **Jev** (`ANALYSIS_ENGINE=jev` + `JEV_API_KEY`) : type d'offre, caractéristiques du catalogue que Le Bon Coin ne dit
    pas, et critères de l'utilisateur qui en relèvent. Une question n'est posée que si le sujet apparaît dans le texte
    (≈ 6 questions par annonce au lieu de 34) ; réponse retenue au-dessus de 0,85 (`JEV_MIN_CONFIDENCE`), avec la phrase
