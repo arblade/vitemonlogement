@@ -78,6 +78,7 @@ async function main() {
   const score = { decided: 0, right: 0, falseYes: 0, judged: 0 };
   const offerScore = { decided: 0, right: 0, judged: 0 };
   const llmAgreement = { compared: 0, same: 0 };
+  let llmFailed = 0;
   for (const [index, item] of items.entries()) {
     const listing = toListing(item, index + 1);
     const started = Date.now();
@@ -94,7 +95,9 @@ async function main() {
     }
     if (reading.offer) { offerScore.decided++; if (item.truth?.offer) { offerScore.judged++; if (item.truth.offer === reading.offer.kind) offerScore.right++; } }
     if (withLlm) {
-      const [llm] = await analyze([toListing(item, index + 1)], criteria, { jev: null, cache: memoryAnalysisCache() });
+      let llm: Listing;
+      try { [llm] = await analyze([toListing(item, index + 1)], criteria, { jev: null, cache: memoryAnalysisCache() }); }
+      catch (error) { llmFailed++; console.error(`LLM en échec sur l'annonce ${index + 1} : ${error instanceof Error ? error.message : error}`); continue; }
       for (const check of llm.criterionResults.filter(result => result.id.startsWith("wish-"))) {
         const jevVerdict = Object.entries(reading.verdicts).find(([key]) => key.includes(check.label.toLocaleLowerCase("fr")))?.[1];
         if (!jevVerdict || check.status === "unknown") continue;
@@ -116,6 +119,7 @@ async function main() {
     `| Justes (sur annotées) | ${pct(score.right, score.judged)} (${score.right}/${score.judged}) |`,
     `| Faux « oui » (sur annotées) | ${score.falseYes} |`,
     `| Type d'offre tranché / juste | ${offerScore.decided} / ${pct(offerScore.right, offerScore.judged)} |`,
+    withLlm ? `| Annonces où le LLM a échoué (aucun contenu) | ${llmFailed} |` : "",
     withLlm ? `| Accord Jev / LLM sur les critères tranchés par les deux | ${pct(llmAgreement.same, llmAgreement.compared)} (${llmAgreement.same}/${llmAgreement.compared}) |` : "",
     "", "| # | Annonce | Offre | Caractéristiques (Jev) | Tokens |", "|---|---|---|---|---|", ...rows,
   ].filter(line => line !== "").join("\n");
