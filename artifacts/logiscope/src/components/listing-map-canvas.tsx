@@ -145,7 +145,7 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes, sto
   }, [home.lat, home.lng, radius, places, routes, stop?.name, stop?.lat, stop?.lng]);
 
   // Afficher ou masquer les lignes sans recréer la carte.
-  useEffect(() => { if (mapRef.current) setLinesShown(setTransitLines(mapRef.current, showLines)); }, [showLines]);
+  useEffect(() => { if (mapRef.current) setLinesShown(setTransitLines(mapRef.current, showLines, true)); }, [showLines]);
 
   if (failed) return <div className="grid h-full place-items-center px-6 text-center text-xs text-stone">La carte ne peut pas s’afficher sur cet appareil.</div>;
   // data-* : trajets, tronçons pleins, pointillés et lignes droites réellement tracés (utilisé par les tests navigateur).

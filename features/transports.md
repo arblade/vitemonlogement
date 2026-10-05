@@ -44,10 +44,11 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
 - API : champ `nearestStop` de `HousingListing` (nom, position, distance, minutes, lignes).
 
 ### 3. Lignes de tram et de métro, en option
-- Interrupteur « Lignes tram · métro » en haut à gauche de chaque carte (fiche et carte des résultats), éteint par
+- Interrupteur « Lignes tram · métro » en bas à gauche de chaque carte (fiche et carte des résultats), éteint par
   défaut, choix mémorisé sur l'appareil. Allumé : voies de métro en bleu, de tram en violet, tunnels en tirets, et une
   légende.
-- Les tuiles n'ont ces voies qu'à partir du zoom 14 : plus loin, la légende dit « Zoomez pour voir les lignes ».
+- Les tuiles n'ont ces voies qu'à partir du zoom 14 : dans la fiche, allumer les lignes sur une carte plus éloignée
+  la rapproche au zoom 14 (la carte des résultats ne bouge pas, les logements sortiraient du cadre) ; si l'on dézoome ensuite, la légende dit « Zoomez pour voir les lignes ».
 
 ## Limites et suites possibles
 - **Marche estimée, pas calculée** : en ville, l'erreur est de l'ordre de ± 2 à 3 min ; elle peut être plus forte
@@ -70,5 +71,11 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
   (station dans la fiche, interrupteur et légende, invitation à zoomer), `search-detail.test.tsx` (ligne sur la carte).
 - Navigateur (`e2e/app.e2e.mjs`, mobile puis desktop) : station sur la carte d'annonce et dans la fiche, couches
   transport posées, interrupteur des lignes sur la fiche et sur la carte des résultats.
+
+## Captures
+`maquettes/transport-*` (mobile 390 px et desktop 1280 px, vrai fond OpenFreeMap) : `carte-annonce` (ligne « 10 min à
+pied · Métro Rihour M1 »), `fiche-station` (stations grises, repère Rihour), `fiche-lignes` (lignes allumées, métro
+souterrain en tirets). La carte des résultats en desktop n'a pas pu être capturée dans l'environnement de test (rendu
+WebGL logiciel trop lent) ; le test navigateur la vérifie en mobile et en desktop.
 
 Données © les contributeurs d'OpenStreetMap, licence ODbL (déjà crédité sur la carte).

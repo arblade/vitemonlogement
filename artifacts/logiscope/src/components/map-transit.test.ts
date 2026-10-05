@@ -14,7 +14,7 @@ function fakeMap(withSource = true, glyphs = true) {
     setLayoutProperty: (id: string, key: string, value: unknown) => { layers.get(id)!.layout![key] = value; },
     getLayoutProperty: (id: string, key: string) => layers.get(id)!.layout![key],
     getStyle: () => ({ glyphs: glyphs ? 'https://fonts/{fontstack}/{range}.pbf' : undefined }),
-    hasImage: () => false, addImage: vi.fn(), on: vi.fn(),
+    hasImage: () => false, addImage: vi.fn(), on: vi.fn(), zoom: 15, getZoom(this: { zoom: number }) { return this.zoom; }, easeTo: vi.fn(),
   };
   return map;
 }
@@ -57,6 +57,22 @@ describe('fond de carte : transports', () => {
     expect(addTransitLayers(bare as unknown as maplibregl.Map, true)).toBe(false);
     expect(bare.addLayer).not.toHaveBeenCalled();
     expect(setTransitLines(bare as unknown as maplibregl.Map, true)).toBe(false);
+    expect(bare.easeTo).not.toHaveBeenCalled();
+  });
+
+  it('fiche : lignes demandées sur une carte trop dézoomée → rapprochée au zoom 14 ; déjà assez près, lignes masquées ou carte des résultats : rien ne bouge', () => {
+    const map = fakeMap();
+    addTransitLayers(map as unknown as maplibregl.Map, false);
+    setTransitLines(map as unknown as maplibregl.Map, true);
+    expect(map.easeTo).not.toHaveBeenCalled();
+    map.zoom = 12.4;
+    setTransitLines(map as unknown as maplibregl.Map, false, true);
+    expect(map.easeTo).not.toHaveBeenCalled();
+    setTransitLines(map as unknown as maplibregl.Map, true); // carte des résultats : ne bouge pas
+    expect(map.easeTo).not.toHaveBeenCalled();
+    setTransitLines(map as unknown as maplibregl.Map, true, true);
+    expect(map.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: LINES_MIN_ZOOM }));
+    expect(map.easeTo).toHaveBeenCalledTimes(1);
   });
 
   it('style sans police : stations en icônes seules (un nom serait refusé par MapLibre)', () => {

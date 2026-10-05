@@ -91,8 +91,13 @@ export function addTransitLayers(map: maplibregl.Map, showLines: boolean) {
   return true;
 }
 
-/** Montre ou masque les voies ; renvoie leur état réel (faux si les couches n'existent pas). */
-export function setTransitLines(map: maplibregl.Map, showLines: boolean) {
+/**
+ * Montre ou masque les voies ; renvoie leur état réel (faux si les couches n'existent pas). Avec `zoomIn` (carte d'un
+ * seul logement), les montrer sur une carte trop dézoomée (les tuiles n'en ont pas) la rapproche au zoom 14, sans
+ * changer son centre ; la carte des résultats ne bouge pas (les logements sortiraient du cadre).
+ */
+export function setTransitLines(map: maplibregl.Map, showLines: boolean, zoomIn = false) {
   for (const id of LINE_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', showLines ? 'visible' : 'none');
+  if (zoomIn && showLines && map.getLayer(LINE_LAYERS[1]) && map.getZoom() < LINES_MIN_ZOOM) map.easeTo({ zoom: LINES_MIN_ZOOM, duration: 300 });
   return Boolean(map.getLayer(LINE_LAYERS[1])) && map.getLayoutProperty(LINE_LAYERS[1], 'visibility') === 'visible';
 }

@@ -14,9 +14,9 @@ export function useTransitLines() {
   return [show, toggle] as const;
 }
 
-/** Interrupteur posé sur la carte, en haut à gauche ; légende des couleurs quand les lignes sont affichées. */
+/** Interrupteur posé sur la carte, en bas à gauche (le logement est au centre, le zoom en haut à droite) ; légende des couleurs quand les lignes sont affichées. */
 export function TransitLinesToggle({ show, onToggle, testId, zoomHint = false }: { show: boolean; onToggle: () => void; testId: string; zoomHint?: boolean }) {
-  return <div className="absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1">
+  return <div className="absolute bottom-2.5 left-2.5 z-10 flex flex-col-reverse items-start gap-1">
     <button type="button" role="switch" aria-checked={show} data-testid={testId} onClick={onToggle}
       className={`inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold shadow-[0_1px_4px_rgba(0,0,0,.18)] transition-colors ${show ? 'border-ink bg-ink text-[#ffffff]' : 'border-line bg-[#ffffff] text-ink hover:border-ink'}`}>
       <TramFront size={14} aria-hidden="true"/>Lignes tram · métro

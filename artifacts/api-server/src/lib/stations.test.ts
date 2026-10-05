@@ -10,6 +10,7 @@ test("parseLines : métro d'abord, ordre naturel, couleur absente = null", () =>
     { mode: "metro", name: "2", color: "#003ca6" }, { mode: "metro", name: "10", color: "#c9910d" }, { mode: "tram", name: "T2", color: null },
   ]);
   assert.deepEqual(parseLines(""), []);
+  assert.deepEqual(parseLines("t|T2|#ab0672;t|T2|#cc008e;m|b|#00893e"), [{ mode: "metro", name: "B", color: "#00893e" }, { mode: "tram", name: "T2", color: "#ab0672" }]);
 });
 
 test("marche estimée : vol d'oiseau × 1,3 à 80 m/min, au moins 1 min", () => {

@@ -1,18 +1,24 @@
 import data from "../data/stations.json";
 
 // Stations de métro et de tram de France (OpenStreetMap, voir scripts/build-stations.mjs), cherchées en mémoire :
-// ~3 000 lignes, pas de table, aucun appel extérieur. Données © les contributeurs d'OpenStreetMap (ODbL).
+// ~2 200 stations, pas de table, aucun appel extérieur. Données © les contributeurs d'OpenStreetMap (ODbL).
 export type StopLine = { mode: "metro" | "tram"; name: string; color: string | null };
 export type Station = { name: string; lat: number; lng: number; lines: StopLine[] };
 export type NearestStop = Station & { distanceMeters: number; walkMinutes: number };
 
 type Row = [string, number, number, string];
 
-/** "m|1|#ffcd00;t|T2|" → lignes, métro d'abord puis ordre naturel (« 2 » avant « 10 »). */
+/** "m|1|#ffcd00;t|T2|" → lignes, sans doublon, métro d'abord puis ordre naturel (« 2 » avant « 10 »). */
 export function parseLines(value: string): StopLine[] {
-  return value.split(";").filter(Boolean).map(item => {
-    const [mode, name, color] = item.split("|");
-    return { mode: mode === "m" ? "metro" as const : "tram" as const, name, color: color || null };
+  const seen = new Set<string>();
+  return value.split(";").filter(Boolean).flatMap(item => {
+    const [mode, raw, color] = item.split("|");
+    // « b » (Rennes) → « B » ; une même ligne saisie deux fois (une relation par sens, couleurs différentes) : la première.
+    const name = raw.length === 1 ? raw.toUpperCase() : raw;
+    const line = { mode: mode === "m" ? "metro" as const : "tram" as const, name, color: color || null };
+    if (seen.has(`${line.mode}|${name}`)) return [];
+    seen.add(`${line.mode}|${name}`);
+    return [line];
   }).sort((a, b) => (a.mode === b.mode ? 0 : a.mode === "metro" ? -1 : 1) || a.name.localeCompare(b.name, "fr", { numeric: true }));
 }
 
