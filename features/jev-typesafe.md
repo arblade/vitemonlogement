@@ -164,6 +164,25 @@ OpenAI est déjà faible face à Apify (≈ 20 % de la dépense) : Jev réduit s
 | 2 | Banc d'essai : les 69 annonces réelles déjà utilisées, vérité annotée à la main sur ≈ 15 caractéristiques + type d'offre + 3 critères ; Jev contre gpt-5-mini : justesse, faux « oui », tokens réellement facturés, latence | 1 jour | < 1 $ |
 | 3 | Si concluant : moteur Jev derrière `ANALYSIS_ENGINE`, catalogue de caractéristiques, seuils, garde-fou mots-clés ; résumé et adresse au LLM à l'ouverture de la fiche ; tests (faux Jev, comme les faux Apify/OpenAI) | 2 jours | — |
 
+## Mise à jour du 05/10 : lecture de tout le catalogue, appréciations, affichage par thème
+Suite à l'étude (voir plus haut), développé et testé, **toujours derrière `ANALYSIS_ENGINE=jev`** (défaut : LLM seul) :
+- **Jev lit tout le catalogue sur chaque annonce** (une requête, ≈ 0,0002 $), plus 6 appréciations (calme, lumineux,
+  bon état, vue dégagée, cachet, rangements). Seuls les sujets « à risque » (balcon, terrasse, jardin, duplex,
+  dernier étage, parking, colocation, charges : `guard`) exigent que le mot-clé figure dans l'annonce.
+- **Rien n'est affiché de ce que l'annonce ne dit pas.** Un « non » et toute appréciation ne sont retenus qu'avec la
+  phrase de l'annonce qui les porte ; « charges comprises » : seul un « oui » (ambigu sinon) ; un critère demandé que
+  rien ne tranche reste « à vérifier » (et seulement lui).
+- **Un souhait qui vise plusieurs sujets** (« terrasse ou balcon », « calme et proche métro ») reste au LLM ;
+  « calme », « lumineux », « bon état », « vue dégagée » sont tranchés par Jev avec citation.
+- **Rejeu sur les 188 annonces de l'étude (sans les champs Le Bon Coin) : précision 99,5 %, rappel 70 %**, 7,7
+  caractéristiques affichées par annonce, 5 inventées, 2 contradictions.
+- **Modèle Jev** : `jev-latest` par défaut (l'API refuse un appel sans modèle), `JEV_MODEL` pour changer.
+- **Carte** : critères de l'utilisateur d'abord, puis des atouts confirmés (extérieur, vue, dernier étage, ascenseur,
+  parking, meublé, cachet/duplex, lumineux, calme), 6 pastilles au plus ; jamais de « non ». **Fiche** : caractéristiques
+  par thème (extérieur et annexes, intérieur, immeuble, quartier, conditions, autres). Maquette : `features/maquettes/affichage-criteres.html`.
+- **Pas fait** : « spacieux » (m² par pièce) et énergie (lettre du DPE) calculés par règle : seuils à valider.
+  Pas de nouvelle version d'analyse : les annonces déjà en cache gardent leur lecture jusqu'à une nouvelle analyse.
+
 ## Implémenté (branche `jev`)
 Trois étages, du plus sûr au plus cher, autour d'un **catalogue de 33 caractéristiques** (`routes/housing/catalogue.ts`) :
 1. **Le Bon Coin** (gratuit, certain, actif même sans Jev) : en plus des champs déjà lus, les cases « Spécificités »

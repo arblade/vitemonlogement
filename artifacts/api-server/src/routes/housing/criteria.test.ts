@@ -7,12 +7,13 @@ import type { Criteria } from "./store";
 const base: Criteria = { location: "Lille", intent: "rent", keywords: "", radius: 5, wishes: [] };
 const listing = { price: 600, area: 30, rooms: 1, location: "Lille" };
 
-test("classifyWish : seuls parking, meublé et ascenseur sont hybrides", () => {
+test("classifyWish : un souhait simple vise une caractéristique du catalogue ; un souhait complexe reste au LLM", () => {
   assert.equal(classifyWish("place de parking"), "parking");
   assert.equal(classifyWish("garage"), "parking");
   assert.equal(classifyWish("meublé"), "furnished");
   assert.equal(classifyWish("ascenseur"), "elevator");
-  assert.equal(classifyWish("calme"), null);
+  assert.equal(classifyWish("calme"), "quiet", "une appréciation que Jev lit aussi (étude du 05/10)");
+  assert.equal(classifyWish("calme et proche de mon travail"), null, "plusieurs sujets : le LLM");
 });
 
 test("checksFor : lieu, budget, surface, pièces et souhaits sont tous représentés", () => {

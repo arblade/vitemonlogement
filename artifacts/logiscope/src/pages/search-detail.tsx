@@ -13,7 +13,7 @@ import { useWatchedSearch } from '@/lib/watch';
 import { ago, at } from '@/lib/dates';
 import { ResultsMap } from '@/components/results-map';
 import { mappedListings } from '@/lib/geo';
-import { featureIcon, featureText, generalIcons, listingFacts, sortFeatures } from '@/components/listing-facts';
+import { featureIcon, featureText, generalIcons, listingFacts, cardAtouts } from '@/components/listing-facts';
 import { SearchProgress } from '@/components/search-progress';
 import { SearchRequestDebug } from '@/components/search-request-debug';
 import { EditPromptButton, SearchPromptEditor } from '@/components/search-prompt-editor';
@@ -122,12 +122,15 @@ function LoadMore({ remaining, loading, onLoad }: { remaining: number; loading: 
 const CARD_CHIPS = 6;
 const STATUS_TEXT = { confirmed: 'confirmé', contradicted: 'ne correspond pas', unknown: 'à vérifier' } as const;
 
-/** Une seule rangée de pastilles, sans titre : vos critères d'abord (couleur = statut), puis les autres caractéristiques (neutres). */
+/**
+ * Une seule rangée de pastilles, sans titre : vos critères d'abord (couleur = statut ; « à vérifier » seulement pour ce que
+ * vous avez demandé), puis quelques atouts que l'annonce confirme (neutres). Ni « non », ni ce que l'annonce ne dit pas.
+ */
 function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[]) {
   const all = [
     ...criteria.map(result => ({ key: `c-${result.id}`, testId: `card-criterion-${id}-${result.id}`, tone: result.status, text: result.label,
       status: STATUS_TEXT[result.status], Icon: result.status === 'confirmed' ? Check : result.status === 'contradicted' ? Minus : CircleHelp })),
-    ...sortFeatures(features).map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
+    ...cardAtouts(features).map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
   ];
   return { chips: all.slice(0, CARD_CHIPS), hidden: Math.max(0, all.length - CARD_CHIPS) };
 }

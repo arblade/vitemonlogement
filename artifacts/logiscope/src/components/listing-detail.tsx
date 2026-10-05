@@ -4,7 +4,7 @@ import { ArrowUpRight, Check, CircleHelp, Info, Layers2, MapPin, Minus, Sparkles
 import { ListingGallery } from '@/components/listing-gallery';
 import { useState } from 'react';
 import type { HousingFeature } from '@workspace/api-client-react';
-import { featureIcon, featureText, generalIcons, isAbsent, listingFacts, sortFeatures } from '@/components/listing-facts';
+import { featureIcon, featureText, generalIcons, groupFeatures, isAbsent, listingFacts } from '@/components/listing-facts';
 import { ListingMap } from '@/components/listing-map';
 import { sourceName } from '@/lib/sources';
 import { MatchGauge } from '@/components/match-gauge';
@@ -12,18 +12,26 @@ import { MatchGauge } from '@/components/match-gauge';
 const FEATURES_SHOWN = 10;
 const FEATURES_ALL = 12; // jusqu'à 12, tout est montré : pas de bouton pour un ou deux éléments cachés
 
-/** Caractéristiques à la façon Airbnb : icône au trait + mots simples, sans fond ; ce qui manque, barré, à la fin. */
+/** Caractéristiques à la façon Airbnb, par thème : icône au trait + mots simples, sans fond ; ce qui manque, barré, à la fin du thème. */
 function FeatureList({ id, features }: { id: number; features: HousingFeature[] }) {
   const [all, setAll] = useState(false);
-  const ordered = sortFeatures(features);
-  const folded = ordered.length > FEATURES_ALL;
-  const shown = all || !folded ? ordered : ordered.slice(0, FEATURES_SHOWN);
+  const total = features.length;
+  const folded = total > FEATURES_ALL;
+  let budget = all || !folded ? total : FEATURES_SHOWN; // jusqu'à 12, tout est montré : pas de bouton pour un ou deux éléments cachés
+  const groups = groupFeatures(features).map(group => {
+    const shown = group.features.slice(0, Math.max(0, budget));
+    budget -= shown.length;
+    return { ...group, shown };
+  }).filter(group => group.shown.length);
   return <>
-    <ul data-testid={`features-${id}`} className="mt-5 grid grid-cols-1 gap-x-8 sm:grid-cols-2">{shown.map((feature, index) => { const Icon = featureIcon(feature.label); const absent = isAbsent(feature); return <li key={`${feature.label}-${index}`} className="flex min-w-0 items-center gap-4 py-2.5 text-[15px] leading-snug">
-      <Icon size={22} strokeWidth={1.6} aria-hidden="true" className={`shrink-0 ${absent ? 'text-[#b0b0b0]' : 'text-ink'}`}/>
-      <span className={absent ? 'text-stone line-through' : ''}>{absent ? feature.label : featureText(feature)}</span>{absent && <span className="sr-only"> : absent</span>}
-    </li>; })}</ul>
-    {folded && <button type="button" data-testid={`button-all-features-${id}`} onClick={() => setAll(value => !value)} aria-expanded={all} className="mt-5 inline-flex min-h-11 items-center rounded-lg border border-ink px-5 text-[14px] font-semibold transition-colors hover:bg-sage">{all ? 'Afficher moins' : `Afficher les ${ordered.length} caractéristiques`}</button>}
+    <div data-testid={`features-${id}`}>{groups.map((group, groupIndex) => <div key={group.id} data-testid={`features-group-${id}-${group.id}`} className={groupIndex ? 'mt-7' : 'mt-5'}>
+      <h3 className="font-data text-xs uppercase tracking-[.1em] text-stone">{group.title}</h3>
+      <ul className="mt-2 grid grid-cols-1 gap-x-8 sm:grid-cols-2">{group.shown.map((feature, index) => { const Icon = featureIcon(feature.label); const absent = isAbsent(feature); return <li key={`${feature.label}-${index}`} className="flex min-w-0 items-center gap-4 py-2.5 text-[15px] leading-snug">
+        <Icon size={22} strokeWidth={1.6} aria-hidden="true" className={`shrink-0 ${absent ? 'text-[#b0b0b0]' : 'text-ink'}`}/>
+        <span className={absent ? 'text-stone line-through' : ''}>{absent ? feature.label : featureText(feature)}</span>{absent && <span className="sr-only"> : absent</span>}
+      </li>; })}</ul>
+    </div>)}</div>
+    {folded && <button type="button" data-testid={`button-all-features-${id}`} onClick={() => setAll(value => !value)} aria-expanded={all} className="mt-5 inline-flex min-h-11 items-center rounded-lg border border-ink px-5 text-[14px] font-semibold transition-colors hover:bg-sage">{all ? 'Afficher moins' : `Afficher les ${total} caractéristiques`}</button>}
   </>;
 }
 

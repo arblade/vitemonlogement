@@ -23,6 +23,18 @@ export type CatalogueFeature = {
   keyword: RegExp;
   /** Question posée à Jev (oui / non / non précisé). */
   question: string;
+  /**
+   * Sujet « à risque » : Jev l'invente volontiers à partir du reste du texte (balcon, terrasse, duplex…, mesuré le
+   * 05/10 sur 188 annonces). On ne lui pose la question que si le mot-clé figure dans l'annonce.
+   */
+  guard?: boolean;
+  /**
+   * Un « non » de Jev n'est jamais retenu : sujet ambigu (« 645 € hors charges + 55 € de charges, soit 700 € » : les
+   * charges sont-elles comprises ?) où Jev et un autre modèle ont donné « non » 8 fois sur 8 contre l'avis de la référence.
+   */
+  yesOnly?: boolean;
+  /** « qualitative » : appréciation (calme, lumineux…), jamais retenue sans phrase de l'annonce qui la porte. */
+  kind?: "qualitative";
   /** Lecture certaine des champs Le Bon Coin ; null si rien n'est dit. */
   structured?: (raw: Record<string, unknown>) => Presence | null;
 };
@@ -66,7 +78,7 @@ function floorProperty(raw: Record<string, unknown>) {
 }
 
 export const CATALOGUE: CatalogueFeature[] = [
-  { id: "parking", label: "Parking", wish: /parking|stationnement|garage|\bbox\b/i, keyword: /parking|stationnement|garage|\bbox\b|place\s+de\s+parc/i,
+  { id: "parking", label: "Parking", guard: true, wish: /parking|stationnement|garage|\bbox\b/i, keyword: /parking|stationnement|garage|\bbox\b|place\s+de\s+parc/i,
     question: "Le logement dispose-t-il d'une place de parking, d'un garage ou d'un box (inclus ou en option) ?",
     structured: raw => {
       if (ticked(/garage|parking/)(raw) === "yes") return "yes";
@@ -82,9 +94,9 @@ export const CATALOGUE: CatalogueFeature[] = [
       return null;
     } },
   { id: "elevator", label: "Ascenseur", wish: /ascenseur/i, keyword: /ascenseur/i, question: "L'immeuble a-t-il un ascenseur ?", structured: yesNo("elevator") },
-  { id: "balcony", label: "Balcon", wish: /balcon|loggia/i, keyword: /balcon|loggia/i, question: "Le logement a-t-il un balcon ou une loggia ?", structured: yesNo("balcony") },
-  { id: "terrace", label: "Terrasse", wish: /terrasse/i, keyword: /terrasse/i, question: "Le logement a-t-il une terrasse ?", structured: yesNo("terrace") },
-  { id: "garden", label: "Jardin", wish: /jardin/i, keyword: /jardin/i, question: "Le logement a-t-il un jardin (privatif ou commun) ?", structured: yesNo("garden") },
+  { id: "balcony", label: "Balcon", guard: true, wish: /balcon|loggia/i, keyword: /balcon|loggia/i, question: "Le logement a-t-il un balcon ou une loggia ?", structured: yesNo("balcony") },
+  { id: "terrace", label: "Terrasse", guard: true, wish: /terrasse/i, keyword: /terrasse/i, question: "Le logement a-t-il une terrasse ?", structured: yesNo("terrace") },
+  { id: "garden", label: "Jardin", guard: true, wish: /jardin/i, keyword: /jardin/i, question: "Le logement a-t-il un jardin (privatif ou commun) ?", structured: yesNo("garden") },
   { id: "outdoor", label: "Extérieur", wish: /ext[ée]rieur/i, keyword: /balcon|loggia|terrasse|jardin|ext[ée]rieur|cour\b/i,
     question: "Le logement a-t-il un espace extérieur (balcon, loggia, terrasse, jardin ou cour) ?",
     structured: either(yesNo("balcony"), yesNo("terrace"), yesNo("garden")) },
@@ -105,16 +117,16 @@ export const CATALOGUE: CatalogueFeature[] = [
   { id: "caretaker", label: "Gardien", wish: /gardien|concierge/i, keyword: /gardien|concierge/i, question: "L'immeuble a-t-il un gardien ou un concierge ?", structured: ticked(/gardien|concierge/) },
   { id: "pets", label: "Animaux acceptés", wish: /animal|animaux|\bchats?\b|\bchiens?\b/i, keyword: /animal|animaux|\bchats?\b|\bchiens?\b/i,
     question: "Les animaux de compagnie sont-ils acceptés ?", structured: ticked(/animaux autoris/) },
-  { id: "flatshare", label: "Colocation acceptée", wish: /colocation|coloc\b/i, keyword: /coloc/i, question: "Le logement entier peut-il être loué en colocation ?" },
+  { id: "flatshare", label: "Colocation acceptée", guard: true, wish: /colocation|coloc\b/i, keyword: /coloc/i, question: "Le logement entier peut-il être loué en colocation ?" },
   { id: "students", label: "Étudiants acceptés", wish: /[ée]tudiant/i, keyword: /[ée]tudiant/i, question: "Les étudiants sont-ils acceptés comme locataires ?" },
   { id: "visale", label: "Garantie Visale", wish: /visale/i, keyword: /visale/i, question: "La garantie Visale est-elle acceptée ?" },
   { id: "apl", label: "APL possible", wish: /\bapl\b|aide\s+au\s+logement|\bcaf\b/i, keyword: /\bapl\b|\bcaf\b|aide\s+au\s+logement/i, question: "Le logement est-il éligible aux APL (aide au logement de la CAF) ?" },
   { id: "no_fees", label: "Sans frais d'agence", wish: /sans\s+frais|sans\s+agence|particulier/i, keyword: /frais\s+d.agence|honoraires|sans\s+frais|particulier/i,
     question: "La location se fait-elle sans frais d'agence (de particulier à particulier) ?" },
-  { id: "charges_included", label: "Charges comprises", wish: /charges?\s+compris|cc\b/i, keyword: /charges?|\bcc\b/i, question: "Les charges sont-elles comprises dans le loyer ?", structured: yesNo("charges_included") },
+  { id: "charges_included", label: "Charges comprises", guard: true, yesOnly: true, wish: /charges?\s+compris|cc\b/i, keyword: /charges?|\bcc\b/i, question: "Les charges sont-elles comprises dans le loyer ?", structured: yesNo("charges_included") },
   { id: "renovated", label: "Rénové", wish: /r[ée]nov|refait|neuf/i, keyword: /r[ée]nov|refait|neuf/i, question: "Le logement est-il refait à neuf ou récemment rénové ?",
     structured: raw => /neuf|r[ée]nov/i.test(String(apiValue(raw, "global_condition") ?? "")) ? "yes" : null },
-  { id: "top_floor", label: "Dernier étage", wish: /dernier\s+[ée]tage/i, keyword: /dernier\s+[ée]tage/i, question: "Le logement est-il au dernier étage ?",
+  { id: "top_floor", label: "Dernier étage", guard: true, wish: /dernier\s+[ée]tage/i, keyword: /dernier\s+[ée]tage/i, question: "Le logement est-il au dernier étage ?",
     structured: raw => /dernier [ée]tage/.test(floorProperty(raw)) ? "yes" : null },
   { id: "ground_floor", label: "Rez-de-chaussée", wish: /rez[\s-]*de[\s-]*chauss|\brdc\b/i, keyword: /rez[\s-]*de[\s-]*chauss|\brdc\b/i, question: "Le logement est-il au rez-de-chaussée ?",
     structured: raw => {
@@ -122,19 +134,40 @@ export const CATALOGUE: CatalogueFeature[] = [
       const floor = apiValue(raw, "floor_number");
       return floor == null ? null : Number(floor) === 0 ? "yes" : Number.isFinite(Number(floor)) ? "no" : null;
     } },
-  { id: "duplex", label: "Duplex", wish: /duplex|mezzanine/i, keyword: /duplex|mezzanine/i, question: "Le logement est-il en duplex ou avec mezzanine ?" },
+  { id: "duplex", label: "Duplex", guard: true, wish: /duplex|mezzanine/i, keyword: /duplex|mezzanine/i, question: "Le logement est-il en duplex ou avec mezzanine ?" },
   { id: "transport", label: "Proche transports", wish: /m[ée]tro|tram|gare|transport|\bbus\b/i, keyword: /m[ée]tro|tram|gare|transports?|\bbus\b|\brer\b/i,
     question: "L'annonce dit-elle qu'un métro, tram, bus ou une gare est accessible à pied ?" },
+  // Appréciations : lues par Jev sur toutes les annonces (98 % de précision à 0,85, étude du 05/10), affichées seulement
+  // si l'annonce les porte (phrase citée). « Spacieux » et « économe en énergie » se calculent mieux qu'ils ne se lisent.
+  { id: "quiet", label: "Calme", kind: "qualitative", wish: /calme|tranquille/i, keyword: /calme|tranquill|silenc|paisible/i,
+    question: "Le logement est-il calme ?" },
+  { id: "bright", label: "Lumineux", kind: "qualitative", wish: /lumineu|lumi[èe]re|ensoleill/i, keyword: /lumineu|lumi[èe]re|ensoleill|\bclair|expos[ée]|baign[ée]/i,
+    question: "Le logement est-il lumineux ?" },
+  { id: "good_condition", label: "Bon état", kind: "qualitative", wish: /bon\s+[ée]tat/i, keyword: /[ée]tat|impeccable|r[ée]nov|refait|neuf/i,
+    question: "Le logement est-il en bon état ?" },
+  { id: "view", label: "Vue dégagée", kind: "qualitative", wish: /vue\s+d[ée]gag|belle\s+vue|vue\s+imprenable/i, keyword: /\bvue\b|vis[\s-]*[àa][\s-]*vis|dégag/i,
+    question: "Le logement a-t-il une vue dégagée ou une belle vue ?" },
+  { id: "charm", label: "Cachet", kind: "qualitative", wish: /cachet|charme/i, keyword: /cachet|charm|moulure|poutre|pierres?\s+apparente|haussmann|ancien/i,
+    question: "Le logement a-t-il du cachet ou du charme ?" },
+  { id: "storage", label: "Rangements", kind: "qualitative", wish: /rangement|placard|dressing/i, keyword: /rangement|placard|dressing|penderie|cellier/i,
+    question: "Le logement a-t-il de bons rangements ?" },
 ];
 
 const byId = new Map(CATALOGUE.map(feature => [feature.id, feature]));
 export const catalogueFeature = (id: string | null | undefined) => (id ? byId.get(id) : undefined);
 
-/** Caractéristique du catalogue visée par un souhait (« balcon », « chat accepté »…) ; undefined : critère « complexe » (LLM). */
+/**
+ * Caractéristique du catalogue visée par un souhait (« balcon », « chat accepté »…) ; undefined : critère « complexe » (LLM).
+ * Un souhait qui vise plusieurs sujets (« terrasse ou balcon », « calme et proche de mon travail ») reste aussi au
+ * LLM : trancher sur une seule serait répondre à la moitié de la question.
+ */
 export function catalogueFor(wish: string) {
   // Une phrase de plus de 6 mots (« calme et proche de mon travail ») reste au LLM, même si elle cite un mot connu.
   if (wish.trim().split(/\s+/).length > 6) return undefined;
-  return CATALOGUE.find(feature => feature.wish.test(wish));
+  // « calme et proche de mon travail » : une moitié connue ne tranche pas la question entière.
+  if (/\s(et|ou)\s|[,;+&]/i.test(wish)) return undefined;
+  const hits = CATALOGUE.filter(feature => feature.wish.test(wish));
+  return hits.length === 1 ? hits[0] : undefined;
 }
 
 /** « sans ascenseur », « pas de rez-de-chaussée », « non meublé » : on veut que la caractéristique soit absente. */

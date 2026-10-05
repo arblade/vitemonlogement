@@ -66,7 +66,13 @@ test("catalogue : un souhait simple vise une caractéristique ; une phrase compl
   assert.equal(catalogueFor("chat accepté")?.id, "pets");
   assert.equal(catalogueFor("proche métro")?.id, "transport");
   assert.equal(catalogueFor("lave-vaisselle")?.id, "dishwasher");
-  assert.equal(catalogueFor("calme"), undefined);
+  assert.equal(catalogueFor("calme")?.id, "quiet", "les appréciations sont lues par Jev aussi");
+  assert.equal(catalogueFor("lumineux")?.id, "bright");
+  // Un souhait qui vise plusieurs sujets, ou dont « sans » ne veut pas dire « absent », reste au LLM.
+  for (const wish of ["terrasse ou balcon", "calme et proche métro", "vue sur la mer", "sans vis-à-vis", "pas de travaux", "calme et lumineux", "calme et proche de mon travail", "balcon, cave"]) {
+    assert.equal(catalogueFor(wish), undefined, wish);
+  }
+  assert.equal(catalogueFor("vue dégagée")?.id, "view");
   assert.equal(catalogueFor("à moins de 20 minutes de mon travail en vélo par la piste cyclable"), undefined);
   assert.ok(wantsAbsence("sans ascenseur") && wantsAbsence("pas de rez-de-chaussée") && wantsAbsence("non meublé"));
   assert.ok(!wantsAbsence("balcon"));
@@ -114,6 +120,29 @@ test("client Jev : requête (clé, texte, questions) et réponses lues quel que 
   assert.deepEqual(readAnswers({ decisions: { x: { answer: "no", confidence: "0.9" } } }, ["x"]).x, { choice: "no", confidence: 0.9, probabilities: {} });
 });
 
+test("client Jev : l'API exige un modèle, « jev-latest » par défaut", async () => {
+  const received: { model?: string }[] = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", chunk => (body += chunk));
+    req.on("end", () => { received.push(JSON.parse(body)); res.setHeader("content-type", "application/json"); res.end(JSON.stringify({ answers: {} })); });
+  });
+  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+  process.env.JEV_API_KEY = "jev_test";
+  process.env.JEV_BASE_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1/systemone`;
+  delete process.env.JEV_MODEL;
+  try {
+    await jevDecide("Texte.", {});
+    assert.equal(received[0].model, "jev-latest");
+    process.env.JEV_MODEL = "autre-modele";
+    await jevDecide("Texte.", {});
+    assert.equal(received[1].model, "autre-modele");
+  } finally {
+    server.close();
+    delete process.env.JEV_API_KEY; delete process.env.JEV_MODEL; process.env.JEV_BASE_URL = "http://127.0.0.1:1";
+  }
+});
+
 // --- Étage 2 : lecture par Jev, garde-fous ----------------------------------------------------------------------------
 
 type Scripted = Record<string, { choice: string; confidence: number }>;
@@ -129,13 +158,44 @@ function fakeJev(script: Scripted) {
 const listing = (description: string, extra: Partial<Listing> = {}) => ({ title: "Studio Lille", description, features: [], ...extra }) as Pick<Listing, "title" | "description" | "features">;
 const wish = (id: string, label: string) => ({ id, label, status: "unknown" as const, source: "unknown" as const, value: "", evidence: "" });
 
-test("Jev : questions seulement sur les sujets présents dans l'annonce et pas déjà donnés par Le Bon Coin", async () => {
+test("Jev lit tout le catalogue ; les sujets à risque seulement s'ils sont cités ; rien de ce que Le Bon Coin a déjà dit", async () => {
   const { decide, asked } = fakeJev({});
   await readWithJev(listing("Studio avec balcon et cave. Ascenseur. Proche métro.", {
     features: [{ label: "Ascenseur", value: "Oui", source: "annonce", evidence: "" }],
   } as Partial<Listing>), [], decide);
-  assert.deepEqual(asked[0].sort(), ["balcony", "cellar", "offer", "outdoor", "transport"].filter(id => id !== "outdoor").sort(),
-    "pas l'ascenseur (Le Bon Coin l'a dit), pas le jardin (absent du texte)");
+  const questions = asked[0];
+  for (const id of ["offer", "balcony", "cellar", "transport", "dishwasher", "bathtub", "quiet", "bright", "storage"]) assert.ok(questions.includes(id), `${id} est demandé`);
+  for (const id of ["elevator", "outdoor"]) assert.ok(!questions.includes(id), `${id} : déjà donné par Le Bon Coin / composite`);
+  for (const id of ["garden", "terrace", "parking", "duplex", "top_floor", "flatshare", "charges_included"]) assert.ok(!questions.includes(id), `${id} : sujet à risque absent du texte`);
+  assert.equal(questions.length, CATALOGUE.filter(feature => feature.id !== "outdoor" && feature.id !== "elevator" && (!feature.guard || ["balcony"].includes(feature.id))).length + 1);
+});
+
+test("Jev : un « oui » sans risque se passe de phrase ; un « non » ou une appréciation exigent la phrase de l'annonce", async () => {
+  const { decide } = fakeJev({
+    dishwasher: { choice: "yes", confidence: 0.95 }, // aucun mot-clé dans le texte : retenu sans preuve
+    separate_wc: { choice: "no", confidence: 0.95 },  // « non » sans phrase : écarté
+    quiet: { choice: "yes", confidence: 0.97 },       // appréciation sans phrase : écartée
+    bright: { choice: "yes", confidence: 0.97 },      // appréciation avec phrase : retenue
+    parking: { choice: "yes", confidence: 0.97 },     // sujet à risque absent du texte : jamais demandé
+  });
+  const reading = await readWithJev(listing("Studio refait. Appartement très lumineux, plein sud."), [], decide);
+  assert.deepEqual(reading.features.map(feature => [feature.label, feature.value, feature.evidence]), [
+    ["Lave-vaisselle", "", ""],
+    ["Lumineux", "", "Appartement très lumineux, plein sud."],
+  ]);
+});
+
+test("Jev : « charges comprises » : seul un « oui » est retenu (« hors charges + charges » prête à confusion)", async () => {
+  const reading = (choice: string, text: string) => readWithJev(listing(text), [], fakeJev({ charges_included: { choice, confidence: 0.97 } }).decide);
+  assert.deepEqual((await reading("yes", "Loyer 700 € charges comprises.")).features.map(feature => feature.label), ["Charges comprises"]);
+  assert.deepEqual((await reading("no", "Loyer 645 € hors charges. Charges : 55 €.")).features, []);
+});
+
+test("Jev : rien n'est affiché de ce que l'annonce ne dit pas (ni « non », ni « non précisé »), sauf à vérifier si l'utilisateur le demande", async () => {
+  const { decide } = fakeJev({ pets: { choice: "unstated", confidence: 0.99 }, visale: { choice: "unstated", confidence: 0.99 }, apl: { choice: "unstated", confidence: 0.99 } });
+  const reading = await readWithJev(listing("Studio lumineux."), [wish("wish-1", "chat accepté")], decide);
+  assert.deepEqual(reading.features, [], "aucune caractéristique inventée");
+  assert.deepEqual(reading.verdicts, {}, "le critère demandé n'est pas tranché : il reste « à vérifier » pour le LLM");
 });
 
 test("Jev : réponse retenue au-dessus du seuil, avec la phrase de l'annonce comme preuve ; « non » explicite ; incertain ignoré", async () => {
@@ -205,6 +265,18 @@ test("trois étages : Jev tranche balcon et chat, le LLM ne lit plus que « calm
   assert.equal(status("calme")?.status, "confirmed");
   assert.deepEqual(result.features.map(feature => feature.label).sort(), ["Animaux acceptés", "Balcon", "Cave"], "les caractéristiques viennent de Jev, pas du LLM");
   assert.equal(result.aiSummary, "Studio avec balcon, rue calme.");
+});
+
+test("« calme » et « lumineux » : tranchés par Jev avec la phrase de l'annonce ; sans phrase, le LLM les lit", async () => {
+  const criteria = criteriaOf(["calme", "lumineux", "bon état"]);
+  const { decide } = fakeJev({ offer: { choice: "entire", confidence: 0.95 }, quiet: { choice: "yes", confidence: 0.96 }, bright: { choice: "yes", confidence: 0.95 }, good_condition: { choice: "yes", confidence: 0.99 } });
+  const { llm, payloads } = fakeLlm();
+  const [result] = await analyze([{ ...fullListing(criteria), description: "Studio dans une rue très calme. Lumineux, plein sud. Cave." }], criteria, { llm, jev: decide, cache: memoryAnalysisCache() });
+  assert.deepEqual(payloads[0].toVerify.map(check => check.label), ["bon état"], "« bon état » : aucune phrase ne le porte, le LLM le lira");
+  const verdict = (label: string) => result.criterionResults.find(check => check.label === label);
+  assert.equal(verdict("calme")?.status, "confirmed");
+  assert.equal(verdict("calme")?.evidence, "Studio dans une rue très calme.");
+  assert.equal(verdict("lumineux")?.evidence, "Lumineux, plein sud.");
 });
 
 test("Jev en panne : le LLM fait tout, comme avant", async () => {
