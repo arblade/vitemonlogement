@@ -12,7 +12,8 @@ import { resolvePlace } from "../../lib/places";
 import type { Criteria, Listing, Place } from "./store";
 
 const lille = (resolvePlace("Lille") as { commune: { lat: number; lon: number } }).commune;
-const AIRPORT = { lat: 50.562, lng: 3.089 };
+// Coordonnées IGN de Lille-Lesquin : celles de la table des grands aéroports (airports.ts), qui sert de bout en bout.
+const AIRPORT = { lat: 50.566266, lng: 3.102332 };
 const airport = (over: Partial<Place> = {}): Place => ({ id: "place-1", label: "Aéroport de Lille", kind: "other", address: "aéroport de Lille", mode: null, ...AIRPORT, resolved: "Aéroport de Lille-Lesquin", ...over });
 const criteriaOf = (places: Place[], radius = 5): Criteria => ({ location: "Lille", intent: "rent", keywords: "", radius, places });
 const urlOf = (criteria: Criteria) => new URL(String((housingActorInput(criteria).input as { startUrls: string[] }).startUrls[0])).searchParams;
@@ -49,7 +50,7 @@ test("searchZone : « à Lille ET à moins de X de l'aéroport » → le plus pe
 });
 
 test("URL Le Bon Coin : la zone recentrée y figure (coordonnées et rayon en mètres)", () => {
-  assert.match(urlOf(criteriaOf([airport({ centered: true, maxKm: 3 })])).get("locations") ?? "", /__50\.56200_3\.08900_3000$/);
+  assert.match(urlOf(criteriaOf([airport({ centered: true, maxKm: 3 })])).get("locations") ?? "", /__50\.56627_3\.10233_3000$/);
   assert.match(urlOf(criteriaOf([airport({ maxKm: 20 })])).get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000$`));
 });
 
@@ -127,8 +128,12 @@ before(async () => {
         if (request.messages[0].content.includes("Interprète une demande")) {
           const user = request.messages[1].content;
           const near = { label: "Aéroport de Lille", kind: "other", address: "aéroport de Lille", maxKm: 3, maxMinutes: null };
-          content = { location: "Lille", intent: "rent", radius: 5, keywords: "", uncertainChecks: [],
-            places: [user.includes("autour de") ? { ...near, centered: true } : { ...near, maxKm: 20, centered: false }] };
+          content = user.includes("de voiture de l'aéroport")
+            // Réponse observée 2 fois sur 3 en réel (05/10) : l'aéroport vu comme un lieu, aucune ville.
+            ? { location: "", intent: "rent", radius: 5, keywords: "", uncertainChecks: [], propertyType: "house",
+              places: [{ label: "Aéroport", kind: "other", address: "aéroport de Lille", mode: "drive", maxKm: null, maxMinutes: 30, centered: false }] }
+            : { location: "Lille", intent: "rent", radius: 5, keywords: "", uncertainChecks: [],
+              places: [user.includes("autour de") ? { ...near, centered: true } : { ...near, maxKm: 20, centered: false }] };
         } else {
           const { listings } = JSON.parse(request.messages[1].content) as { listings: { id: number; toVerify: { id: string }[] }[] };
           for (const item of listings) toVerifyIds.push(...item.toVerify.map(check => check.id));
@@ -171,8 +176,8 @@ test("« autour de l'aéroport de Lille, à moins de 3 km » : recherche centré
   assert.equal((await runToCompletion(id)).status, "completed");
   const search = await getSearch(id);
   const place = search?.criteria.places?.[0];
-  assert.deepEqual([place?.lat, place?.lng, place?.resolved, place?.maxKm, place?.centered], [AIRPORT.lat, AIRPORT.lng, "Aéroport de Lille-Lesquin, Lesquin", 3, true]);
-  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", /__50\.56200_3\.08900_3000$/, "zone lue : 3 km autour de l'aéroport, pas autour du centre de Lille");
+  assert.deepEqual([place?.lat, place?.lng, place?.resolved, place?.maxKm, place?.centered], [AIRPORT.lat, AIRPORT.lng, "Aéroport de Lille-Lesquin, Fretin", 3, true]);
+  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", /__50\.56627_3\.10233_3000$/, "zone lue : 3 km autour de l'aéroport, pas autour du centre de Lille");
   assert.deepEqual(search?.criteria.checks?.map(check => check.id), ["distance-place-1"], "plus de critère « Lieu : Lille »");
   const near = search?.listings.find(item => item.url.endsWith("/1"))?.criterionResults.find(check => check.id === "distance-place-1");
   const far = search?.listings.find(item => item.url.endsWith("/2"))?.criterionResults.find(check => check.id === "distance-place-1");
@@ -190,4 +195,20 @@ test("« à Lille, à moins de 20 km de l'aéroport » : double contrainte, zone
   assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000$`));
   assert.deepEqual(search?.criteria.checks?.map(check => check.id), ["location", "distance-place-1"]);
   for (const listing of search?.listings ?? []) assert.equal(listing.criterionResults.find(check => check.id === "distance-place-1")?.status, "confirmed", listing.url);
+});
+
+test("« une maison à moins de 30 min de voiture de l'aéroport de Lille », sans ville comprise par le LLM : la ville vient de l'aéroport, recherche centrée dessus", async () => {
+  const { createSearch, getSearch } = await import("./store");
+  runInputs.length = 0;
+  const id = await createSearch("Une maison à moins de 30 min de voiture de l'aéroport de Lille, moins de 1000 € de loyer");
+  const row = await runToCompletion(id);
+  assert.equal(row.status, "completed", "plus d'échec « Indiquez une ville »");
+  const search = await getSearch(id);
+  assert.equal(search?.criteria.location, "Lille");
+  assert.equal(search?.criteria.places?.[0].centered, true);
+  const zone = new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "";
+  assert.match(zone, /^Lille_\d{5}__50\.56627_3\.10233_(\d+)$/, "zone centrée sur l'aéroport");
+  const radius = Number(zone.split("_").at(-1));
+  assert.ok(radius > 15_000 && radius < 20_000, `30 min en voiture ≈ 17 km autour de l'aéroport (${radius} m), pas 5 km autour de Lille`);
+  assert.deepEqual(search?.criteria.checks?.map(check => check.id), ["distance-place-1"]);
 });

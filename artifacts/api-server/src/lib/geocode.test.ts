@@ -66,8 +66,9 @@ test("locatePlaces : chaque lieu reçoit ses coordonnées et l'adresse retrouvé
 
 // --- Lieux repères (aéroport, gare, hôpital…) : IGN « poi », puis adresse, puis OpenStreetMap ---
 
-const airportPoi = (over: Record<string, unknown> = {}) => ({ geometry: { coordinates: [-1.733001, 48.070897] }, properties: {
-  toponym: "Aéroport de Rennes-Saint-Jacques", category: ["aérodrome", "transport"], city: ["Saint-Jacques-de-la-Lande"], score: 0.85, ...over } });
+// Quimper : absent de la table des grands aéroports (airports.ts), il passe par l'index des lieux de l'IGN.
+const airportPoi = (over: Record<string, unknown> = {}) => ({ geometry: { coordinates: [-4.167786, 47.974957] }, properties: {
+  toponym: "Aéroport de Quimper-Bretagne", category: ["aérodrome", "transport"], city: ["Pluguffan"], depcode: ["29"], score: 0.85, ...over } });
 
 /** Faux IGN (poi / address) et faux Nominatim, dans un même fetcher : on voit qui est appelé et dans quel ordre. */
 function fakeServices(replies: { poi?: unknown[]; address?: unknown[]; nominatim?: unknown[] | { status: number } }) {
@@ -86,10 +87,11 @@ function fakeServices(replies: { poi?: unknown[]; address?: unknown[]; nominatim
   return { fetcher, calls };
 }
 
-test("geocodeLandmark : « aéroport de Rennes » → l'aérodrome de l'index des lieux, nom seul (la ville ajoutée fait échouer la recherche)", async () => {
+test("geocodeLandmark : « aéroport de Quimper » → l'aérodrome de l'index des lieux, nom seul (la ville ajoutée fait échouer la recherche), avec sa commune", async () => {
   const { fetcher, calls } = fakeServices({ poi: [airportPoi()] });
-  assert.deepEqual(await geocodeLandmark("aéroport de Rennes", "Rennes", fetcher), { lat: 48.070897, lng: -1.733001, label: "Aéroport de Rennes-Saint-Jacques, Saint-Jacques-de-la-Lande" });
-  assert.deepEqual(calls, ["poi:aéroport de Rennes"]);
+  assert.deepEqual(await geocodeLandmark("aéroport de Quimper", "Quimper", fetcher),
+    { lat: 47.974957, lng: -4.167786, label: "Aéroport de Quimper-Bretagne, Pluguffan", searchCity: "Pluguffan (29)" });
+  assert.deepEqual(calls, ["poi:aéroport de Quimper"]);
 });
 
 test("geocodeLandmark : un quartier ou un résultat dont le nom ne correspond pas n'est jamais pris (« Sud Gare » n'est pas la gare)", async () => {
@@ -97,7 +99,7 @@ test("geocodeLandmark : un quartier ou un résultat dont le nom ne correspond pa
   const gare = { geometry: { coordinates: [-1.672023, 48.103421] }, properties: { toponym: "Rennes", category: ["gare voyageurs et fret", "transport"], city: ["Rennes"], score: 0.35 } };
   const homonym = { geometry: { coordinates: [2, 47] }, properties: { toponym: "Parc des expositions", category: ["équipement"], city: ["Lyon"], score: 0.9 } };
   const found = await geocodeLandmark("gare de Rennes", "Rennes", fakeServices({ poi: [sudGare, gare] }).fetcher);
-  assert.deepEqual(found, { lat: 48.103421, lng: -1.672023, label: "gare de Rennes" }, "la gare s'appelle « Rennes » dans la base : on garde le nom demandé");
+  assert.deepEqual(found, { lat: 48.103421, lng: -1.672023, label: "gare de Rennes", searchCity: "Rennes" }, "la gare s'appelle « Rennes » dans la base : on garde le nom demandé");
   assert.equal(await geocodeLandmark("gare de Rennes", "", fakeServices({ poi: [sudGare] }).fetcher), null);
   assert.equal(await geocodeLandmark("gare de Rennes", "", fakeServices({ poi: [homonym] }).fetcher), null);
 });
@@ -110,16 +112,16 @@ test("geocodeLandmark : sans réponse de l'IGN « poi », l'adresse ordinaire pu
 });
 
 test("geocodeLandmark : OpenStreetMap n'est cru que pour de vrais équipements, dans la ville recherchée (pas un arrêt de bus, pas un homonyme)", async () => {
-  const busStop = { lat: "48.07", lon: "-1.72", category: "highway", type: "bus_stop", display_name: "Aéroport, Bus, Rennes" };
+  const busStop = { lat: "47.97", lon: "-4.16", category: "highway", type: "bus_stop", display_name: "Aéroport, Bus, Quimper" };
   const elsewhere = { lat: "45.7", lon: "5.0", category: "aeroway", type: "aerodrome", display_name: "Aéroport de Lyon, Colombier-Saugnieu, Rhône" };
-  const rightOne = { lat: "48.0689", lon: "-1.7302", category: "aeroway", type: "aerodrome", display_name: "Rennes Aéroport Bretagne, Saint-Jacques-de-la-Lande, Rennes, Ille-et-Vilaine" };
-  assert.equal(await geocodeLandmark("aéroport", "Rennes", fakeServices({ nominatim: [busStop, elsewhere] }).fetcher), null);
-  assert.deepEqual(await geocodeLandmark("aéroport", "Rennes", fakeServices({ nominatim: [busStop, elsewhere, rightOne] }).fetcher), { lat: 48.0689, lng: -1.7302, label: "Rennes Aéroport Bretagne" });
+  const rightOne = { lat: "47.975", lon: "-4.1678", category: "aeroway", type: "aerodrome", display_name: "Aéroport de Quimper Bretagne, Pluguffan, Quimper, Finistère" };
+  assert.equal(await geocodeLandmark("aéroport", "Quimper", fakeServices({ nominatim: [busStop, elsewhere] }).fetcher), null);
+  assert.deepEqual(await geocodeLandmark("aéroport", "Quimper", fakeServices({ nominatim: [busStop, elsewhere, rightOne] }).fetcher), { lat: 47.975, lng: -4.1678, label: "Aéroport de Quimper Bretagne" });
 });
 
 test("geocodeLandmark : une panne (IGN ou OpenStreetMap, limite de débit 429) donne null, jamais d'exception ; User-Agent envoyé à Nominatim", async () => {
-  assert.equal(await geocodeLandmark("aéroport de Rennes", "Rennes", fakeServices({ nominatim: { status: 429 } }).fetcher), null);
-  assert.equal(await geocodeLandmark("aéroport de Rennes", "Rennes"), null, "vrai fetch vers le port mort du garde-fou hors-ligne");
+  assert.equal(await geocodeLandmark("aéroport de Quimper", "Quimper", fakeServices({ nominatim: { status: 429 } }).fetcher), null);
+  assert.equal(await geocodeLandmark("aéroport de Quimper", "Quimper"), null, "vrai fetch vers le port mort du garde-fou hors-ligne");
   let agent = "";
   const fetcher = (async (input: string | URL, init?: RequestInit) => {
     if (new URL(String(input)).searchParams.get("format")) agent = String((init?.headers as Record<string, string>)["User-Agent"]);
@@ -131,13 +133,13 @@ test("geocodeLandmark : une panne (IGN ou OpenStreetMap, limite de débit 429) d
 
 test("locatePlaces : un lieu avec contrainte de distance passe par la recherche de lieux repères, un lieu de vie ordinaire par la recherche d'adresse", async () => {
   const places: Place[] = [
-    { id: "place-1", label: "Aéroport de Rennes", kind: "other", address: "aéroport de Rennes", maxMinutes: 30 },
+    { id: "place-1", label: "Aéroport de Quimper", kind: "other", address: "aéroport de Quimper", maxMinutes: 30 },
     { id: "place-2", label: "Travail", kind: "work", address: "20 place des Lices" },
   ];
   const { fetcher, calls } = fakeServices({ poi: [airportPoi()], address: [{ geometry: { coordinates: [-1.682821, 48.113521] }, properties: { type: "housenumber", score: 0.97, label: "20 Place des Lices 35000 Rennes" } }] });
   const [airport, work] = await locatePlaces(places, "Rennes", fetcher);
-  assert.deepEqual([airport.lat, airport.lng, airport.resolved], [48.070897, -1.733001, "Aéroport de Rennes-Saint-Jacques, Saint-Jacques-de-la-Lande"]);
+  assert.deepEqual([airport.lat, airport.lng, airport.resolved], [47.974957, -4.167786, "Aéroport de Quimper-Bretagne, Pluguffan"]);
   assert.equal(airport.maxMinutes, 30, "la contrainte est conservée");
   assert.equal(work.lat, 48.113521);
-  assert.deepEqual(calls.sort(), ["address:20 place des Lices, Rennes", "poi:aéroport de Rennes"]);
+  assert.deepEqual(calls.sort(), ["address:20 place des Lices, Rennes", "poi:aéroport de Quimper"]);
 });
