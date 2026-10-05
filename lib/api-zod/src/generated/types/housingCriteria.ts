@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingCriteriaIntent } from './housingCriteriaIntent';
+import type { HousingCriteriaPropertyType } from './housingCriteriaPropertyType';
 import type { HousingCriterion } from './housingCriterion';
 import type { HousingPlace } from './housingPlace';
 
@@ -30,6 +31,11 @@ export interface HousingCriteria {
      */
   radius?: number;
   keywords: string;
+  /**
+     * Dwelling type wanted (house or apartment); null or absent = both
+     * @nullable
+     */
+  propertyType?: HousingCriteriaPropertyType;
   wishes?: string[];
   checks?: HousingCriterion[];
   places?: HousingPlace[];

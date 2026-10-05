@@ -10,6 +10,7 @@ export * from './analysisRequest';
 export * from './healthStatus';
 export * from './housingCriteria';
 export * from './housingCriteriaIntent';
+export * from './housingCriteriaPropertyType';
 export * from './housingCriterion';
 export * from './housingCriterionAvailability';
 export * from './housingCriterionResult';

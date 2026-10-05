@@ -7,6 +7,7 @@ import { accessKey, storedAccess, type Access } from "../../lib/access";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
+import type { PropertyType } from "./property-type";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
 
@@ -51,6 +52,8 @@ export const isPrecise = (listing: Pick<Listing, "lat" | "lng" | "geoPrecision">
 export type Criteria = {
   location: string;
   intent: "rent" | "buy";
+  /** Maison ou appartement ; absent ou null : les deux. */
+  propertyType?: PropertyType | null;
   minPrice?: number | null;
   maxPrice?: number | null;
   minArea?: number | null;

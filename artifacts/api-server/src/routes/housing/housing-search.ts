@@ -1,18 +1,22 @@
 import type { Criteria } from "./store";
 import { resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
+import { realEstateTypes } from "./property-type";
 
 // « broad » : recherche élargie, supprimée le 01/10/2026 ; reste lisible dans les anciennes recherches.
 export type SearchBatch = "focused" | "broad";
 export type ActorRequest = { batch: SearchBatch; path: string; input: string; source?: "leboncoin" | "pap" | "seloger" };
 
-// Un seul mot-clé par recherche : le premier équipement explicite, sinon un type de logement.
+// Un seul mot-clé par recherche : le premier équipement explicite, sinon un type de logement. Quand le type est un
+// critère à part (maison ou appartement), il passe par le filtre de type, pas par le texte : « maison » en mot-clé
+// ferait perdre « pavillon », « villa », « longère ».
 export function focusedSearchTerm(criteria: Criteria): string | null {
   for (const wish of criteria.wishes ?? []) {
     const match = wish.match(/\b(parking|stationnement|garage|meubl[ée]|balcon|jardin|terrasse|ascenseur)\b/i);
     if (match) return match[0].toLocaleLowerCase("fr");
   }
-  return criteria.keywords.match(/\b(appartement|maison|studio|duplex|loft|chambre)\b/i)?.[0]?.toLocaleLowerCase("fr") ?? null;
+  const kinds = criteria.propertyType ? /\b(studio|duplex|loft|chambre)\b/i : /\b(appartement|maison|studio|duplex|loft|chambre)\b/i;
+  return criteria.keywords.match(kinds)?.[0]?.toLocaleLowerCase("fr") ?? null;
 }
 
 // The app only searches rentals. The actor's documented category 10 is locations;
@@ -33,8 +37,6 @@ export function isLeboncoinRentalUrl(value: string) {
   }
 }
 
-/** Types de bien Le Bon Coin (`real_estate_type`) : 1 maison, 2 appartement, 3 terrain, 4 parking, 5 autre. */
-export const DWELLING_TYPES = ["1", "2"] as const;
 const bound = (min: number | null | undefined, max: number | null | undefined) =>
   min == null && max == null ? null : `${min ?? "min"}-${max ?? "max"}`;
 
@@ -52,7 +54,7 @@ export function leboncoinSearchUrl(criteria: Criteria, term: string | null): str
   const params = new URLSearchParams({
     category: "10",
     locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}`,
-    real_estate_type: DWELLING_TYPES.join(","),
+    real_estate_type: realEstateTypes(criteria.propertyType),
   });
   const ranges = { rooms: bound(criteria.minRooms, criteria.maxRooms), square: bound(criteria.minArea, criteria.maxArea), price: bound(criteria.minPrice, criteria.maxPrice) };
   for (const [key, value] of Object.entries(ranges)) if (value) params.set(key, value);

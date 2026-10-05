@@ -242,6 +242,10 @@ components:
         maxRooms: { type: ["integer", "null"] }
         radius: { type: integer, minimum: 0, maximum: 200 }
         keywords: { type: string }
+        propertyType:
+          description: Dwelling type wanted (house or apartment); null or absent = both
+          type: ["string", "null"]
+          enum: [house, apartment, null]
         wishes:
           type: array
           items: { type: string }

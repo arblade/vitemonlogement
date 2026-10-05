@@ -235,6 +235,16 @@ describe('Page résultats : contenu', () => {
     expect(row('Pièces max.')).toHaveTextContent('Pièces max.2');
   });
 
+  it('« Votre demande » dit le type de bien cherché : maison, appartement, ou les deux quand il n\'est pas précisé', () => {
+    const row = (label: string) => screen.getByText(label).parentElement;
+    for (const [propertyType, shown] of [['house', 'Maison'], ['apartment', 'Appartement'], [null, 'Maison ou appartement'], [undefined, 'Maison ou appartement']] as const) {
+      api.state.data = search({ criteria: { ...search().criteria, propertyType } });
+      const { unmount } = renderPage();
+      expect(row('Type de bien')).toHaveTextContent(`Type de bien${shown}`);
+      unmount();
+    }
+  });
+
   it('plus de bloc promotionnel « Le tri est fait » avant les annonces', () => {
     renderPage();
     expect(document.body).not.toHaveTextContent('Le tri est fait');

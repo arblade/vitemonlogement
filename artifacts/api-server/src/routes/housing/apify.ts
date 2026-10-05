@@ -10,6 +10,7 @@ import { apiValue, checksFor, evaluateStructured } from "./criteria";
 import { CATALOGUE } from "./catalogue";
 import { isHousingListingUrl, type SearchBatch } from "./housing-search";
 import { isColocationAd, isSeekerAd } from "./offer";
+import { declaredType, matchesPropertyType } from "./property-type";
 
 export function scoreListing(item: Pick<Listing, "price" | "area" | "rooms" | "title" | "description">, criteria: Criteria) {
   let score = 60;
@@ -158,6 +159,8 @@ export function normalize(raw: unknown, criteria: Criteria, batch: SearchBatch =
   if (!isDwellingType(data)) return null;
   const title = text(first(data, ["title", "subject", "name"])).slice(0, 250);
   if (!title) return null;
+  // Maison demandée : un appartement déclaré comme tel n'est pas gardé (et inversement), sauf titre explicite.
+  if (!matchesPropertyType(criteria.propertyType, declaredType(text(first(data, ["real_estate_type"])) || text(apiValue({ attributes: data.attributes }, "real_estate_type"))), title)) return null;
   const description = text(first(data, ["description", "body", "text", "content"])).slice(0, 10000);
   // Une demande (« Recherche appartement T2 ») publiée dans Locations n'est pas un logement à louer.
   if (isSeekerAd({ adType: data.ad_type, title, description })) return null;

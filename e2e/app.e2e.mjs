@@ -254,6 +254,8 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       // Annonce 3 (rue lue dans la description) : accès pas encore calculé, station estimée à ~16 min, donc pas « proche » ;
       // annonce 2 (commune seulement) : pas de position, pas de badge.
       for (const id of [2, 3]) assert.equal(await page.locator(`[data-testid=card-transit-${id}]`).count(), 0, `${name} : pas de badge pour l'annonce ${id}`);
+      // « Votre demande » dit le type de bien cherché (ici « appartement », extrait de la demande).
+      assert.match((await text(page, "aside")).replace(/\s+/g, " "), /Type de bien Appartement/, `${name} : type de bien dans « Votre demande »`);
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
       // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).
       const [fiche, site, compare] = await Promise.all(["button-fiche-1", "link-source-1", "button-compare-1"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));

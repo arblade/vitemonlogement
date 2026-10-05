@@ -63,7 +63,7 @@ function papInput(criteria: Criteria, commune: Commune, limit: number) {
   const input: Record<string, unknown> = {
     product: "location",
     locations: [`${commune.name} (${commune.department})`],
-    propertyTypes: ["appartement", "maison"],
+    propertyTypes: criteria.propertyType === "house" ? ["maison"] : criteria.propertyType === "apartment" ? ["appartement"] : ["appartement", "maison"],
     maxResults: limit,
   };
   const ranges: [string, number | null | undefined][] = [
@@ -76,7 +76,7 @@ function papInput(criteria: Criteria, commune: Commune, limit: number) {
 }
 
 export function selogerSearchUrl(criteria: Criteria, code: string) {
-  const params = new URLSearchParams({ distributionTypes: "Rent", estateTypes: "Apartment,House", locations: code });
+  const params = new URLSearchParams({ distributionTypes: "Rent", estateTypes: criteria.propertyType === "house" ? "House" : criteria.propertyType === "apartment" ? "Apartment" : "Apartment,House", locations: code });
   const ranges: [string, number | null | undefined][] = [
     ["numberOfRoomsMin", criteria.minRooms], ["numberOfRoomsMax", criteria.maxRooms],
     ["priceMin", criteria.minPrice], ["priceMax", criteria.maxPrice],

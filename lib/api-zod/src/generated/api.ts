@@ -41,6 +41,7 @@ export const InterpretHousingRequestResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(interpretHousingRequestResponseRadiusMin).max(interpretHousingRequestResponseRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -80,6 +81,7 @@ export const ListHousingSearchesResponseItem = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(listHousingSearchesResponseCriteriaRadiusMin).max(listHousingSearchesResponseCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -157,6 +159,7 @@ export const CreateHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(createHousingSearchResponseOneCriteriaRadiusMin).max(createHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -295,6 +298,7 @@ export const GetHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(getHousingSearchResponseOneCriteriaRadiusMin).max(getHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -444,6 +448,7 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(analyzeHousingSearchResponseOneCriteriaRadiusMin).max(analyzeHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -585,6 +590,7 @@ export const RefreshHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(refreshHousingSearchResponseOneCriteriaRadiusMin).max(refreshHousingSearchResponseOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -735,6 +741,7 @@ export const WatchHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(watchHousingSearchResponseCriteriaRadiusMin).max(watchHousingSearchResponseCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -808,6 +815,7 @@ export const UnwatchHousingSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(unwatchHousingSearchResponseCriteriaRadiusMin).max(unwatchHousingSearchResponseCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),
@@ -888,6 +896,7 @@ export const GetWatchedSearchResponse = zod.object({
   "maxRooms": zod.number().int().nullish(),
   "radius": zod.number().int().min(getWatchedSearchResponseSearchOneCriteriaRadiusMin).max(getWatchedSearchResponseSearchOneCriteriaRadiusMax).optional(),
   "keywords": zod.string(),
+  "propertyType": zod.union([zod.literal('house'),zod.literal('apartment'),zod.literal(null)]).nullish().describe('Dwelling type wanted (house or apartment); null or absent = both'),
   "wishes": zod.array(zod.string()).optional(),
   "checks": zod.array(zod.object({
   "id": zod.string(),

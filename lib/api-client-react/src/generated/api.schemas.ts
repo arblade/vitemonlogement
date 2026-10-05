@@ -25,6 +25,18 @@ export const HousingCriteriaIntent = {
   buy: 'buy',
 } as const;
 
+/**
+ * Dwelling type wanted (house or apartment); null or absent = both
+ * @nullable
+ */
+export type HousingCriteriaPropertyType = typeof HousingCriteriaPropertyType[keyof typeof HousingCriteriaPropertyType] | null;
+
+
+export const HousingCriteriaPropertyType = {
+  house: 'house',
+  apartment: 'apartment',
+} as const;
+
 export type HousingCriterionAvailability = typeof HousingCriterionAvailability[keyof typeof HousingCriterionAvailability];
 
 
@@ -104,6 +116,11 @@ export interface HousingCriteria {
      */
   radius?: number;
   keywords: string;
+  /**
+     * Dwelling type wanted (house or apartment); null or absent = both
+     * @nullable
+     */
+  propertyType?: HousingCriteriaPropertyType;
   wishes?: string[];
   checks?: HousingCriterion[];
   places?: HousingPlace[];
