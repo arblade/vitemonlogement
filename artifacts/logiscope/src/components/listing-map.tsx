@@ -98,7 +98,7 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
         <p data-testid={`map-precision-${listing.id}`} className="mt-1 text-xs text-stone">{precisionText(listing)}</p>
       </div>
     </div>
-    <div className="mb-3 empty:hidden"><NearestStops listing={listing} testId={`map-stop-${listing.id}`} detailed/></div>
+    <div className="mb-3 empty:hidden"><NearestStops listing={listing} testId={`map-stop-${listing.id}`}/></div>
     <div className="relative isolate h-[260px] overflow-hidden rounded-2xl border border-line bg-sage md:h-[340px]">
       <Suspense fallback={<div className="grid h-full place-items-center text-xs text-stone">Chargement de la carte…</div>}>
         <ListingMapCanvas home={home} radius={area.radius} places={located} routes={routes} stop={listing.nearestStop} busStop={listing.nearestBusStop} showLines={showLines}/>

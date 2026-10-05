@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type maplibregl from 'maplibre-gl';
 import { addTransitLayers, LINE_LAYERS, lineLayers, linesArea, linesUrl, LINES_SOURCE, setTransitLines, stopLayers, TILE_SOURCE, TRANSIT_ICONS } from '@/components/map-transit';
-import { lineLabel, stopKind } from '@/components/nearest-stop';
+import { lineLabel, stopKind, transitBadge } from '@/components/nearest-stop';
 
 type Handler = (...args: unknown[]) => void;
 /** Carte factice : juste ce que le module appelle (sources, couches, images, visibilité, déplacements). */
@@ -105,5 +105,20 @@ describe('station la plus proche : libellés', () => {
     expect(stopKind({ lines: [{ mode: 'metro', name: '1', color: null }] })).toBe('Métro');
     expect(stopKind({ lines: [{ mode: 'tram', name: 'R', color: null }] })).toBe('Tram');
     expect(stopKind({ lines: [{ mode: 'metro', name: 'A', color: null }, { mode: 'tram', name: 'T1', color: null }] })).toBe('Métro et tram');
+  });
+});
+
+describe('badge métro / tram de la carte d’annonce', () => {
+  const stop = (walkMinutes: number, ...modes: ('metro' | 'tram')[]) => ({ walkMinutes, lines: modes.map(mode => ({ mode, name: 'X', color: null })) });
+  it('palier de 5 minutes au-dessus, « Métro » dès qu’une ligne de métro dessert la station, rien au-delà de 15 minutes', () => {
+    expect(transitBadge(stop(1, 'metro'))?.text).toBe('Métro < 5 min');
+    expect(transitBadge(stop(5, 'tram'))?.text).toBe('Tram < 5 min');
+    expect(transitBadge(stop(6, 'tram'))?.text).toBe('Tram < 10 min');
+    expect(transitBadge(stop(10, 'metro', 'tram'))?.text).toBe('Métro < 10 min');
+    expect(transitBadge(stop(11, 'metro'))?.text).toBe('Métro < 15 min');
+    expect(transitBadge(stop(15, 'metro'))?.text).toBe('Métro < 15 min');
+    expect(transitBadge(stop(16, 'metro'))).toBeNull();
+    expect(transitBadge(null)).toBeNull();
+    expect(transitBadge(undefined)).toBeNull();
   });
 });

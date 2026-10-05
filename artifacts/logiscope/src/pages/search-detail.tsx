@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAnalyzeHousingSearch, useCreateHousingSearch, useGetHousingSearch, getGetHousingSearchQueryKey, getGetWatchedSearchQueryKey, useRefreshHousingSearch, useVisitHousingSearch, getListHousingSearchesQueryKey, type HousingCriterion, type HousingCriterionResult, type HousingFeature, type HousingListing, type HousingPlace } from '@workspace/api-client-react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, BellRing, ChevronDown, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, BellRing, ChevronDown, Check, CircleHelp, Clock3, ExternalLink, Heart, Info, Layers2, Map as MapIcon, Minus, RefreshCw, Search, Sparkles, TrainFront, TramFront, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorNotice, Eyebrow, formatDate, formatPrice } from '@/components/site-shell';
@@ -21,7 +21,7 @@ import { useAppConfig } from '@/hooks/use-app-config';
 import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
 import { sourceName } from '@/lib/sources';
 import { MatchGauge, matchLabel } from '@/components/match-gauge';
-import { NearestStops } from '@/components/nearest-stop';
+import { transitBadge } from '@/components/nearest-stop';
 
 
 function refreshErrorMessage(error: unknown) {
@@ -127,10 +127,13 @@ const STATUS_TEXT = { confirmed: 'confirmé', contradicted: 'ne correspond pas',
  * Une seule rangée de pastilles, sans titre : vos critères d'abord (couleur = statut ; « à vérifier » seulement pour ce que
  * vous avez demandé), puis quelques atouts que l'annonce confirme (neutres). Ni « non », ni ce que l'annonce ne dit pas.
  */
-function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[]) {
+function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[], nearestStop: HousingListing['nearestStop']) {
+  // Métro ou tram proche : un atout comme les autres (« Métro < 5 min »), juste après vos critères ; le détail est dans la fiche.
+  const transit = transitBadge(nearestStop);
   const all = [
     ...criteria.map(result => ({ key: `c-${result.id}`, testId: `card-criterion-${id}-${result.id}`, tone: result.status, text: result.label,
       status: STATUS_TEXT[result.status], Icon: result.status === 'confirmed' ? Check : result.status === 'contradicted' ? Minus : CircleHelp })),
+    ...(transit ? [{ key: 'transit', testId: `card-transit-${id}`, tone: 'feature' as const, text: transit.text, status: '', Icon: transit.metro ? TrainFront : TramFront }] : []),
     ...cardAtouts(features).map((feature, i) => ({ key: `f-${i}`, testId: `card-feature-${id}-${i}`, tone: 'feature' as const, text: featureText(feature), status: '', Icon: featureIcon(feature.label) })),
   ];
   return { chips: all.slice(0, CARD_CHIPS), hidden: Math.max(0, all.length - CARD_CHIPS) };
@@ -156,7 +159,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
     return () => observer.disconnect();
   }, [listing.aiSummary, expandedSummary]);
   const { generals, criteria, features } = listingFacts(listing, checks);
-  const { chips, hidden } = cardChips(listing.id, criteria, features);
+  const { chips, hidden } = cardChips(listing.id, criteria, features, listing.nearestStop);
   return <><article data-testid={`card-listing-${listing.id}`} className={`group relative overflow-hidden rounded-3xl border border-line transition-all duration-300 hover:-translate-y-0.5 hover:border-[#b0b0b0] hover:shadow-[0_12px_34px_rgba(34,32,44,.08)] ${viewed ? 'bg-sage opacity-85 grayscale-[.2]' : 'bg-cream'}`}
     onClick={event => { if ((event.target as HTMLElement).closest('button, a, input, select, textarea, label, summary')) return; onViewed(); setOpen(true); }}>
     <button type="button" data-testid={`button-open-listing-${listing.id}`} onClick={() => { onViewed(); setOpen(true); }} aria-label={`Lire le détail de l’annonce : ${listing.title}`} className="absolute inset-0 z-10 cursor-pointer rounded-3xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-moss"/>
@@ -175,7 +178,6 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-soft bg-line-soft sm:grid-cols-4" aria-label="Repères essentiels">
            {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`card-general-${listing.id}-${label}`} className="min-w-0 bg-[#f7f7f7] px-3 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.06em] text-stone">{Icon && <Icon size={13} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className={`mt-1 block break-words font-semibold ${label === 'Prix' ? 'text-[16px] tracking-[-.03em]' : 'text-[12px]'}`}>{value}</strong></div>; })}
          </div>
-         <NearestStops listing={listing} testId={`card-stop-${listing.id}`}/>
          {chips.length > 0 && <ul className="mt-4 flex flex-wrap gap-1.5" data-testid={`card-facts-${listing.id}`} aria-label="Vos critères et caractéristiques">
            {chips.map(chip => <li key={chip.key} data-testid={chip.testId} title={chip.status ? `${chip.text} : ${chip.status}` : undefined} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs ${chip.tone === 'confirmed' ? 'border border-ok-line bg-ok-wash font-medium text-ok-deep' : chip.tone === 'contradicted' ? 'border border-[#fecdca] bg-[#fef3f2] font-medium text-[#b42318]' : chip.tone === 'unknown' ? 'border border-dashed border-[#b0b0b0] font-medium text-[#484848]' : 'bg-[#f2f2f2] text-[#484848]'}`}><chip.Icon size={13} aria-hidden="true" className="shrink-0"/>{chip.text}{chip.status && <span className="sr-only"> : {chip.status}</span>}</li>)}
            {hidden > 0 && <li className="inline-flex items-center px-1.5 py-1.5 text-xs text-stone" data-testid={`card-facts-more-${listing.id}`}>+{hidden}</li>}

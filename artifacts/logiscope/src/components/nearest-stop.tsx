@@ -22,11 +22,21 @@ export function StopLines({ lines }: { lines: StopLine[] }) {
   </span>;
 }
 
+/** Au-delà de ce temps à pied, une station n'est plus « proche » : pas de badge sur la carte d'annonce (la fiche la détaille). */
+export const NEAR_WALK_MINUTES = 15;
+
 /**
- * Arrêt le plus proche, à pied : station de métro ou de tram, ou arrêt de bus (`bus`). Carte : une ligne courte. Fiche
- * (`detailed`) : la distance, à pied si la marche est calculée (OpenRouteService), sinon à vol d'oiseau avec « estimé ».
+ * Badge de la carte d'annonce : « Métro < 5 min » ou « Tram < 10 min », sans nom de station ni de ligne. Le temps est
+ * arrondi au palier de 5 minutes au-dessus (la marche est de toute façon approximative) ; rien au-delà de 15 minutes.
  */
-export function NearestStopLine({ stop, testId, bus = false, detailed = false }: { stop: NearestStop; testId: string; bus?: boolean; detailed?: boolean }) {
+export function transitBadge(stop: Pick<NearestStop, 'lines' | 'walkMinutes'> | null | undefined) {
+  if (!stop || stop.walkMinutes > NEAR_WALK_MINUTES) return null;
+  const metro = stop.lines.some(line => line.mode === 'metro');
+  return { metro, text: `${metro ? 'Métro' : 'Tram'} < ${Math.max(5, Math.ceil(stop.walkMinutes / 5) * 5)} min` };
+}
+
+/** Arrêt le plus proche, à pied, pour la fiche : station de métro ou de tram, ou arrêt de bus (`bus`), avec la distance. */
+export function NearestStopLine({ stop, testId, bus = false }: { stop: NearestStop; testId: string; bus?: boolean }) {
   const Icon = bus ? Bus : stop.lines.some(line => line.mode === 'metro') ? TrainFront : TramFront;
   return <div data-testid={testId} className="flex items-start gap-2 text-[13px] text-ink">
     <Icon size={16} aria-hidden="true" className="mt-px shrink-0 text-stone"/>
@@ -36,18 +46,18 @@ export function NearestStopLine({ stop, testId, bus = false, detailed = false }:
         <span className="text-stone">· {bus ? 'Bus' : stopKind(stop)} {stop.name}</span>
         {!bus && <StopLines lines={stop.lines}/>}
       </p>
-      {detailed && <p className="mt-0.5 text-xs text-stone">{stop.estimated
+      <p className="mt-0.5 text-xs text-stone">{stop.estimated
         ? `${formatDistance(stop.distanceMeters)} à vol d’oiseau ; temps de marche estimé, sans itinéraire.`
-        : `${formatDistance(stop.distanceMeters)} à pied.`}</p>}
+        : `${formatDistance(stop.distanceMeters)} à pied.`}</p>
     </div>
   </div>;
 }
 
-/** Accès à pied d'une annonce : métro ou tram, puis bus (ce qui est connu). */
-export function NearestStops({ listing, testId, detailed = false }: { listing: Pick<HousingListing, 'nearestStop' | 'nearestBusStop'>; testId: string; detailed?: boolean }) {
+/** Accès à pied d'une annonce, dans la fiche : métro ou tram, puis bus (ce qui est connu). */
+export function NearestStops({ listing, testId }: { listing: Pick<HousingListing, 'nearestStop' | 'nearestBusStop'>; testId: string }) {
   if (!listing.nearestStop && !listing.nearestBusStop) return null;
-  return <div data-testid={testId} className={`flex flex-col ${detailed ? 'gap-2' : 'mt-3 gap-1.5'}`}>
-    {listing.nearestStop && <NearestStopLine stop={listing.nearestStop} testId={`${testId}-metro`} detailed={detailed}/>}
-    {listing.nearestBusStop && <NearestStopLine stop={listing.nearestBusStop} testId={`${testId}-bus`} bus detailed={detailed}/>}
+  return <div data-testid={testId} className="flex flex-col gap-2">
+    {listing.nearestStop && <NearestStopLine stop={listing.nearestStop} testId={`${testId}-metro`}/>}
+    {listing.nearestBusStop && <NearestStopLine stop={listing.nearestBusStop} testId={`${testId}-bus`} bus/>}
   </div>;
 }

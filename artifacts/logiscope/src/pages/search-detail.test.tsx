@@ -115,23 +115,27 @@ describe('Page résultats : contenu', () => {
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
-  it('accès à pied sur la carte : métro ou tram (nom, lignes), puis bus ; « ≈ » si la marche est estimée ; rien sans arrêt', () => {
+  it('métro ou tram proche : un badge « Métro < 5 min » parmi les autres, sans nom de station ni de ligne ; rien au-delà de 15 min', () => {
+    const stop = (walkMinutes: number, mode: 'metro' | 'tram', estimated = false) => ({
+      name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: walkMinutes * 70, walkMinutes, estimated, lines: [{ mode, name: mode === 'metro' ? 'B' : 'T2', color: '#00a3e0' }],
+    });
     api.state.data = search({ listings: [
-      listing(1, {
-        nearestStop: { name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: 640, walkMinutes: 9, estimated: false, lines: [{ mode: 'metro', name: 'B', color: '#00a3e0' }, { mode: 'tram', name: 'T2', color: null }] },
-        nearestBusStop: { name: 'Gerland', lat: 45.7, lng: 4.8, distanceMeters: 150, walkMinutes: 2, estimated: false, lines: [] },
-      }),
-      listing(2, { nearestStop: { name: 'Gare', lat: 45.7, lng: 4.8, distanceMeters: 900, walkMinutes: 19, estimated: true, lines: [{ mode: 'tram', name: 'T1', color: null }] }, nearestBusStop: null }),
-      listing(3, { nearestStop: null, nearestBusStop: null }),
+      listing(1, { nearestStop: stop(4, 'metro') }),
+      listing(2, { nearestStop: stop(7, 'tram', true) }),
+      listing(3, { nearestStop: stop(15, 'metro') }),
+      listing(4, { nearestStop: stop(16, 'metro') }),
+      listing(5, { nearestStop: null }),
     ] });
     renderPage();
-    const metro = screen.getByTestId('card-stop-1-metro');
-    expect(metro).toHaveTextContent('9 min à pied· Métro et tram Jean Jaurès');
-    expect(within(metro).getByLabelText('Lignes B, T2')).toBeInTheDocument();
-    expect(screen.getByTestId('card-stop-1-bus')).toHaveTextContent('2 min à pied· Bus Gerland');
-    expect(screen.getByTestId('card-stop-2-metro')).toHaveTextContent('≈ 19 min à pied· Tram Gare');
-    expect(screen.queryByTestId('card-stop-2-bus')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('card-stop-3')).not.toBeInTheDocument();
+    expect(screen.getByTestId('card-transit-1')).toHaveTextContent('Métro < 5 min');
+    expect(screen.getByTestId('card-transit-2')).toHaveTextContent('Tram < 10 min');
+    expect(screen.getByTestId('card-transit-3')).toHaveTextContent('Métro < 15 min');
+    for (const id of [4, 5]) expect(screen.queryByTestId(`card-transit-${id}`)).not.toBeInTheDocument();
+    // Dans la rangée des badges, juste après le critère demandé ; ni station, ni ligne, ni « à pied » sur la carte.
+    const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
+    expect(chips.slice(0, 2)).toEqual(['chat accepté : à vérifier', 'Métro < 5 min']);
+    expect(within(screen.getByTestId('card-listing-1')).queryByText(/Jean Jaurès|à pied|M?B$/)).toBeNull();
+    expect(screen.getByTestId('card-transit-1').querySelector('svg')).not.toBeNull();
   });
 
   it('carte : jamais de « non », ni de caractéristique anodine ; « à vérifier » seulement pour un critère demandé', () => {

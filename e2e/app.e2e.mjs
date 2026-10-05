@@ -236,12 +236,11 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       // Station de métro ou de tram la plus proche, à pied : sur la carte d'une adresse exacte, pas d'une simple commune.
-      assert.match(await text(page, "[data-testid=card-stop-1-metro]"), /^9 min à pied[\s\S]*Métro Rihour/, name);
-      assert.match(await text(page, "[data-testid=card-stop-1-bus]"), /^2 min à pied[\s\S]*Bus Colpin/, name);
-      // Annonce 3 (rue lue dans la description) : pas encore calculée, station estimée (« ≈ »), pas de bus.
-      assert.match(await text(page, "[data-testid=card-stop-3-metro]"), /^≈ \d+ min à pied/, name);
-      assert.equal(await page.locator("[data-testid=card-stop-3-bus]").count(), 0, name);
-      assert.equal(await page.locator("[data-testid=card-stop-2]").count(), 0, `${name} : commune seulement, pas de station annoncée`);
+      assert.equal((await text(page, "[data-testid=card-transit-1]")).trim(), "Métro < 10 min", `${name} : badge métro (9 min à pied), sans nom de station ni de ligne`);
+      assert.doesNotMatch(card, /Rihour|Colpin|M1/, `${name} : ni station, ni ligne, ni bus sur la carte`);
+      // Annonce 3 (rue lue dans la description) : accès pas encore calculé, station estimée à ~16 min, donc pas « proche » ;
+      // annonce 2 (commune seulement) : pas de position, pas de badge.
+      for (const id of [2, 3]) assert.equal(await page.locator(`[data-testid=card-transit-${id}]`).count(), 0, `${name} : pas de badge pour l'annonce ${id}`);
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
       // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).
       const [fiche, site, compare] = await Promise.all(["button-fiche-1", "link-source-1", "button-compare-1"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));

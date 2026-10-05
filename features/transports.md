@@ -46,9 +46,11 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
   annonces déjà analysées avant ce changement gardent la station estimée, sans bus (pas de rattrapage).
 - **Seulement pour une position précise** ; pas de « métro dans le quartier » pour les annonces placées au quartier
   ou à la commune (décidé le 05/10).
-- **Affichage** : sur la carte d'annonce, « 9 min à pied · Métro Rihour [M1] » puis « 2 min à pied · Bus Colpin » ;
-  « ≈ 12 min à pied » quand la marche est estimée. Dans la fiche, la distance (« 760 m à pied », ou « à vol d'oiseau ;
-  temps de marche estimé ») et les deux arrêts repérés sur la carte.
+- **Affichage** (revu le 05/10 sur demande) : sur la **carte d'annonce**, un simple badge dans la rangée des
+  caractéristiques, juste après vos critères : « Métro < 5 min » ou « Tram < 10 min » (palier de 5 minutes au-dessus ;
+  « Métro » dès qu'une ligne de métro dessert la station), **sans nom de station ni de ligne** ; rien si la station est à
+  plus de 15 minutes, et pas de badge bus sur la carte. Dans la **fiche**, le détail : « 9 min à pied · Métro Rihour M1 »
+  (« ≈ » si estimé), la distance (« 760 m à pied »), puis « 2 min à pied · Bus Colpin », les deux repérés sur la carte.
 - API : `nearestStop` et `nearestBusStop` de `HousingListing` (nom, position, distance, minutes, lignes, `estimated`).
 
 ### 3. Lignes de tram et de métro, en couleurs officielles (2e étape, 05/10)
@@ -85,13 +87,13 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
   `map.test.ts` (l'API renvoie l'estimation, puis la vraie marche et le bus une fois en base, rien pour une commune).
 - Front : `map-transit.test.ts` (couches, traits pleins, couleur par ligne, zone demandée, rechargement au
   déplacement, style sans tuiles ou sans police), `listing-map.test.tsx` (métro et bus dans la fiche, « ≈ »,
-  interrupteur), `search-detail.test.tsx` (métro puis bus sur la carte d'annonce).
-- Navigateur (`e2e/app.e2e.mjs`, mobile puis desktop) : métro et bus sur la carte d'annonce et dans la fiche, repères,
-  station estimée pour une annonce non calculée, lignes servies par l'API, interrupteur sur la fiche et sur la carte
+  interrupteur), `search-detail.test.tsx` (badge sur la carte d'annonce : paliers, seuil de 15 min, pas de nom).
+- Navigateur (`e2e/app.e2e.mjs`, mobile puis desktop) : badge « Métro < 10 min » sans station sur la carte d'annonce,
+  métro et bus détaillés dans la fiche, repères, pas de badge pour une station estimée à plus de 15 min, lignes servies par l'API, interrupteur sur la fiche et sur la carte
   des résultats. Aucun service extérieur (OpenFreeMap et ORS coupés, accès de l'annonce 1 déjà en base).
 
 ## Captures
-`maquettes/transport-*` (mobile 390 px puis desktop 1280 px, vrai fond OpenFreeMap, accès à pied de l'annonce de test
+`maquettes/transport-badge-carte-*` : le badge « Métro < 10 min » sur la carte d'annonce. `maquettes/transport-*` (mobile 390 px puis desktop 1280 px, vrai fond OpenFreeMap, accès à pied de l'annonce de test
 déjà calculé) : `carte-annonce` (« 9 min à pied · Métro Rihour M1 », « 2 min à pied · Bus Colpin »), `fiche-station`
 (métro et bus repérés), `fiche-lignes` et `carte-resultats-lignes` (lignes allumées : métro 1 jaune, 2 rouge, trams R et
 T, traits continus, nom le long du trait). Dans l'environnement de test, le rendu WebGL logiciel est lent : sur
