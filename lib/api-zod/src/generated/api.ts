@@ -59,7 +59,10 @@ export const InterpretHousingRequestResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 })
 
@@ -101,7 +104,10 @@ export const ListHousingSearchesResponseItem = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -181,7 +187,10 @@ export const CreateHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -322,7 +331,10 @@ export const GetHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -474,7 +486,10 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -618,7 +633,10 @@ export const RefreshHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -771,7 +789,10 @@ export const WatchHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -847,7 +868,10 @@ export const UnwatchHousingSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),
@@ -930,7 +954,10 @@ export const GetWatchedSearchResponse = zod.object({
   "mode": zod.union([zod.literal('transit'),zod.literal('drive'),zod.literal('bike'),zod.literal('walk'),zod.literal(null)]).nullish().describe('Travel mode stated explicitly by the user (wins over the automatic choice)'),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish(),
-  "resolved": zod.string().nullish()
+  "resolved": zod.string().nullish(),
+  "maxKm": zod.number().nullish().describe('Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")'),
+  "maxMinutes": zod.number().nullish().describe('Proximity limit, travel time in minutes by `mode` (car by default)'),
+  "centered": zod.boolean().optional().describe('The search is centred on this place; the city is not an extra constraint')
 })).optional()
 }),
   "status": zod.enum(['running', 'completed', 'failed']),

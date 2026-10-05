@@ -1,8 +1,27 @@
 import type { Criteria, Criterion, CriterionResult, Listing } from "./store";
 import { catalogueFeature, catalogueFor, saysNo, wantsAbsence } from "./catalogue";
 import { ENERGY_CLASSES } from "./property-type";
+import { evaluatePlace, hasDistanceLimit, placeCheckLabel } from "../../lib/distance";
 
-type Basic = Pick<Listing, "price" | "area" | "rooms" | "location">;
+type Basic = Pick<Listing, "price" | "area" | "rooms" | "location"> & Partial<Pick<Listing, "lat" | "lng" | "geoPrecision">>;
+
+const DISTANCE_PREFIX = "distance-";
+/** Critère de proximité d'un lieu cité (« à moins de 30 min de l'aéroport ») : calculé, jamais confié au LLM. */
+export const isDistanceCheck = (check: Pick<Criterion, "id">) => check.id.startsWith(DISTANCE_PREFIX);
+
+/**
+ * Critères de proximité des lieux cités, une fois ceux-ci géocodés. Quand la recherche est centrée sur un lieu retrouvé
+ * (« autour de l'aéroport »), la ville n'est plus un critère : le lieu la remplace.
+ */
+export function withPlaceChecks(criteria: Criteria): Criteria {
+  const places = criteria.places ?? [];
+  const centered = places.some(place => place.centered && place.lat != null && place.lng != null);
+  const kept = checksFor(criteria).filter(check => !isDistanceCheck(check) && !(centered && check.id === "location"));
+  const added: Criterion[] = places.filter(hasDistanceLimit).map(place => ({
+    id: `${DISTANCE_PREFIX}${place.id}`, label: placeCheckLabel(place), availability: "api", apiField: "distance",
+  }));
+  return { ...criteria, checks: [...kept, ...added] };
+}
 
 function labelForWish(value: string) {
   return value.trim().slice(0, 100);
@@ -135,6 +154,10 @@ export function evaluateStructured(criteria: Criteria, listing: Basic, raw: Reco
       const wanted = criteria.minEnergyClass;
       return declared == null || wanted == null ? unknown(check)
         : structured(`Classe ${declared}`, "classe énergie", check, ENERGY_CLASSES.indexOf(declared) <= ENERGY_CLASSES.indexOf(wanted));
+    }
+    if (isDistanceCheck(check)) {
+      const place = criteria.places?.find(item => `${DISTANCE_PREFIX}${item.id}` === check.id);
+      return place ? evaluatePlace(check.id, check.label, place, listing) : unknown(check);
     }
     if (check.id === "location") {
       if (!listing.location) return unknown(check);

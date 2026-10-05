@@ -8,7 +8,8 @@ import type { AddressInfo } from "node:net";
 import { openDatabase, walkAccess } from "@workspace/db";
 import { db, initDatabase } from "../src/lib/database";
 import { accessKey } from "../src/lib/access";
-import { completeSearch, createSearch, setCriteria } from "../src/routes/housing/store";
+import { completeSearch, createSearch, setCriteria, type Place } from "../src/routes/housing/store";
+import { evaluatePlace, placeCheckLabel } from "../src/lib/distance";
 
 process.env.APIFY_BASE_URL = "http://127.0.0.1:1";
 process.env.OPENAI_BASE_URL = "http://127.0.0.1:1/v1";
@@ -63,8 +64,12 @@ process.env.GOOGLE_MAPS_API_KEY = "e2e";
 
 await initDatabase(await openDatabase({ dataDir: "memory://" }));
 const id = await createSearch("Un studio à Lille, 700 € max, chat accepté");
-await setCriteria(id, { location: "Lille", intent: "rent", propertyType: "apartment", minBedrooms: 1, minEnergyClass: "D", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }],
-  places: [{ id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille" }] });
+// Lieu repère avec contrainte (« à moins de 3 km de la gare ») : la proximité est calculée, annonce par annonce.
+const station: Place = { id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille", maxKm: 3 };
+const distanceLabel = placeCheckLabel(station);
+await setCriteria(id, { location: "Lille", intent: "rent", propertyType: "apartment", minBedrooms: 1, minEnergyClass: "D", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }, { id: "distance-place-1", label: distanceLabel, availability: "api", apiField: "distance" }],
+  places: [station] });
+const position = (n: number) => n === 1 ? { ...home, geoPrecision: "streetNumber" } : n === 3 ? { lat: 50.6435, lng: 3.0545, geoPrecision: "street" } : { lat: 50.63, lng: 3.06, geoPrecision: "city" };
 const listing = (n: number) => ({
   // Annonce 1 : Le Bon Coin ; annonce 2 : PAP (sources multiples).
   source: n === 2 ? "pap" as const : "leboncoin" as const,
@@ -80,6 +85,7 @@ const listing = (n: number) => ({
   criterionResults: [
     { id: "price", label: "Budget ≤ 700 €", status: "confirmed" as const, source: "api" as const, value: "590 €", evidence: "" },
     { id: "wish-1", label: "chat accepté", status: "unknown" as const, source: "unknown" as const, value: "", evidence: "" },
+    evaluatePlace("distance-place-1", distanceLabel, station, position(n)),
   ],
   // Annonce 1 : adresse exacte ; annonce 3 : rue ; annonce 2 : commune seulement (ni point ni place sur la carte des résultats).
   ...(n === 1 ? { ...home, geoPrecision: "streetNumber" as const }

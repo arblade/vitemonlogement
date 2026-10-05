@@ -110,6 +110,18 @@ export interface HousingPlace {
   lng?: number | null;
   /** @nullable */
   resolved?: string | null;
+  /**
+     * Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")
+     * @nullable
+     */
+  maxKm?: number | null;
+  /**
+     * Proximity limit, travel time in minutes by `mode` (car by default)
+     * @nullable
+     */
+  maxMinutes?: number | null;
+  /** The search is centred on this place; the city is not an extra constraint */
+  centered?: boolean;
 }
 
 export interface HousingCriteria {

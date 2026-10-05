@@ -279,6 +279,15 @@ components:
         lat: { type: ["number", "null"] }
         lng: { type: ["number", "null"] }
         resolved: { type: ["string", "null"] }
+        maxKm:
+          description: Proximity limit, straight-line kilometres (e.g. "within 10 km of the airport")
+          type: ["number", "null"]
+        maxMinutes:
+          description: Proximity limit, travel time in minutes by `mode` (car by default)
+          type: ["number", "null"]
+        centered:
+          description: The search is centred on this place; the city is not an extra constraint
+          type: boolean
     TravelMode:
       type: string
       enum: [transit, drive, bike, walk]

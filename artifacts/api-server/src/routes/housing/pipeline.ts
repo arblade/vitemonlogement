@@ -1,6 +1,7 @@
 import { logger } from "../../lib/logger";
 import { interpret } from "./ai";
 import { locatePlaces } from "../../lib/geocode";
+import { withPlaceChecks } from "./criteria";
 import { analyzeListings, checkPage, firstState, startPage, type PassMode } from "./reader";
 import { clearTask, FAILURE_MESSAGE, getSearchRow, pendingAnalysis, recordAttemptFailure, setCriteria, setFailure, type Criteria, type SearchRow } from "./store";
 
@@ -48,7 +49,7 @@ export async function advanceSearch(id: number): Promise<number> {
             await setFailure(id, "Indiquez une ville ou un département dans votre description.");
             return 0;
           }
-          if (criteria.places?.length) criteria = { ...criteria, places: await locatePlaces(criteria.places, criteria.location) };
+          if (criteria.places?.length) criteria = withPlaceChecks({ ...criteria, places: await locatePlaces(criteria.places, criteria.location) });
           await setCriteria(id, criteria);
         }
         if (criteria.intent !== "rent") {

@@ -39,6 +39,11 @@ export type Place = {
   lng?: number | null;
   /** Adresse telle que retrouvée par le géocodeur (affichée à l'utilisateur). */
   resolved?: string | null;
+  /** Contrainte de proximité (« à moins de 10 km », « à moins de 30 min ») : distance à vol d'oiseau et/ou durée de trajet. */
+  maxKm?: number | null;
+  maxMinutes?: number | null;
+  /** true : la recherche se fait autour de ce lieu (« autour de l'aéroport »), la ville n'est pas une contrainte en plus. */
+  centered?: boolean;
 };
 
 export type TravelMode = "transit" | "drive" | "bike" | "walk";

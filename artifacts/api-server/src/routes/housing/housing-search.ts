@@ -3,6 +3,7 @@ import { resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
 import { realEstateTypes } from "./property-type";
 import { queryMinRooms } from "./criteria";
+import { hasDistanceLimit, placeReachKm } from "../../lib/distance";
 
 // « broad » : recherche élargie, supprimée le 01/10/2026 ; reste lisible dans les anciennes recherches.
 export type SearchBatch = "focused" | "broad";
@@ -38,6 +39,29 @@ export function isLeboncoinRentalUrl(value: string) {
   }
 }
 
+export type Zone = { lat: number; lon: number; radiusKm: number };
+
+const MAX_RADIUS_KM = 200;
+const clampRadius = (km: number) => Math.max(1, Math.min(MAX_RADIUS_KM, km));
+
+/**
+ * Zone lue chez Le Bon Coin. Par défaut, la commune et son rayon. Lieu cité retrouvé :
+ *  - recherche centrée (« autour de l'aéroport ») : un cercle autour du lieu (sa distance, sinon le rayon demandé) ;
+ *  - sinon (« à Rennes, à moins de 30 min de l'aéroport »), la ville ET le lieu sont deux contraintes : un logement
+ *    qui les respecte est dans les deux cercles, donc dans le plus petit, lu en entier ; l'autre contrainte est
+ *    vérifiée sur chaque annonce.
+ */
+export function searchZone(criteria: Criteria, commune: { lat: number; lon: number }): Zone {
+  const city: Zone = { lat: commune.lat, lon: commune.lon, radiusKm: clampRadius(criteria.radius ?? 5) };
+  const located = (criteria.places ?? []).filter(place => place.lat != null && place.lng != null);
+  const around = located.find(place => place.centered);
+  if (around) return { lat: around.lat!, lon: around.lng!, radiusKm: clampRadius(placeReachKm(around) ?? criteria.radius ?? 5) };
+  return located.filter(hasDistanceLimit).reduce<Zone>((best, place) => {
+    const radiusKm = clampRadius(placeReachKm(place)!);
+    return radiusKm < best.radiusKm ? { lat: place.lat!, lon: place.lng!, radiusKm } : best;
+  }, city);
+}
+
 const bound = (min: number | null | undefined, max: number | null | undefined) =>
   min == null && max == null ? null : `${min ?? "min"}-${max ?? "max"}`;
 
@@ -50,8 +74,9 @@ const bound = (min: number | null | undefined, max: number | null | undefined) =
 export function leboncoinSearchUrl(criteria: Criteria, term: string | null): string | null {
   const place = resolvePlace(criteria.location);
   if (place.status !== "resolved") return null;
-  const { name, postalCodes, lat, lon } = place.commune;
-  const radiusMeters = Math.round(Math.max(1, Math.min(200, criteria.radius ?? 5)) * 1000);
+  const { name, postalCodes } = place.commune;
+  const { lat, lon, radiusKm } = searchZone(criteria, place.commune);
+  const radiusMeters = Math.round(radiusKm * 1000);
   const params = new URLSearchParams({
     category: "10",
     locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}`,

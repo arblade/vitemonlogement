@@ -13,7 +13,7 @@
 import { analyze } from "./ai";
 import { apify } from "./apify-client";
 import { extraSourceItems, itemRefreshedAt, normalize, positionOf, scoreListing } from "./apify";
-import { contradictsDeclared, matchesKnownBasics } from "./criteria";
+import { contradictsDeclared, evaluateStructured, isDistanceCheck, matchesKnownBasics } from "./criteria";
 import { actorRequest, canReadPages } from "./housing-search";
 import { interleave, normalizeExtra, startExtraSources } from "./sources";
 import { finishPass, isPrecise, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
@@ -250,9 +250,12 @@ export async function analyzeListings(id: number, criteria: Criteria, listings: 
       continue;
     }
     const position = await positionOf(item, observations.address ?? null, undefined);
+    // La position lue dans la description peut départager la proximité d'un lieu cité, jusque-là « à vérifier ».
+    const distances = new Map(evaluateStructured(criteria, { ...item, ...position }, {}).filter(isDistanceCheck).map(check => [check.id, check]));
+    const criterionResults = observations.criterionResults.map(check => distances.get(check.id) ?? check);
     outcomes.push({ kind: "kept", listing: {
       id: item.id, features: observations.features, aiSummary: observations.aiSummary, summaryEvidence: observations.summaryEvidence,
-      criterionResults: observations.criterionResults, score: observations.score,
+      criterionResults, score: observations.score,
       price: observations.price, area: observations.area, rooms: observations.rooms, location: observations.location, ...position,
     } });
   }

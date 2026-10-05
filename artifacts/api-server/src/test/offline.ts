@@ -7,6 +7,7 @@ process.env.OPENAI_BASE_URL = "http://127.0.0.1:1/v1";
 process.env.APIFY_TOKEN = "offline-guard";
 process.env.OPENAI_API_KEY = "offline-guard";
 process.env.GEOCODER_BASE_URL = "http://127.0.0.1:1";
+process.env.NOMINATIM_BASE_URL = "http://127.0.0.1:1";
 process.env.GOOGLE_ROUTES_BASE_URL = "http://127.0.0.1:1";
 delete process.env.GOOGLE_MAPS_API_KEY;
 delete process.env.DATABASE_URL;

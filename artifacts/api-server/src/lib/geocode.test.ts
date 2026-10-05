@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { geocode, locatePlaces } from "./geocode";
+import { geocode, geocodeLandmark, locatePlaces } from "./geocode";
 import type { Place } from "../routes/housing/store";
 
 /** Faux géocodeur : répond selon l'index demandé et mémorise les requêtes. */
@@ -61,4 +61,83 @@ test("locatePlaces : chaque lieu reçoit ses coordonnées et l'adresse retrouvé
   assert.equal(work.resolved, "20 Place des Lices 35000 Rennes");
   assert.equal(school.lat, undefined);
   assert.equal(school.address, "introuvable");
+});
+
+
+// --- Lieux repères (aéroport, gare, hôpital…) : IGN « poi », puis adresse, puis OpenStreetMap ---
+
+const airportPoi = (over: Record<string, unknown> = {}) => ({ geometry: { coordinates: [-1.733001, 48.070897] }, properties: {
+  toponym: "Aéroport de Rennes-Saint-Jacques", category: ["aérodrome", "transport"], city: ["Saint-Jacques-de-la-Lande"], score: 0.85, ...over } });
+
+/** Faux IGN (poi / address) et faux Nominatim, dans un même fetcher : on voit qui est appelé et dans quel ordre. */
+function fakeServices(replies: { poi?: unknown[]; address?: unknown[]; nominatim?: unknown[] | { status: number } }) {
+  const calls: string[] = [];
+  const fetcher = (async (input: string | URL) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/search") && url.searchParams.get("format")) {
+      calls.push(`nominatim:${url.searchParams.get("q")}`);
+      if (replies.nominatim && "status" in replies.nominatim) return new Response("{}", { status: replies.nominatim.status });
+      return Response.json(replies.nominatim ?? []);
+    }
+    const index = url.searchParams.get("index") as "poi" | "address";
+    calls.push(`${index}:${url.searchParams.get("q")}`);
+    return Response.json({ features: replies[index] ?? [] });
+  }) as typeof fetch;
+  return { fetcher, calls };
+}
+
+test("geocodeLandmark : « aéroport de Rennes » → l'aérodrome de l'index des lieux, nom seul (la ville ajoutée fait échouer la recherche)", async () => {
+  const { fetcher, calls } = fakeServices({ poi: [airportPoi()] });
+  assert.deepEqual(await geocodeLandmark("aéroport de Rennes", "Rennes", fetcher), { lat: 48.070897, lng: -1.733001, label: "Aéroport de Rennes-Saint-Jacques, Saint-Jacques-de-la-Lande" });
+  assert.deepEqual(calls, ["poi:aéroport de Rennes"]);
+});
+
+test("geocodeLandmark : un quartier ou un résultat dont le nom ne correspond pas n'est jamais pris (« Sud Gare » n'est pas la gare)", async () => {
+  const sudGare = { geometry: { coordinates: [-1.67, 48.1] }, properties: { toponym: "Sud Gare", category: ["quartier", "zone d'habitation"], city: ["Rennes"], score: 0.39 } };
+  const gare = { geometry: { coordinates: [-1.672023, 48.103421] }, properties: { toponym: "Rennes", category: ["gare voyageurs et fret", "transport"], city: ["Rennes"], score: 0.35 } };
+  const homonym = { geometry: { coordinates: [2, 47] }, properties: { toponym: "Parc des expositions", category: ["équipement"], city: ["Lyon"], score: 0.9 } };
+  const found = await geocodeLandmark("gare de Rennes", "Rennes", fakeServices({ poi: [sudGare, gare] }).fetcher);
+  assert.deepEqual(found, { lat: 48.103421, lng: -1.672023, label: "gare de Rennes" }, "la gare s'appelle « Rennes » dans la base : on garde le nom demandé");
+  assert.equal(await geocodeLandmark("gare de Rennes", "", fakeServices({ poi: [sudGare] }).fetcher), null);
+  assert.equal(await geocodeLandmark("gare de Rennes", "", fakeServices({ poi: [homonym] }).fetcher), null);
+});
+
+test("geocodeLandmark : sans réponse de l'IGN « poi », l'adresse ordinaire puis OpenStreetMap, dans cet ordre", async () => {
+  const hospital = { lat: "48.1207424", lon: "-1.6948572", category: "amenity", type: "hospital", display_name: "Hôpital Pontchaillou, 2, Rue Henri Le Guilloux, Rennes, Ille-et-Vilaine" };
+  const { fetcher, calls } = fakeServices({ nominatim: [hospital] });
+  assert.deepEqual(await geocodeLandmark("CHU de Rennes", "Rennes", fetcher), { lat: 48.1207424, lng: -1.6948572, label: "Hôpital Pontchaillou" });
+  assert.deepEqual(calls, ["poi:CHU de Rennes", "address:CHU de Rennes", "nominatim:CHU de Rennes"]);
+});
+
+test("geocodeLandmark : OpenStreetMap n'est cru que pour de vrais équipements, dans la ville recherchée (pas un arrêt de bus, pas un homonyme)", async () => {
+  const busStop = { lat: "48.07", lon: "-1.72", category: "highway", type: "bus_stop", display_name: "Aéroport, Bus, Rennes" };
+  const elsewhere = { lat: "45.7", lon: "5.0", category: "aeroway", type: "aerodrome", display_name: "Aéroport de Lyon, Colombier-Saugnieu, Rhône" };
+  const rightOne = { lat: "48.0689", lon: "-1.7302", category: "aeroway", type: "aerodrome", display_name: "Rennes Aéroport Bretagne, Saint-Jacques-de-la-Lande, Rennes, Ille-et-Vilaine" };
+  assert.equal(await geocodeLandmark("aéroport", "Rennes", fakeServices({ nominatim: [busStop, elsewhere] }).fetcher), null);
+  assert.deepEqual(await geocodeLandmark("aéroport", "Rennes", fakeServices({ nominatim: [busStop, elsewhere, rightOne] }).fetcher), { lat: 48.0689, lng: -1.7302, label: "Rennes Aéroport Bretagne" });
+});
+
+test("geocodeLandmark : une panne (IGN ou OpenStreetMap, limite de débit 429) donne null, jamais d'exception ; User-Agent envoyé à Nominatim", async () => {
+  assert.equal(await geocodeLandmark("aéroport de Rennes", "Rennes", fakeServices({ nominatim: { status: 429 } }).fetcher), null);
+  assert.equal(await geocodeLandmark("aéroport de Rennes", "Rennes"), null, "vrai fetch vers le port mort du garde-fou hors-ligne");
+  let agent = "";
+  const fetcher = (async (input: string | URL, init?: RequestInit) => {
+    if (new URL(String(input)).searchParams.get("format")) agent = String((init?.headers as Record<string, string>)["User-Agent"]);
+    return Response.json(new URL(String(input)).searchParams.get("format") ? [] : { features: [] });
+  }) as typeof fetch;
+  await geocodeLandmark("CHU", "", fetcher);
+  assert.match(agent, /^vitemonlogement\//);
+});
+
+test("locatePlaces : un lieu avec contrainte de distance passe par la recherche de lieux repères, un lieu de vie ordinaire par la recherche d'adresse", async () => {
+  const places: Place[] = [
+    { id: "place-1", label: "Aéroport de Rennes", kind: "other", address: "aéroport de Rennes", maxMinutes: 30 },
+    { id: "place-2", label: "Travail", kind: "work", address: "20 place des Lices" },
+  ];
+  const { fetcher, calls } = fakeServices({ poi: [airportPoi()], address: [{ geometry: { coordinates: [-1.682821, 48.113521] }, properties: { type: "housenumber", score: 0.97, label: "20 Place des Lices 35000 Rennes" } }] });
+  const [airport, work] = await locatePlaces(places, "Rennes", fetcher);
+  assert.deepEqual([airport.lat, airport.lng, airport.resolved], [48.070897, -1.733001, "Aéroport de Rennes-Saint-Jacques, Saint-Jacques-de-la-Lande"]);
+  assert.equal(airport.maxMinutes, 30, "la contrainte est conservée");
+  assert.equal(work.lat, 48.113521);
+  assert.deepEqual(calls.sort(), ["address:20 place des Lices, Rennes", "poi:aéroport de Rennes"]);
 });

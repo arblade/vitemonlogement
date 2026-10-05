@@ -149,6 +149,37 @@ test("fiche détaillée (mobile) : bouton « Voir l'annonce » visible en haut, 
   await page.close();
 });
 
+test("proximité d'un lieu repère (mobile puis desktop) : « à moins de 3 km » du lieu cité affiché dans la fiche, jugé sur la distance, sans débordement", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    for (const [name, context] of [["mobile", mobile], ["desktop", wide]]) {
+      const page = await context.newPage();
+      await page.goto(base + "/searches/1");
+      await page.waitForSelector("[data-testid=card-listing-1]");
+      await page.click("[data-testid=button-open-listing-1]");
+      const pill = "[data-testid=criterion-result-1-distance-place-1]";
+      await page.waitForSelector(pill);
+      // Annonce 1 : adresse exacte à ~450 m de la gare → confirmée, avec la distance calculée en preuve.
+      assert.match(await text(page, pill), /À moins de 3 km à vol d'oiseau · Travail/, name);
+      assert.match(await page.getAttribute(pill, "title"), /confirmé/i, name);
+      const tall = await page.evaluate(sel => document.querySelector(sel).getBoundingClientRect().height, pill);
+      assert.ok(tall >= 32, `zone lisible (${name}, ${tall} px)`);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `pas de défilement horizontal (${name})`);
+      await page.keyboard.press("Escape");
+      await page.close();
+    }
+  } finally {
+    await wide.close();
+  }
+});
+
 /** Encart carte de la fiche 1 (adresse exacte à Lille, lieu « Travail » à vélo, trajet renvoyé par le faux Google). */
 async function checkListingMap(page) {
   await page.waitForSelector("[data-testid=listing-map-1]");
