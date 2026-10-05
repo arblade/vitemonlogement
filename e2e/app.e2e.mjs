@@ -482,6 +482,59 @@ test("désinscription des e-mails (mobile puis desktop) : sans connexion, un bou
   }
 });
 
+test("onglet resté ouvert pendant un déploiement : l'ancien fichier de la carte (servi en HTML) recharge la page une fois, sans afficher d'erreur ; si ça persiste, l'erreur s'affiche en français, sans boucle", async () => {
+  const wide = await newContext("desktop");
+  try {
+    const login = await wide.newPage();
+    await login.goto(base + "/");
+    await login.waitForSelector("[data-testid=input-email]");
+    await login.fill("[data-testid=input-email]", "dev@example.com");
+    await login.fill("[data-testid=input-password]", "motdepasse-1");
+    await login.click("[data-testid=button-login]");
+    await login.waitForSelector("[data-testid=button-start-search]");
+    await login.close();
+    // Ancien fichier : avant la correction, le serveur répondait la page d'accueil (200, text/html) à sa place.
+    const stale = route => route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><div id=root></div>" });
+    let staleLeft = 1;
+    await wide.route(/\/assets\/results-map-canvas-.*\.js/, route => (staleLeft-- > 0 ? stale(route) : route.continue()));
+
+    const page = await wide.newPage();
+    let loads = 0;
+    page.on("framenavigated", frame => { if (frame === page.mainFrame()) loads++; });
+    await page.goto(`${base}/searches/1`);
+    await page.waitForSelector("[data-testid=card-listing-3]");
+    await page.click("[data-testid=button-open-results-map]");
+    await page.waitForFunction(() => performance.getEntriesByType("navigation").length > 0 && document.querySelector("[data-testid=card-listing-3]") !== null && sessionStorage.getItem("vml-stale-reload") !== null);
+    await page.waitForSelector("[data-testid=card-listing-3]");
+    assert.equal(loads, 2, "la page s'est rechargée une fois");
+    assert.equal(await page.locator("[data-testid=error-fallback]").count(), 0, "aucune erreur affichée");
+    // Après le rechargement, la version en ligne : la carte s'ouvre.
+    await page.click("[data-testid=button-open-results-map]");
+    await page.waitForSelector("[data-testid=results-map-canvas][data-listings='2']");
+    await page.close();
+
+    // Le fichier reste introuvable : une seule relance, puis l'erreur (en français) avec ses deux boutons.
+    await wide.unroute(/\/assets\/results-map-canvas-.*\.js/);
+    await wide.route(/\/assets\/results-map-canvas-.*\.js/, stale);
+    const stuck = await wide.newPage();
+    let stuckLoads = 0;
+    stuck.on("framenavigated", frame => { if (frame === stuck.mainFrame()) stuckLoads++; });
+    await stuck.goto(`${base}/searches/1`);
+    await stuck.waitForSelector("[data-testid=card-listing-3]");
+    await stuck.click("[data-testid=button-open-results-map]");
+    await stuck.waitForFunction(() => sessionStorage.getItem("vml-stale-reload") !== null);
+    await stuck.waitForSelector("[data-testid=card-listing-3]");
+    await stuck.click("[data-testid=button-open-results-map]");
+    await stuck.waitForSelector("[data-testid=error-fallback]");
+    assert.equal(stuckLoads, 2, "pas de boucle de rechargement");
+    assert.match(await text(stuck, "[data-testid=error-fallback]"), /L’application a rencontré une erreur[\s\S]*Recharger la page[\s\S]*Réessayer/);
+    const reload = await stuck.locator("[data-testid=button-reload]").boundingBox();
+    assert.ok(reload && reload.height >= 32, "bouton tactile");
+  } finally {
+    await wide.close();
+  }
+});
+
 test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la rue sont placés, un clic ouvre la fiche et la fermeture ramène à la carte", async () => {
   const wide = await newContext("desktop");
   try {

@@ -62,6 +62,9 @@ if (existsSync(path.join(staticDir, "index.html"))) {
   app.use(express.static(staticDir, { index: false }));
   app.get("/{*splat}", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
+    // Un fichier qui n'existe pas (ancien /assets/….js d'un onglet resté ouvert pendant un déploiement) est un 404, pas
+    // la page d'accueil : en HTML, le navigateur échoue à charger le module et l'appli affiche une erreur.
+    if (req.path.startsWith("/assets/") || /\.[a-z0-9]{1,8}$/i.test(req.path)) return void res.status(404).set("Cache-Control", "no-store").type("text").send("Fichier introuvable");
     sendIndex(req, res);
   });
 }
