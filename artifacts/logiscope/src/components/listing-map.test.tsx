@@ -1,15 +1,18 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { HousingListing, HousingPlace, ListingRoute } from '@workspace/api-client-react';
+import type { HousingListing, HousingPlace, ListingRoute, NearestStop } from '@workspace/api-client-react';
 import { ListingMap } from '@/components/listing-map';
 import { AREA_RADIUS, circle, crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, mappedListings, ROUTE_COLOR, routeDrawing, textOn, type LatLng } from '@/lib/geo';
 import { listing, mockFetch } from '@/test/fixtures';
 
 // jsdom n'a pas de WebGL : la carte MapLibre est remplacée par un témoin des données reçues (le vrai rendu est vérifié en e2e).
 vi.mock('@/components/listing-map-canvas', () => ({
-  default: ({ radius, places, routes }: { radius: number; places: HousingPlace[]; routes: ListingRoute[] }) =>
-    <div data-testid="canvas" data-radius={radius} data-places={places.map(place => place.id).join(',')} data-routes={routes.map(route => route.placeId).join(',')}/>,
+  default: ({ radius, places, routes, stop, showLines, onZoom }: { radius: number; places: HousingPlace[]; routes: ListingRoute[]; stop?: NearestStop | null; showLines?: boolean; onZoom?: (zoom: number) => void }) =>
+    <div data-testid="canvas" data-radius={radius} data-places={places.map(place => place.id).join(',')} data-routes={routes.map(route => route.placeId).join(',')}
+      data-stop={stop?.name ?? ''} data-lines={String(showLines)}>
+      <button type="button" onClick={() => onZoom?.(12)}>dézoomer</button><button type="button" onClick={() => onZoom?.(15)}>zoomer</button>
+    </div>,
 }));
 
 const home = { lat: 50.6408, lng: 3.0611 };
@@ -254,5 +257,55 @@ describe('Encart « Où se trouve le logement »', () => {
     renderMap({ searchId: undefined, routingAvailable: true });
     expect(await screen.findByTestId('canvas')).toBeInTheDocument();
     expect(calls).toHaveLength(0);
+  });
+
+  const gambetta: NearestStop = { name: 'Gambetta', lat: 50.6331, lng: 3.0526, distanceMeters: 720, walkMinutes: 12, lines: [{ mode: 'metro', name: '1', color: '#ffcd00' }] };
+
+  it('station la plus proche : marche estimée, nom, ligne dans sa couleur, distance ; repérée sur la carte', async () => {
+    mockFetch([]);
+    renderMap({ listing: precise({ nearestStop: gambetta }) });
+    const stop = screen.getByTestId('map-stop-1');
+    expect(stop).toHaveTextContent('12 min à pied· Métro Gambetta');
+    expect(stop).toHaveTextContent('720 m à vol d’oiseau ; temps de marche estimé, sans itinéraire.');
+    expect(screen.getByText('M1')).toHaveStyle({ background: '#ffcd00', color: '#222222' });
+    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-stop', 'Gambetta');
+  });
+
+  it('sans station à distance de marche (ou position imprécise) : rien n’est annoncé', async () => {
+    mockFetch([]);
+    renderMap({ listing: precise({ nearestStop: null }) });
+    await screen.findByTestId('canvas');
+    expect(screen.queryByTestId('map-stop-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('canvas')).toHaveAttribute('data-stop', '');
+  });
+
+  it('lignes de tram et de métro : masquées par défaut, l’interrupteur les montre avec leur légende, choix mémorisé', async () => {
+    localStorage.clear();
+    mockFetch([]);
+    const { unmount } = renderMap();
+    const toggle = screen.getByRole('switch', { name: 'Lignes tram · métro' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-lines', 'false');
+    expect(screen.queryByTestId('toggle-lines-1-legend')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('canvas')).toHaveAttribute('data-lines', 'true');
+    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('MétroTram');
+    unmount();
+    renderMap();
+    expect(screen.getByRole('switch', { name: 'Lignes tram · métro' })).toHaveAttribute('aria-checked', 'true');
+    localStorage.clear();
+  });
+
+  it('lignes demandées mais carte trop dézoomée (les tuiles ne les ont qu’à partir du zoom 14) : on invite à zoomer', async () => {
+    localStorage.clear();
+    mockFetch([]);
+    renderMap();
+    fireEvent.click(screen.getByRole('switch', { name: 'Lignes tram · métro' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'dézoomer' }));
+    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('Zoomez pour voir les lignes');
+    fireEvent.click(screen.getByRole('button', { name: 'zoomer' }));
+    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('MétroTram');
+    localStorage.clear();
   });
 });

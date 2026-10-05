@@ -118,6 +118,15 @@ test("la position et les lieux de vie sont enregistrés en base et relus avec la
   assert.equal((await getSearch(id))?.listings.find(item => item.id === precise.id)?.geoPrecision, "streetNumber");
 });
 
+test("GET recherche : station de métro la plus proche à pied pour l'adresse exacte ; rien pour une simple commune", async () => {
+  const { id, cookie, precise, vague } = await searchFor("carte-station@test.fr");
+  const body = await (await fetch(`${base}/housing/searches/${id}`, { headers: { cookie } })).json() as { listings: { id: number; nearestStop: { name: string; walkMinutes: number; distanceMeters: number; lines: { mode: string }[] } | null }[] };
+  const stop = body.listings.find(item => item.id === precise.id)?.nearestStop;
+  assert.ok(stop && stop.name && stop.walkMinutes >= 1 && stop.distanceMeters > 0, JSON.stringify(stop));
+  assert.ok(stop.lines.some(line => line.mode === "metro"), "Rennes : métro");
+  assert.equal(body.listings.find(item => item.id === vague.id)?.nearestStop, null);
+});
+
 const path = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];
 const route = (mode: string, recommended: boolean) => ({ placeId: "place-1", mode, recommended, durationSeconds: 1534, distanceMeters: 5210, path, segments: [] });
 

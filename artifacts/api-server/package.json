@@ -9,6 +9,7 @@
     "start": "node --enable-source-maps ./dist/index.mjs",
     "user:reset-password": "node --import tsx ./scripts/reset-password.ts",
     "data:communes": "node ./scripts/build-communes.mjs",
+    "data:stations": "node ./scripts/build-stations.mjs",
     "mail:test": "node --import tsx ./scripts/mail-test.ts",
     "bench:jev": "node --import tsx ./scripts/jev-bench.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",

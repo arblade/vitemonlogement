@@ -21,6 +21,7 @@ import { useAppConfig } from '@/hooks/use-app-config';
 import { listingKey, markListingViewed, useFavoriteActions, useListingInteractions } from '@/lib/listing-interactions';
 import { sourceName } from '@/lib/sources';
 import { MatchGauge, matchLabel } from '@/components/match-gauge';
+import { NearestStopLine } from '@/components/nearest-stop';
 
 
 function refreshErrorMessage(error: unknown) {
@@ -171,6 +172,7 @@ function ListingCard({ listing, checks, index, selected, compareFull, liked, vie
          <div className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-line-soft bg-line-soft sm:grid-cols-4" aria-label="Repères essentiels">
            {generals.map(({ label, value }) => { const Icon = generalIcons[label]; return <div key={label} data-testid={`card-general-${listing.id}-${label}`} className="min-w-0 bg-[#f7f7f7] px-3 py-3"><span className="flex items-center gap-1.5 font-data text-xs uppercase tracking-[.06em] text-stone">{Icon && <Icon size={13} aria-hidden="true" className="shrink-0 text-brand"/>}{label}</span><strong className={`mt-1 block break-words font-semibold ${label === 'Prix' ? 'text-[16px] tracking-[-.03em]' : 'text-[12px]'}`}>{value}</strong></div>; })}
          </div>
+         {listing.nearestStop && <NearestStopLine stop={listing.nearestStop} testId={`card-stop-${listing.id}`}/>}
          {chips.length > 0 && <ul className="mt-4 flex flex-wrap gap-1.5" data-testid={`card-facts-${listing.id}`} aria-label="Vos critères et caractéristiques">
            {chips.map(chip => <li key={chip.key} data-testid={chip.testId} title={chip.status ? `${chip.text} : ${chip.status}` : undefined} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs ${chip.tone === 'confirmed' ? 'border border-ok-line bg-ok-wash font-medium text-ok-deep' : chip.tone === 'contradicted' ? 'border border-[#fecdca] bg-[#fef3f2] font-medium text-[#b42318]' : chip.tone === 'unknown' ? 'border border-dashed border-[#b0b0b0] font-medium text-[#484848]' : 'bg-[#f2f2f2] text-[#484848]'}`}><chip.Icon size={13} aria-hidden="true" className="shrink-0"/>{chip.text}{chip.status && <span className="sr-only"> : {chip.status}</span>}</li>)}
            {hidden > 0 && <li className="inline-flex items-center px-1.5 py-1.5 text-xs text-stone" data-testid={`card-facts-more-${listing.id}`}>+{hidden}</li>}

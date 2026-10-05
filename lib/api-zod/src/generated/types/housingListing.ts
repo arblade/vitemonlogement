@@ -11,6 +11,7 @@ import type { HousingListingBatch } from './housingListingBatch';
 import type { HousingListingGeoPrecision } from './housingListingGeoPrecision';
 import type { HousingListingGeoSource } from './housingListingGeoSource';
 import type { HousingListingSource } from './housingListingSource';
+import type { NearestStop } from './nearestStop';
 
 export interface HousingListing {
   id: number;
@@ -70,4 +71,6 @@ export interface HousingListing {
   firstSeenAt?: string | null;
   /** false while the AI analysis is still to be done (done when the listing is displayed) */
   analyzed: boolean;
+  /** Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach */
+  nearestStop?: NearestStop | null;
 }

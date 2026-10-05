@@ -13,9 +13,15 @@ let desktop; // contexte du second compte
 
 const newContext = async (name) => {
   const context = await browser.newContext({ viewport: VIEWPORTS[name], isMobile: name === "mobile", hasTouch: name === "mobile", deviceScaleFactor: name === "mobile" ? 2 : 1 });
-  // Aucun service externe : le fond de carte (OpenFreeMap) est remplacé par un style vide local.
+  // Aucun service externe : le fond de carte (OpenFreeMap) est remplacé par un style vide local. Il déclare la source
+  // des tuiles et les polices comme le vrai (requêtes coupées) : les couches transport y sont posées comme en production.
+  const style = {
+    version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
+    sources: { openmaptiles: { type: "vector", tiles: ["https://tiles.openfreemap.org/planet/test/{z}/{x}/{y}.pbf"], maxzoom: 14 } },
+    layers: [{ id: "fond", type: "background", paint: { "background-color": "#eeeeee" } }],
+  };
   await context.route(/tiles\.openfreemap\.org/, route => route.request().url().includes("/styles/")
-    ? route.fulfill({ contentType: "application/json", body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: "fond", type: "background", paint: { "background-color": "#eeeeee" } }] }) })
+    ? route.fulfill({ contentType: "application/json", body: JSON.stringify(style) })
     : route.abort());
   return context;
 };
@@ -180,6 +186,17 @@ async function checkListingMap(page) {
   assert.equal(await page.locator("[data-testid=listing-map-1] .vml-line").count(), 0);
   const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
+  // Station de métro la plus proche (base OpenStreetMap du serveur) : marche estimée, repère sur la carte.
+  assert.match(await text(page, "[data-testid=map-stop-1]"), /\d+ min à pied[\s\S]*Métro [\s\S]*à vol d’oiseau/);
+  await page.waitForSelector("[data-testid=listing-map-1] [data-testid=map-marker-stop]");
+  // Fond de carte : stations grises posées ; lignes de tram et de métro masquées, puis montrées par l'interrupteur.
+  await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-transit") === "true", canvas);
+  assert.equal(await page.getAttribute(canvas, "data-lines"), "false");
+  await page.click("[data-testid=toggle-lines-1]");
+  await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "true", canvas);
+  assert.equal(await page.getAttribute("[data-testid=toggle-lines-1]", "aria-checked"), "true");
+  await page.click("[data-testid=toggle-lines-1]");
+  await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "false", canvas);
 }
 
 test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal ouvre la fiche, « Voir sur … » renvoie au site, sans titres de rubrique", async () => {
@@ -216,6 +233,9 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       assert.ok(first.y < page.viewportSize().height * 0.75, `${name} : première annonce dans le premier écran (${Math.round(first.y)} px)`);
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
+      // Station de métro ou de tram la plus proche, à pied : sur la carte d'une adresse exacte, pas d'une simple commune.
+      assert.match(await text(page, "[data-testid=card-stop-1]"), /^\d+ min à pied[\s\S]*Métro/, name);
+      assert.equal(await page.locator("[data-testid=card-stop-2]").count(), 0, `${name} : commune seulement, pas de station annoncée`);
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
       // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).
       const [fiche, site, compare] = await Promise.all(["button-fiche-1", "link-source-1", "button-compare-1"].map(id => page.locator(`[data-testid=${id}]`).boundingBox()));
@@ -466,6 +486,17 @@ test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la 
       assert.equal(await page.locator("[data-testid=results-marker-2]").count(), 0, `${name} : la commune seule n'est pas un point`);
       assert.match(await text(page, "[data-testid=results-marker-1]"), /600|610|620|630/, name);
       assert.match(await text(page, "[data-testid=results-place-place-1]"), /Travail/, `${name} : le lieu de travail est repéré`);
+      // Stations grises sur le fond ; l'interrupteur montre les lignes de tram et de métro (puis on les remasque).
+      const resultsCanvas = "[data-testid=results-map-canvas]";
+      await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-transit") === "true", resultsCanvas);
+      assert.equal(await page.getAttribute(resultsCanvas, "data-lines"), "false", name);
+      const toggleBox = await page.locator("[data-testid=toggle-lines-results]").boundingBox();
+      assert.ok(toggleBox && toggleBox.height >= 32, `${name} : interrupteur tactile (${JSON.stringify(toggleBox)})`);
+      await page.click("[data-testid=toggle-lines-results]");
+      await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "true", resultsCanvas);
+      await page.waitForSelector("[data-testid=toggle-lines-results-legend]");
+      await page.click("[data-testid=toggle-lines-results]");
+      await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "false", resultsCanvas);
       assert.match(await text(page, "[data-testid=results-map-note]"), /2 logements sur la carte \(dont 1 d’après l’adresse citée dans la description\).*1 autre n’a qu’un quartier ou une commune/s, name);
       const viewport = page.viewportSize();
       const dialogBox = await page.locator("[data-testid=dialog-results-map]").boundingBox();

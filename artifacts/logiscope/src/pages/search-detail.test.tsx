@@ -114,6 +114,18 @@ describe('Page résultats : contenu', () => {
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
+  it('station de métro ou de tram la plus proche : « 9 min à pied » sur la carte, avec le nom et les lignes ; rien sans station', () => {
+    api.state.data = search({ listings: [
+      listing(1, { nearestStop: { name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: 540, walkMinutes: 9, lines: [{ mode: 'metro', name: 'B', color: '#00a3e0' }, { mode: 'tram', name: 'T2', color: null }] } }),
+      listing(2, { nearestStop: null }),
+    ] });
+    renderPage();
+    const stop = screen.getByTestId('card-stop-1');
+    expect(stop).toHaveTextContent('9 min à pied· Métro et tram Jean Jaurès');
+    expect(within(stop).getByLabelText('Lignes B, T2')).toBeInTheDocument();
+    expect(screen.queryByTestId('card-stop-2')).not.toBeInTheDocument();
+  });
+
   it('« Fiche complète » est le bouton principal et ouvre la fiche ; « Voir sur … » et « Comparer » restent à côté', async () => {
     const user = userEvent.setup();
     renderPage();

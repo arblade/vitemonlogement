@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
+import { nearestStop } from "../../lib/stations";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
@@ -295,10 +296,17 @@ export async function getPublicSearch(id: number) {
   return search && { ...search, listings: search.listings.map(publicListing) };
 }
 
-/** Annonce telle qu'exposée au navigateur : dates en ISO, sans le code postal. */
+/**
+ * Annonce telle qu'exposée au navigateur : dates en ISO, sans le code postal. Station de métro ou de tram la plus proche
+ * calculée à la volée (base en mémoire, sans appel) et seulement depuis une position précise : depuis un quartier ou
+ * une commune, la marche annoncée serait fausse.
+ */
 export function publicListing(listing: Listing) {
   const { postcode: _postcode, postedAt, refreshedAt, firstSeenAt, analyzed, ...rest } = listing;
-  return { ...rest, postedAt: iso(postedAt), refreshedAt: iso(refreshedAt), firstSeenAt: iso(firstSeenAt), analyzed: analyzed !== false };
+  return {
+    ...rest, postedAt: iso(postedAt), refreshedAt: iso(refreshedAt), firstSeenAt: iso(firstSeenAt), analyzed: analyzed !== false,
+    nearestStop: isPrecise(listing) ? nearestStop(listing) : null,
+  };
 }
 
 const squeeze = (value: string) => value.toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();

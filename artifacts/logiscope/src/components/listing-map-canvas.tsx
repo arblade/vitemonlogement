@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { ListingRoute } from '@workspace/api-client-react';
+import type { ListingRoute, NearestStop } from '@workspace/api-client-react';
 import { circle, formatDuration, routeDrawing, type LatLng, type LocatedPlace } from '@/lib/geo';
 import { mapIcon, type MapIconName } from '@/components/map-icons';
+import { addTransitLayers, setTransitLines, TRANSIT_ICONS } from '@/components/map-transit';
 
 // OpenFreeMap : tuiles vectorielles OpenStreetMap, gratuites, sans clé ni plafond (usage commercial autorisé).
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
@@ -29,16 +30,27 @@ function element(html: string, title: string) {
 }
 
 /** Carte MapLibre impérative : recréée quand les points ou les trajets changent (quelques marqueurs, c'est instantané). */
-export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
+export default function ListingMapCanvas({ home, radius = 0, places, routes, stop = null, showLines = false, onZoom }: {
   home: LatLng;
   /** 0 : position exacte (point) ; sinon rayon en mètres de la zone où se trouve le logement. */
   radius?: number;
   places: LocatedPlace[];
   routes: ListingRoute[];
+  /** Station de métro ou de tram la plus proche : repérée sur la carte. */
+  stop?: NearestStop | null;
+  /** Voies de tram et de métro du fond de carte affichées. */
+  showLines?: boolean;
+  onZoom?: (zoom: number) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const linesRef = useRef(showLines);
+  linesRef.current = showLines;
+  const zoomRef = useRef(onZoom);
+  zoomRef.current = onZoom;
   const [failed, setFailed] = useState(false);
-  const [drawn, setDrawn] = useState<{ routes: number; crow: number; area: boolean; parts: number; dotted: number } | null>(null);
+  const [linesShown, setLinesShown] = useState(false);
+  const [drawn, setDrawn] = useState<{ routes: number; crow: number; area: boolean; parts: number; dotted: number; transit: boolean } | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -73,19 +85,25 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
       const html = `<div class="vml-line" style="background:${badge.color};color:${badge.text}">${escape(badge.name)}</div>`;
       new maplibregl.Marker({ element: element(html, `Ligne ${badge.name}`) }).setLngLat(badge.at).addTo(map);
     }
+    if (stop) {
+      const icon = stop.lines.some(item => item.mode === 'metro') ? 'vml-metro' : 'vml-tram';
+      const html = `<div class="vml-stop" data-testid="map-marker-stop"><img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(TRANSIT_ICONS[icon])}" alt="" width="22" height="22"/><span>${escape(stop.name)}</span></div>`;
+      new maplibregl.Marker({ element: element(html, `Station la plus proche : ${stop.name}`) }).setLngLat(lngLat(stop)).addTo(map);
+    }
     const homeHtml = `<div class="vml-pin vml-pin-home${radius ? ' vml-pin-area' : ''}" data-testid="map-marker-home">${mapIcon('house', 16)}</div>`;
     new maplibregl.Marker({ element: element(homeHtml, 'Le logement') }).setLngLat(lngLat(home)).addTo(map);
 
     const zone = radius ? circle(home, radius) : [];
     const bounds = new maplibregl.LngLatBounds(lngLat(home), lngLat(home));
     zone.forEach(point => bounds.extend(point));
+    if (stop) bounds.extend(lngLat(stop));
     for (const { place, route } of withRoute) {
       bounds.extend(lngLat(place));
       route?.path.forEach(([lat, lng]) => bounds.extend([lng, lat]));
     }
     const frame = () => {
       map.resize();
-      if (places.length || radius) map.fitBounds(bounds, { padding: { top: 84, left: 56, right: 72, bottom: 64 }, maxZoom: 16, duration: 0 });
+      if (places.length || radius || stop) map.fitBounds(bounds, { padding: { top: 84, left: 56, right: 72, bottom: 64 }, maxZoom: 16, duration: 0 });
       else map.jumpTo({ center: lngLat(home), zoom: 15 });
     };
     frame();
@@ -93,6 +111,9 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
     map.on('load', () => {
       // Crédit OpenStreetMap replié en « i » (déplié, il masquerait les marqueurs sur mobile).
       container.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      // Stations et arrêts en gris sur le fond, voies de tram et de métro à la demande : sous les trajets.
+      const transit = addTransitLayers(map, linesRef.current);
+      setLinesShown(transit && linesRef.current);
       const routeLines = drawings.flatMap(drawing => drawing.solid.map(part => ({ ...line(part.coordinates), properties: { color: part.color } })));
       const dotted = drawings.flatMap(drawing => drawing.dotted.map(line));
       // Ligne droite seulement depuis une position exacte : depuis une zone, elle ferait croire à un trajet connu.
@@ -110,18 +131,24 @@ export default function ListingMapCanvas({ home, radius = 0, places, routes }: {
       map.addLayer({ id: 'route-casing', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-width': 9 } });
       map.addLayer({ id: 'route-line', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 5 } });
       map.addLayer({ id: 'crow-line', type: 'line', source: 'crow', layout: { 'line-cap': 'round' }, paint: { 'line-color': '#222222', 'line-opacity': .5, 'line-width': 2, 'line-dasharray': [1, 3] } });
-      setDrawn({ routes: drawings.length, crow: crowLines.length, area: zone.length > 0, parts: routeLines.length, dotted: dotted.length });
+      setDrawn({ routes: drawings.length, crow: crowLines.length, area: zone.length > 0, parts: routeLines.length, dotted: dotted.length, transit });
     });
+    map.on('zoomend', () => zoomRef.current?.(map.getZoom()));
+    zoomRef.current?.(map.getZoom());
+    mapRef.current = map;
     map.on('error', () => undefined); // tuiles injoignables : la carte reste utilisable avec ses marqueurs
 
     // La fiche s'ouvre avec une animation : on recadre une fois sa taille définitive connue.
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => frame());
     observer?.observe(container.current);
-    return () => { observer?.disconnect(); map.remove(); };
-  }, [home.lat, home.lng, radius, places, routes]);
+    return () => { observer?.disconnect(); mapRef.current = null; map.remove(); };
+  }, [home.lat, home.lng, radius, places, routes, stop?.name, stop?.lat, stop?.lng]);
+
+  // Afficher ou masquer les lignes sans recréer la carte.
+  useEffect(() => { if (mapRef.current) setLinesShown(setTransitLines(mapRef.current, showLines)); }, [showLines]);
 
   if (failed) return <div className="grid h-full place-items-center px-6 text-center text-xs text-stone">La carte ne peut pas s’afficher sur cet appareil.</div>;
   // data-* : trajets, tronçons pleins, pointillés et lignes droites réellement tracés (utilisé par les tests navigateur).
-  return <div ref={container} data-testid="listing-map-canvas" data-routes={drawn?.routes} data-crow={drawn?.crow} data-area={drawn?.area} data-parts={drawn?.parts} data-dotted={drawn?.dotted}
+  return <div ref={container} data-testid="listing-map-canvas" data-routes={drawn?.routes} data-crow={drawn?.crow} data-area={drawn?.area} data-parts={drawn?.parts} data-dotted={drawn?.dotted} data-transit={drawn?.transit} data-lines={linesShown}
     className="h-full w-full" role="region" aria-label={radius ? 'Carte : zone du logement et vos lieux' : 'Carte : position du logement et de vos lieux'}/>;
 }

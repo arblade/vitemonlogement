@@ -411,6 +411,32 @@ export const HousingListingGeoSource = {
   description: 'description',
 } as const;
 
+export type StopLineMode = typeof StopLineMode[keyof typeof StopLineMode];
+
+
+export const StopLineMode = {
+  metro: 'metro',
+  tram: 'tram',
+} as const;
+
+export interface StopLine {
+  mode: StopLineMode;
+  name: string;
+  /** @nullable */
+  color: string | null;
+}
+
+export interface NearestStop {
+  name: string;
+  lat: number;
+  lng: number;
+  /** Straight-line distance from the listing */
+  distanceMeters: number;
+  /** Estimated walk (straight line x 1.3 detour, 4.8 km/h) */
+  walkMinutes: number;
+  lines: StopLine[];
+}
+
 export interface HousingListing {
   id: number;
   /** Site the listing comes from */
@@ -469,6 +495,8 @@ export interface HousingListing {
   firstSeenAt?: string | null;
   /** false while the AI analysis is still to be done (done when the listing is displayed) */
   analyzed: boolean;
+  /** Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach */
+  nearestStop?: NearestStop | null;
 }
 
 export type HousingSearchDetail = HousingSearchSummary & {

@@ -240,7 +240,19 @@ export const CreateHousingSearchResponse = zod.object({
   "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
   "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
   "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
-  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)'),
+  "nearestStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
+  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -352,7 +364,19 @@ export const GetHousingSearchResponse = zod.object({
   "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
   "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
   "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
-  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)'),
+  "nearestStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
+  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -475,7 +499,19 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
   "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
   "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
-  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)'),
+  "nearestStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
+  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -590,7 +626,19 @@ export const RefreshHousingSearchResponse = zod.object({
   "postedAt": zod.string().nullish().describe('Publication on the site (ISO)'),
   "refreshedAt": zod.string().nullish().describe('Last update on the site, moves when the ad is bumped (ISO)'),
   "firstSeenAt": zod.string().nullish().describe('First read for this search (ISO)'),
-  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)')
+  "analyzed": zod.boolean().describe('false while the AI analysis is still to be done (done when the listing is displayed)'),
+  "nearestStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
+  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
