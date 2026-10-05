@@ -91,9 +91,11 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
   des résultats. Aucun service extérieur (OpenFreeMap et ORS coupés, accès de l'annonce 1 déjà en base).
 
 ## Captures
-`maquettes/transport-*` (mobile 390 px et desktop 1280 px, vrai fond OpenFreeMap) : `carte-annonce` (ligne « 10 min à
-pied · Métro Rihour M1 »), `fiche-station` (stations grises, repère Rihour), `fiche-lignes` (lignes allumées, métro
-souterrain en tirets). La carte des résultats en desktop n'a pas pu être capturée dans l'environnement de test (rendu
-WebGL logiciel trop lent) ; le test navigateur la vérifie en mobile et en desktop.
+`maquettes/transport-*` (mobile 390 px puis desktop 1280 px, vrai fond OpenFreeMap, accès à pied de l'annonce de test
+déjà calculé) : `carte-annonce` (« 9 min à pied · Métro Rihour M1 », « 2 min à pied · Bus Colpin »), `fiche-station`
+(métro et bus repérés), `fiche-lignes` et `carte-resultats-lignes` (lignes allumées : métro 1 jaune, 2 rouge, trams R et
+T, traits continus, nom le long du trait). Dans l'environnement de test, le rendu WebGL logiciel est lent : sur
+certaines captures desktop, le fond n'a pas fini de se dessiner (les lignes, elles, sont là) ; les polices web
+n'étaient pas toujours chargées.
 
 Données © les contributeurs d'OpenStreetMap, licence ODbL (déjà crédité sur la carte).
