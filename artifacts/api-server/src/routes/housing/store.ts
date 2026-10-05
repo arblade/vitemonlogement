@@ -7,7 +7,7 @@ import { accessKey, storedAccess, type Access } from "../../lib/access";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
-import type { PropertyType } from "./property-type";
+import type { EnergyClass, PropertyType } from "./property-type";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
 
@@ -60,6 +60,10 @@ export type Criteria = {
   maxArea?: number | null;
   minRooms?: number | null;
   maxRooms?: number | null;
+  /** Nombre minimum de CHAMBRES (distinct des pièces : une maison de 3 pièces peut n'avoir que 2 chambres). */
+  minBedrooms?: number | null;
+  /** DPE le moins bon accepté (« DPE minimum D » → « D » : A à D acceptés). */
+  minEnergyClass?: EnergyClass | null;
   radius?: number;
   keywords: string;
   wishes?: string[];

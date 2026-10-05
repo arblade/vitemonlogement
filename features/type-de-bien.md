@@ -47,9 +47,39 @@ d'ailleurs jamais une annonce (il retire 15 points de score).
    avec citation), au prix d'une lecture IA ; « Location domaine » (20 pièces, 350 €) et « Location maison à la chambre » passent.
 3. **« À moins de 30 min de l'aéroport »** n'est pas un lieu de vie reconnu (`places` vide) : c'est un souhait lu dans le
    texte (jamais confirmé), et le rayon reste de 5 km autour du centre de Rennes alors que l'aéroport est à ~7 km.
-4. **« 3 chambres ou plus »** devient « au moins 3 pièces » : une maison de 2 chambres + séjour (3 pièces) passe.
+4. **« 3 chambres ou plus » devenait « au moins 3 pièces ». Corrigé le 05/10** (voir ci-dessous).
+
+## Chambres et DPE : critères à part, vérifiés sur les champs du site (05/10)
+- **Interprétation** : deux nouveaux champs, `minBedrooms` (chambres, distinct des pièces : « 3 chambres ou plus » → 3 chambres,
+  pièces à `null`) et `minEnergyClass` (« DPE minimum D » → `D`, c'est-à-dire A à D). Un souhait que ces critères expriment déjà
+  est retiré de la liste des souhaits (pas de doublon). Valeur incompréhensible (« trois », « Z », 0) → ignorée.
+- **Requête Le Bon Coin** : le filtre de pièces vaut au moins N (« N chambres » suppose N pièces au minimum, jamais plus : un
+  filtre à N+1 perdrait pour toujours une annonce qui compte mal ses pièces). Aucun filtre de DPE demandé au site (non vérifié).
+- **Lecture, sans IA ni coût** : l'annonce déclare ses chambres (`bedrooms`, « 3 ch. ») et sa classe (`energy_rate`, A à G). Elle
+  est **écartée seulement si ce champ contredit clairement la demande** (2 chambres pour 3 demandées, DPE F pour « D minimum »),
+  comme le prix, la surface et les pièces déclarés. **Jamais** sur une lecture de texte, **jamais** quand le champ manque ou n'est
+  pas lisible (« N », « vierge » = inconnu, annonce gardée). Ces champs sont peu remplis (chambres : 6 annonces sur 59 de nos
+  échantillons) : la plupart des annonces restent « à vérifier » et gardées.
+- Deux critères s'affichent sur les cartes (« Au moins 3 chambres », « DPE D ou mieux ») avec leur statut, et deux lignes dans
+  « Votre demande » (« Chambres min. », « DPE minimum »). Les critères « à vérifier » restent lus dans le texte par le LLM (score
+  seulement, comme avant).
+- **Rejoué sur les 10 annonces réelles de l'essai** : « Maison t3 » (2 chambres, DPE F) et « Maison 3 pièces 59 m² » (2 chambres),
+  qui passaient parce que 3 pièces ne font pas 3 chambres, sont écartées. Restent : « Location domaine » (champs absents),
+  « Location maison à la chambre » (4 chambres déclarées, mais location à la chambre) et « Espace de bureaux » : à écarter par
+  la dernière passe du LLM (type d'offre « chambre » / « non habitable », avec citation), pas par ces champs.
+
+### Garde contre « terrain de 1500 m² » pris pour une surface habitable
+Un essai réel a montré le LLM lisant « un terrain de 1500 m2 » comme `minArea: 1500` (surface du logement) : la requête aurait
+contenu `square=1500-max`, soit aucun résultat. Prompt renforcé (la surface est celle du logement, jamais d'un terrain ou jardin)
+**et** garde déterministe (`landAreaClause`) : si le nombre est qualifié de terrain, jardin, parcelle… dans la demande et pas de
+logement, la surface est annulée et le groupe « terrain de 1500 m2 » devient un souhait (une seule fois).
+
+### Constat de l'essai réel : ville vide
+Sur 3 interprétations réelles de la même demande, **2 ont renvoyé `location: ""`** : le LLM voit « l'aéroport de Rennes » comme un
+lieu et non comme la ville de la recherche. La recherche échoue alors avec « Indiquez une ville ou un département dans votre
+description » (`pipeline.ts`). Petit échantillon, mais cela rejoint le point 2 (aéroport) : à traiter avec lui.
 
 ## Tests
 `type-de-bien.test.ts` (requête, `declaredType`, `matchesPropertyType`, lecture, de bout en bout avec faux LLM et faux
-Apify : maison demandée, valeur inattendue du LLM) ; `offer.test.ts` (demandes « … à louer », offres qui gardent « à louer ») ; `search-detail.test.tsx` (ligne « Type de bien ») ; `e2e/app.e2e.mjs`
+Apify : maison demandée, valeur inattendue du LLM) ; `chambres-dpe.test.ts` (champs chambres et DPE, filtre de pièces large, écartement sur champ seulement, souhaits sans doublon, garde terrain, de bout en bout) ; `offer.test.ts` (demandes « … à louer », offres qui gardent « à louer ») ; `search-detail.test.tsx` (ligne « Type de bien ») ; `e2e/app.e2e.mjs`
 (« Votre demande » dit « Appartement »). Vérifié en cassant volontairement le filtre et la requête : les tests échouent.

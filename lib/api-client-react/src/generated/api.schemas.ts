@@ -26,6 +26,23 @@ export const HousingCriteriaIntent = {
 } as const;
 
 /**
+ * Worst energy class (DPE) accepted, A (best) to G; null or absent = no requirement
+ * @nullable
+ */
+export type HousingCriteriaMinEnergyClass = typeof HousingCriteriaMinEnergyClass[keyof typeof HousingCriteriaMinEnergyClass] | null;
+
+
+export const HousingCriteriaMinEnergyClass = {
+  A: 'A',
+  B: 'B',
+  C: 'C',
+  D: 'D',
+  E: 'E',
+  F: 'F',
+  G: 'G',
+} as const;
+
+/**
  * Dwelling type wanted (house or apartment); null or absent = both
  * @nullable
  */
@@ -110,6 +127,16 @@ export interface HousingCriteria {
   minRooms?: number | null;
   /** @nullable */
   maxRooms?: number | null;
+  /**
+     * Minimum number of bedrooms (not rooms); null or absent = no minimum
+     * @nullable
+     */
+  minBedrooms?: number | null;
+  /**
+     * Worst energy class (DPE) accepted, A (best) to G; null or absent = no requirement
+     * @nullable
+     */
+  minEnergyClass?: HousingCriteriaMinEnergyClass;
   /**
      * @minimum 0
      * @maximum 200

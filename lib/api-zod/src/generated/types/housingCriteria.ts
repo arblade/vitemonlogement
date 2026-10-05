@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { HousingCriteriaIntent } from './housingCriteriaIntent';
+import type { HousingCriteriaMinEnergyClass } from './housingCriteriaMinEnergyClass';
 import type { HousingCriteriaPropertyType } from './housingCriteriaPropertyType';
 import type { HousingCriterion } from './housingCriterion';
 import type { HousingPlace } from './housingPlace';
@@ -25,6 +26,16 @@ export interface HousingCriteria {
   minRooms?: number | null;
   /** @nullable */
   maxRooms?: number | null;
+  /**
+     * Minimum number of bedrooms (not rooms); null or absent = no minimum
+     * @nullable
+     */
+  minBedrooms?: number | null;
+  /**
+     * Worst energy class (DPE) accepted, A (best) to G; null or absent = no requirement
+     * @nullable
+     */
+  minEnergyClass?: HousingCriteriaMinEnergyClass;
   /**
      * @minimum 0
      * @maximum 200

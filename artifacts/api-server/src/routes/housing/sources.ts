@@ -5,7 +5,7 @@ import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
 import { resolvePlace, type Commune } from "../../lib/places";
 import { apify, apifyText } from "./apify-client";
-import { checksFor, evaluateStructured } from "./criteria";
+import { checksFor, evaluateStructured, queryMinRooms } from "./criteria";
 import type { ActorRequest, SearchBatch } from "./housing-search";
 import { getImages, number, object, text } from "./parse";
 import { isColocationAd, isSeekerAd } from "./offer";
@@ -67,7 +67,7 @@ function papInput(criteria: Criteria, commune: Commune, limit: number) {
     maxResults: limit,
   };
   const ranges: [string, number | null | undefined][] = [
-    ["nbPiecesMin", criteria.minRooms], ["nbPiecesMax", criteria.maxRooms],
+    ["nbPiecesMin", queryMinRooms(criteria)], ["nbPiecesMax", criteria.maxRooms],
     ["priceMin", criteria.minPrice], ["priceMax", criteria.maxPrice],
     ["surfaceMin", criteria.minArea], ["surfaceMax", criteria.maxArea],
   ];
@@ -78,7 +78,7 @@ function papInput(criteria: Criteria, commune: Commune, limit: number) {
 export function selogerSearchUrl(criteria: Criteria, code: string) {
   const params = new URLSearchParams({ distributionTypes: "Rent", estateTypes: criteria.propertyType === "house" ? "House" : criteria.propertyType === "apartment" ? "Apartment" : "Apartment,House", locations: code });
   const ranges: [string, number | null | undefined][] = [
-    ["numberOfRoomsMin", criteria.minRooms], ["numberOfRoomsMax", criteria.maxRooms],
+    ["numberOfRoomsMin", queryMinRooms(criteria)], ["numberOfRoomsMax", criteria.maxRooms],
     ["priceMin", criteria.minPrice], ["priceMax", criteria.maxPrice],
     ["spaceMin", criteria.minArea], ["spaceMax", criteria.maxArea],
   ];

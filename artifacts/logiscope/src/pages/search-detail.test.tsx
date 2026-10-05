@@ -235,6 +235,20 @@ describe('Page résultats : contenu', () => {
     expect(row('Pièces max.')).toHaveTextContent('Pièces max.2');
   });
 
+  it('« Votre demande » dit les chambres minimum et le DPE minimum, distincts des pièces ; « Non précisé » sinon', () => {
+    const row = (label: string) => screen.getByText(label).parentElement;
+    api.state.data = search({ criteria: { ...search().criteria, minRooms: null, minBedrooms: 3, minEnergyClass: 'D' } });
+    const { unmount } = renderPage();
+    expect(row('Chambres min.')).toHaveTextContent('Chambres min.3');
+    expect(row('DPE minimum')).toHaveTextContent('DPE minimumD ou mieux');
+    expect(row('Pièces min.')).toHaveTextContent('Pièces min.Non précisées');
+    unmount();
+    api.state.data = search();
+    renderPage();
+    expect(row('Chambres min.')).toHaveTextContent('Non précisées');
+    expect(row('DPE minimum')).toHaveTextContent('Non précisé');
+  });
+
   it('« Votre demande » dit le type de bien cherché : maison, appartement, ou les deux quand il n\'est pas précisé', () => {
     const row = (label: string) => screen.getByText(label).parentElement;
     for (const [propertyType, shown] of [['house', 'Maison'], ['apartment', 'Appartement'], [null, 'Maison ou appartement'], [undefined, 'Maison ou appartement']] as const) {

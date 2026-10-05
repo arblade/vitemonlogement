@@ -2,6 +2,11 @@
 // Le Bon Coin classe chaque annonce (`real_estate_type`) : 1 Maison, 2 Appartement, 3 Terrain, 4 Parking, 5 Autre.
 export type PropertyType = "house" | "apartment";
 
+/** Classe du diagnostic de performance énergétique : A (la meilleure) à G. */
+export const ENERGY_CLASSES = ["A", "B", "C", "D", "E", "F", "G"] as const;
+export type EnergyClass = (typeof ENERGY_CLASSES)[number];
+export const isEnergyClass = (value: unknown): value is EnergyClass => typeof value === "string" && (ENERGY_CLASSES as readonly string[]).includes(value);
+
 export const isPropertyType = (value: unknown): value is PropertyType => value === "house" || value === "apartment";
 
 /**

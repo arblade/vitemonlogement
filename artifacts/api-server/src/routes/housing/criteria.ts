@@ -1,5 +1,6 @@
 import type { Criteria, Criterion, CriterionResult, Listing } from "./store";
 import { catalogueFeature, catalogueFor, saysNo, wantsAbsence } from "./catalogue";
+import { ENERGY_CLASSES } from "./property-type";
 
 type Basic = Pick<Listing, "price" | "area" | "rooms" | "location">;
 
@@ -34,6 +35,9 @@ export function checksFor(criteria: Criteria): Criterion[] {
     availability: "api", apiField: "area",
   });
   if (criteria.minRooms != null || criteria.maxRooms != null) checks.push({ id: "rooms", label: roomsLabel(criteria.minRooms ?? null, criteria.maxRooms ?? null), availability: "api", apiField: "rooms" });
+  // Chambres et DPE : lus dans les champs du site quand il les donne, sinon dans la description (« hybrid »).
+  if (criteria.minBedrooms != null) checks.push({ id: "bedrooms", label: `Au moins ${criteria.minBedrooms} chambre${criteria.minBedrooms > 1 ? "s" : ""}`, availability: "hybrid", apiField: "bedrooms" });
+  if (criteria.minEnergyClass != null) checks.push({ id: "energy", label: `DPE ${criteria.minEnergyClass} ou mieux`, availability: "hybrid", apiField: "energy_rate" });
   for (const [index, wish] of (criteria.wishes ?? []).slice(0, 8).entries()) {
     const label = labelForWish(wish);
     if (!label) continue;
@@ -54,6 +58,37 @@ export function matchesKnownBasics(listing: Basic, criteria: Criteria) {
     (listing.rooms != null && !matchesValue("rooms", listing.rooms, criteria))
   );
 }
+
+/**
+ * Pièces minimum à demander au site : « 3 chambres » suppose au moins 3 pièces (les chambres en font partie), jamais
+ * plus : un filtre à « 4 pièces » perdrait pour toujours une annonce qui compte mal ses pièces. Le vrai tri sur les
+ * chambres se fait à la lecture, sur le champ « chambres » de l'annonce.
+ */
+export const queryMinRooms = (criteria: Pick<Criteria, "minRooms" | "minBedrooms">) => {
+  const wanted = Math.max(criteria.minRooms ?? 0, criteria.minBedrooms ?? 0);
+  return wanted > 0 ? wanted : null;
+};
+
+/** Chambres déclarées par le site : « 3 », « 3 ch. » ; null si absent ou incompréhensible (jamais deviné). */
+export function declaredBedrooms(value: unknown): number | null {
+  const count = typeof value === "number" ? value : /^\s*(\d{1,2})\s*(?:ch\.?|chambres?)?\s*$/i.exec(String(value ?? ""))?.[1];
+  const n = Number(count);
+  return count != null && Number.isInteger(n) && n >= 0 ? n : null;
+}
+
+/** DPE déclaré : une lettre de A à G ; « N », « vierge », « non communiqué »… → null (on ne sait pas, on garde). */
+export function declaredEnergyClass(value: unknown): (typeof ENERGY_CLASSES)[number] | null {
+  const letter = String(value ?? "").trim().toUpperCase();
+  return (ENERGY_CLASSES as readonly string[]).includes(letter) ? letter as (typeof ENERGY_CLASSES)[number] : null;
+}
+
+/**
+ * Le site contredit-il une exigence ? Seulement sur ce que l'annonce déclare dans ses champs (chambres, classe DPE) :
+ * jamais sur une lecture de texte, jamais quand le champ manque ou n'est pas lisible. Même règle que le prix, la
+ * surface et les pièces (voir matchesKnownBasics) : une annonce qui se contredit elle-même sur une exigence est écartée.
+ */
+export const contradictsDeclared = (listing: { criterionResults: CriterionResult[] }) =>
+  listing.criterionResults.some(check => (check.id === "bedrooms" || check.id === "energy") && check.source === "api" && check.status === "contradicted");
 
 export function matchesValue(id: string, value: number, criteria: Criteria): boolean {
   if (id === "price") return (criteria.minPrice == null || value >= criteria.minPrice) && (criteria.maxPrice == null || value <= criteria.maxPrice);
@@ -90,6 +125,16 @@ export function evaluateStructured(criteria: Criteria, listing: Basic, raw: Reco
     if (check.id === "price" || check.id === "area" || check.id === "rooms") {
       const value = listing[check.id];
       return value == null ? unknown(check) : structured(value, check.id, check, matchesValue(check.id, value, criteria));
+    }
+    if (check.id === "bedrooms") {
+      const bedrooms = declaredBedrooms(apiValue(raw, "bedrooms") ?? apiValue(raw, "nb_bedrooms"));
+      return bedrooms == null ? unknown(check) : structured(`${bedrooms} chambre${bedrooms > 1 ? "s" : ""}`, "chambres", check, bedrooms >= (criteria.minBedrooms ?? 0));
+    }
+    if (check.id === "energy") {
+      const declared = declaredEnergyClass(apiValue(raw, "energy_rate") ?? apiValue(raw, "energy_class"));
+      const wanted = criteria.minEnergyClass;
+      return declared == null || wanted == null ? unknown(check)
+        : structured(`Classe ${declared}`, "classe énergie", check, ENERGY_CLASSES.indexOf(declared) <= ENERGY_CLASSES.indexOf(wanted));
     }
     if (check.id === "location") {
       if (!listing.location) return unknown(check);

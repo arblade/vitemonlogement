@@ -4,6 +4,8 @@ export function fatihRecord(ad: {
   realEstateType?: "1" | "2" | "4" | "5"; city?: string; zipcode?: string; lat?: number; lng?: number; type?: string; dealType?: string; images?: string[];
   /** Dates telles que Le Bon Coin les donne : heure de Paris étiquetée « Z » (« 2026-10-01T20:49:09.000Z »). */
   postedAt?: string; updatedAt?: string;
+  /** Chambres (« 3 » → libellé « 3 ch. ») et classe DPE (« d » → libellé « D »), comme les champs de Le Bon Coin. */
+  bedrooms?: number | string; energyRate?: string;
 }) {
   const labels = { "1": "Maison", "2": "Appartement", "4": "Parking", "5": "Autre" } as const;
   const type = ad.realEstateType ?? "2";
@@ -14,7 +16,9 @@ export function fatihRecord(ad: {
     pricing: { amount_eur: ad.price, billing_period: "month" },
     media: JSON.stringify({ images: { count: ad.images?.length ?? 0, urls: ad.images ?? [] } }),
     source_data: JSON.stringify({
-      attributes: [{ key: "real_estate_type", value: type, value_label: labels[type] }, ...(ad.rooms != null ? [{ key: "rooms", value: String(ad.rooms) }] : [])],
+      attributes: [{ key: "real_estate_type", value: type, value_label: labels[type] }, ...(ad.rooms != null ? [{ key: "rooms", value: String(ad.rooms) }] : []),
+        ...(ad.bedrooms != null ? [{ key: "bedrooms", value: String(ad.bedrooms).replace(/\D/g, ""), value_label: `${String(ad.bedrooms).replace(/\D/g, "")} ch.` }] : []),
+        ...(ad.energyRate != null ? [{ key: "energy_rate", value: ad.energyRate.toLowerCase(), value_label: ad.energyRate.toUpperCase() }] : [])],
       location: { city: ad.city ?? "Lille", zipcode: ad.zipcode ?? null, lat: ad.lat ?? null, lng: ad.lng ?? null, type: ad.type ?? "city" },
     }),
   };

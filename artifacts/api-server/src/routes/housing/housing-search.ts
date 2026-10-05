@@ -2,6 +2,7 @@ import type { Criteria } from "./store";
 import { resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
 import { realEstateTypes } from "./property-type";
+import { queryMinRooms } from "./criteria";
 
 // « broad » : recherche élargie, supprimée le 01/10/2026 ; reste lisible dans les anciennes recherches.
 export type SearchBatch = "focused" | "broad";
@@ -56,7 +57,7 @@ export function leboncoinSearchUrl(criteria: Criteria, term: string | null): str
     locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}`,
     real_estate_type: realEstateTypes(criteria.propertyType),
   });
-  const ranges = { rooms: bound(criteria.minRooms, criteria.maxRooms), square: bound(criteria.minArea, criteria.maxArea), price: bound(criteria.minPrice, criteria.maxPrice) };
+  const ranges = { rooms: bound(queryMinRooms(criteria), criteria.maxRooms), square: bound(criteria.minArea, criteria.maxArea), price: bound(criteria.minPrice, criteria.maxPrice) };
   for (const [key, value] of Object.entries(ranges)) if (value) params.set(key, value);
   if (term) params.set("text", term);
   return `https://www.leboncoin.fr/recherche?${params}`;

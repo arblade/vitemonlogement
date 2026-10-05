@@ -13,7 +13,7 @@
 import { analyze } from "./ai";
 import { apify } from "./apify-client";
 import { extraSourceItems, itemRefreshedAt, normalize, positionOf, scoreListing } from "./apify";
-import { matchesKnownBasics } from "./criteria";
+import { contradictsDeclared, matchesKnownBasics } from "./criteria";
 import { actorRequest, canReadPages } from "./housing-search";
 import { interleave, normalizeExtra, startExtraSources } from "./sources";
 import { finishPass, isPrecise, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
@@ -124,7 +124,7 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
 
   const seen = new Set<string>();
   const keep = (item: Omit<Listing, "id"> | null): item is Omit<Listing, "id"> => {
-    if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria)) return false;
+    if (!item || seen.has(item.url) || !matchesKnownBasics(item, criteria) || contradictsDeclared(item)) return false;
     seen.add(item.url);
     return true;
   };

@@ -63,7 +63,7 @@ process.env.GOOGLE_MAPS_API_KEY = "e2e";
 
 await initDatabase(await openDatabase({ dataDir: "memory://" }));
 const id = await createSearch("Un studio à Lille, 700 € max, chat accepté");
-await setCriteria(id, { location: "Lille", intent: "rent", propertyType: "apartment", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }],
+await setCriteria(id, { location: "Lille", intent: "rent", propertyType: "apartment", minBedrooms: 1, minEnergyClass: "D", maxPrice: 700, radius: 5, keywords: "", wishes: ["chat accepté"], checks: [{ id: "price", label: "Budget ≤ 700 €", availability: "api" }, { id: "wish-1", label: "chat accepté", availability: "description", apiField: null }],
   places: [{ id: "place-1", label: "Travail", kind: "work", address: "gare Lille Flandres", ...work, resolved: "Gare Lille Flandres, Lille" }] });
 const listing = (n: number) => ({
   // Annonce 1 : Le Bon Coin ; annonce 2 : PAP (sources multiples).

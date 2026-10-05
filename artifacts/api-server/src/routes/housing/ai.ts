@@ -1,4 +1,4 @@
-import { isPropertyType } from "./property-type";
+import { isEnergyClass, isPropertyType, type EnergyClass } from "./property-type";
 import OpenAI from "openai";
 import type { Criteria, Listing, Feature, Criterion, CriterionResult, Place } from "./store";
 import { checksFor, classifyWish, isWeakStructured, matchesValue } from "./criteria";
@@ -62,9 +62,40 @@ export function roomRange(min: number | null, max: number | null) {
   return low != null && high != null && low > high ? { minRooms: high, maxRooms: low } : { minRooms: low, maxRooms: high };
 }
 
+const BEDROOMS_WISH = /(?:\d+|une?|deux|trois|quatre|cinq)\s*chambres?|chambres?\s*(?:ou plus|minimum|au moins|:\s*\d)/i;
+const ENERGY_WISH = /\b(?:dpe|classe [ée]nerg\w*|diagnostic de performance [ée]nerg\w*)\b/i;
+/** Un souhait que le critère structuré (chambres, DPE) exprime déjà : « 3 chambres ou plus », « DPE minimum D ». */
+export function coveredByStructured(wish: string, structured: { bedrooms: boolean; energy: boolean }) {
+  return (structured.bedrooms && BEDROOMS_WISH.test(wish)) || (structured.energy && ENERGY_WISH.test(wish));
+}
+
+const LAND_WORDS = "terrain|jardin|parcelle|ext[ée]rieur|propri[ée]t[ée]|verger|pr[ée]";
+/**
+ * La surface « 1500 m² » d'une demande est-elle celle d'un terrain ? Le LLM la prend parfois pour la surface habitable,
+ * ce qui ferait demander des logements de 1500 m² (zéro résultat). Vrai si le nombre est qualifié de terrain, jardin…
+ * dans la demande et jamais de logement (« surface », « habitable »). Renvoie alors la proposition à garder comme souhait.
+ */
+export function landAreaClause(prompt: string, value: number | null): string | null {
+  if (value == null) return null;
+  const digits = String(value).replace(/\B(?=(\d{3})+(?!\d))/g, "[\\s\u00a0\u202f.]?");
+  const number = new RegExp(`(?<![\\d])${digits}(?![\\d])`);
+  for (const clause of prompt.split(/[,;.]|\bet\b/i)) {
+    if (!number.test(clause)) continue;
+    if (new RegExp(`(?:${LAND_WORDS})`, "i").test(clause) && !/\b(?:habitable|surface|logement|appartement|maison de)\b/i.test(clause.replace(/surface\s+(?:de\s+)?(?:terrain|jardin)/gi, ""))) {
+      // Seulement le groupe « terrain de 1500 m² » : du premier des deux mots (terrain, nombre) à la fin du dernier, unité comprise.
+      const land = new RegExp(`(?:${LAND_WORDS})`, "i").exec(clause)!, amount = number.exec(clause)!;
+      const start = Math.min(land.index, amount.index);
+      const end = Math.max(land.index + land[0].length, amount.index + amount[0].length);
+      const unit = /^\s*m(?:2|²|etres?|ètres?)?(?![\p{L}])/iu.exec(clause.slice(end))?.[0] ?? "";
+      return clause.slice(start, end + unit.length).trim().slice(0, 100);
+    }
+  }
+  return null;
+}
+
 export async function interpret(prompt: string): Promise<Criteria> {
   const result = await jsonResponse(
-    `Interprète une demande de location de logement en France, jamais un achat. Réponds UNIQUEMENT en JSON avec location (ville ou département, vide si inconnue), intent ("rent" uniquement), minPrice/maxPrice (bornes du loyer mensuel € ou null), minArea/maxArea (bornes surface m² ou null), minRooms/maxRooms (bornes du nombre de pièces ou null : studio ou T1 = 1, T2 = 2… ; « T1 ou T2 » → 1 et 2 ; « un T2 » → 2 et 2 ; « au moins un T2 » ou « T2 ou plus » → 2 et null), radius (5 par défaut), keywords (mots clés immobiliers simples), propertyType ("house" si la personne veut une maison, un pavillon ou une villa ; "apartment" si elle veut un appartement ou un studio ; null si elle ne précise pas ou accepte les deux : un simple « T3 » ou « 3 chambres » ne suffit pas) uncertainChecks:[{"label":"…","availability":"hybrid ou description","apiField":"parking, furnished, elevator ou null"}] et places:[{"label":"nom court en français, ex. Travail, École, Université, Crèche","kind":"work, school ou other","address":"adresse ou nom du lieu tel que cité, sans rien inventer","mode":"walk, bike, transit ou drive UNIQUEMENT si la personne dit explicitement comment elle s'y rend (à pied, à vélo, en transports/métro/bus/train, en voiture), sinon null"}]. places ne contient que les lieux de la vie de la personne (travail, école, université, crèche, famille…) désignés par une adresse ou un nom d'établissement précis ; jamais une simple ville, un quartier ou une zone ; tableau vide sinon. Classe les critères : ville, prix, surface, pièces sont vérifiables dans les champs structurés API quand présents. Parking (nb_parkings), meublé (furnished) et ascenseur (elevator) existent parfois dans l'API, parfois seulement dans la description : hybrid. Les autres souhaits (calme, proximité, balcon, etc.) exigent la lecture du titre/texte : description. Ne présente jamais une donnée absente de l'API comme négative : elle devra être vérifiée par la suite. Liste dans uncertainChecks chaque préférence non structurée exprimée par l'utilisateur (label : sa formulation, ex. « balcon », « chat accepté ») sans en inventer ; ni le type de logement ni le nombre de pièces n'y vont ; tableau vide si aucune. Ne devine aucune borne absente.`,
+    `Interprète une demande de location de logement en France, jamais un achat. Réponds UNIQUEMENT en JSON avec location (ville ou département, vide si inconnue), intent ("rent" uniquement), minPrice/maxPrice (bornes du loyer mensuel € ou null), minArea/maxArea (bornes de la surface HABITABLE du logement en m² ou null ; jamais la surface d'un terrain, d'un jardin ou d'un extérieur : « un terrain de 1500 m² » n'est pas une surface, c'est un souhait à mettre dans uncertainChecks), minRooms/maxRooms (bornes du nombre de pièces ou null : studio ou T1 = 1, T2 = 2… ; « T1 ou T2 » → 1 et 2 ; « un T2 » → 2 et 2 ; « au moins un T2 » ou « T2 ou plus » → 2 et null), minBedrooms (nombre minimum de CHAMBRES ou null ; ne confonds jamais chambres et pièces : « 3 chambres ou plus » → minBedrooms 3 et minRooms null, car minRooms ne vient que de « pièces » ou d'un « T3 »), minEnergyClass (lettre A à G du DPE le moins bon accepté, null sinon : « DPE minimum D », « DPE D ou mieux », « au moins D » → "D"), radius (5 par défaut), keywords (mots clés immobiliers simples), propertyType ("house" si la personne veut une maison, un pavillon ou une villa ; "apartment" si elle veut un appartement ou un studio ; null si elle ne précise pas ou accepte les deux : un simple « T3 » ou « 3 chambres » ne suffit pas) uncertainChecks:[{"label":"…","availability":"hybrid ou description","apiField":"parking, furnished, elevator ou null"}] et places:[{"label":"nom court en français, ex. Travail, École, Université, Crèche","kind":"work, school ou other","address":"adresse ou nom du lieu tel que cité, sans rien inventer","mode":"walk, bike, transit ou drive UNIQUEMENT si la personne dit explicitement comment elle s'y rend (à pied, à vélo, en transports/métro/bus/train, en voiture), sinon null"}]. places ne contient que les lieux de la vie de la personne (travail, école, université, crèche, famille…) désignés par une adresse ou un nom d'établissement précis ; jamais une simple ville, un quartier ou une zone ; tableau vide sinon. Classe les critères : ville, prix, surface, pièces sont vérifiables dans les champs structurés API quand présents. Parking (nb_parkings), meublé (furnished) et ascenseur (elevator) existent parfois dans l'API, parfois seulement dans la description : hybrid. Les autres souhaits (calme, proximité, balcon, etc.) exigent la lecture du titre/texte : description. Ne présente jamais une donnée absente de l'API comme négative : elle devra être vérifiée par la suite. Liste dans uncertainChecks chaque préférence non structurée exprimée par l'utilisateur (label : sa formulation, ex. « balcon », « chat accepté ») sans en inventer ; ni le type de logement, ni le nombre de pièces ou de chambres, ni le DPE minimum n'y vont ; tableau vide si aucune. Ne devine aucune borne absente.`,
     prompt,
   ) as Record<string, unknown>;
   const numeric = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? Math.floor(v) : null;
@@ -73,20 +104,32 @@ export async function interpret(prompt: string): Promise<Criteria> {
     // Le LLM recopie parfois l'exemple du format au lieu d'un vrai souhait.
     .filter(value => typeof value.label === "string" && value.label.trim() && !/^(…|\.\.\.|souhait exact.*)$/i.test(value.label.trim()))
     .slice(0, 8);
+  const bedrooms = numeric(result.minBedrooms);
+  const minBedrooms = bedrooms != null && bedrooms > 0 ? bedrooms : null;
+  const letter = typeof result.minEnergyClass === "string" ? result.minEnergyClass.trim().toUpperCase() : null;
+  const minEnergyClass = isEnergyClass(letter) ? letter : null;
   const oldWishes = Array.isArray(result.wishes) ? result.wishes.filter((x): x is string => typeof x === "string").slice(0, 8) : [];
-  const preferences = declared.length ? declared : oldWishes.map(label => ({ label }));
+  // Surface de terrain prise pour une surface habitable : on l'annule et on la garde comme souhait (une seule fois).
+  const minLand = landAreaClause(prompt, numeric(result.minArea)), maxLand = landAreaClause(prompt, numeric(result.maxArea));
+  const listed = declared.length ? declared : oldWishes.map(label => ({ label }));
+  const landWishes = listed.some(value => new RegExp(LAND_WORDS, "i").test(String(value.label))) ? []
+    : [...new Set([minLand, maxLand].filter((clause): clause is string => clause != null))].map(label => ({ label }));
+  // Chambres et DPE minimum ont leur propre critère : le même souhait reformulé par le LLM ne doit pas faire doublon.
+  const preferences = [...listed, ...landWishes]
+    .filter(value => !coveredByStructured(String(value.label), { bedrooms: minBedrooms != null, energy: minEnergyClass != null }));
   const wishes = preferences.map(value => String(value.label).trim().slice(0, 100));
   const criteria: Criteria = {
     location: typeof result.location === "string" ? canonicalLocation(result.location.slice(0, 100)) : "",
     intent: "rent",
     minPrice: numeric(result.minPrice),
     maxPrice: numeric(result.maxPrice),
-    minArea: numeric(result.minArea),
-    maxArea: numeric(result.maxArea),
+    minArea: minLand ? null : numeric(result.minArea),
+    maxArea: maxLand ? null : numeric(result.maxArea),
     ...roomRange(numeric(result.minRooms), numeric(result.maxRooms)),
     radius: Math.min(200, numeric(result.radius) ?? 5),
     keywords: typeof result.keywords === "string" ? result.keywords.slice(0, 120) : "",
     propertyType: isPropertyType(result.propertyType) ? result.propertyType : null,
+    minBedrooms, minEnergyClass,
     wishes,
   };
   // The LLM proposes a classification, but only fields actually supported by

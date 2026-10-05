@@ -240,6 +240,13 @@ components:
         maxArea: { type: ["integer", "null"] }
         minRooms: { type: ["integer", "null"] }
         maxRooms: { type: ["integer", "null"] }
+        minBedrooms:
+          description: Minimum number of bedrooms (not rooms); null or absent = no minimum
+          type: ["integer", "null"]
+        minEnergyClass:
+          description: Worst energy class (DPE) accepted, A (best) to G; null or absent = no requirement
+          type: ["string", "null"]
+          enum: [A, B, C, D, E, F, G, null]
         radius: { type: integer, minimum: 0, maximum: 200 }
         keywords: { type: string }
         propertyType:
