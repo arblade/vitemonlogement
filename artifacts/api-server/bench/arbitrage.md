@@ -33,11 +33,14 @@ La vérité gpt-5.5 n'est pas infaillible. J'ai relu à la main les désaccords 
 4. **Réglage proposé** : mot-clé seulement sur 8 sujets à risque (balcon, terrasse, jardin, duplex, dernier étage,
    colocation, charges, parking), seuil 0,85 ailleurs → **précision 98,6 %, rappel 79 %** (au lieu de 65 %), 11
    inventions. Attention : liste choisie sur ces mêmes données, à confirmer sur un nouveau lot.
-5. **Coût et vitesse** : Jev ≈ 0,00016 $ par annonce pour 33 questions (≈ 12 fois moins que gpt-5-mini sur la même
+5. **gpt-5.4-mini (ajouté le 05/10)** n'est pas une meilleure option pour l'extraction : précision 72 %, 593 réponses
+   inventées (surtout des « non » déduits d'une absence), contre 145 pour gpt-5-mini ; plus rapide (2,2 s), plus cher
+   (0,0029 $ par annonce).
+6. **Coût et vitesse** : Jev ≈ 0,00016 $ par annonce pour 33 questions (≈ 12 fois moins que gpt-5-mini sur la même
    tâche, ≈ 0,0019 $) et **0,16 s au lieu de 8 s**.
-6. **Champs Le Bon Coin** : quand le texte tranche aussi, accord 93 % ; ils apportent 321 informations absentes du
+7. **Champs Le Bon Coin** : quand le texte tranche aussi, accord 93 % ; ils apportent 321 informations absentes du
    texte. Ils restent l'étage 1 (gratuit), avec la règle actuelle « seul un oui fait foi ».
-7. **Ce que Jev ne fait pas** (inchangé) : résumé, adresse, critères libres (« calme », « proche de mon travail ») :
+8. **Ce que Jev ne fait pas** (inchangé) : résumé, adresse, critères libres (« calme », « proche de mon travail ») :
    le LLM les garde.
 
 **Verdict : Jev est utilisable pour le type d'offre et le catalogue de caractéristiques**, avec seuil 0,85 et le

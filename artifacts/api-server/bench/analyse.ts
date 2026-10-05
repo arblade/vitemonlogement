@@ -26,6 +26,7 @@ const jevAt = (min: number, gated: boolean): System => (item, id) => {
 const RISKY = new Set(["balcony", "terrace", "garden", "duplex", "top_floor", "flatshare", "charges_included", "parking"]);
 const jevProposed: System = (item, id) => RISKY.has(id) ? jevAt(MIN, true)(item, id) : jevAt(MIN, false)(item, id);
 const mini: System = (item, id) => cache[item.key].mini.answers[id]?.choice ?? "unstated";
+const mini54: System = (item, id) => cache[item.key].mini54?.answers[id]?.choice ?? "unstated";
 const lbcRaw = (item: (typeof items)[number]) => {
   const raw = item.raw as Record<string, unknown> | undefined;
   if (!raw) return null;
@@ -39,6 +40,7 @@ const SYSTEMS: [string, System][] = [
   [`Jev en production (mot-clé + confiance ≥ ${MIN})`, jevAt(MIN, true)],
   [`Jev proposé (mot-clé seulement sur ${RISKY.size} sujets à risque, confiance ≥ ${MIN})`, jevProposed],
   ["gpt-5-mini (effort faible, comme en production)", mini],
+  ["gpt-5.4-mini (effort faible)", mini54],
 ];
 
 function score(system: System, ids = IDS, subset = items) {
@@ -90,11 +92,11 @@ for (const [name, get] of Object.entries(offerOf)) {
 
 // Par caractéristique
 out("", "## Par caractéristique", "", "Vérité : nombre de oui / non. Pour chaque système : précision (tranchées) · rappel.", "",
-  "| Caractéristique | Vérité oui/non | Jev production | Jev proposé | Jev brut | gpt-5-mini |", "|---|---|---|---|---|---|");
+  "| Caractéristique | Vérité oui/non | Jev production | Jev proposé | Jev brut | gpt-5-mini | gpt-5.4-mini |", "|---|---|---|---|---|---|---|");
 for (const id of IDS) {
   const yes = items.filter(i => truth(i, id) === "yes").length, no = items.filter(i => truth(i, id) === "no").length;
   const cell = (system: System) => { const s = score(system, [id]); return `${pct(s.right, s.decided)} (${s.right}/${s.decided}) · ${pct(s.found, s.truthStated)}`; };
-  out(`| ${feature(id).label} | ${yes} / ${no} | ${cell(jevAt(MIN, true))} | ${cell(jevProposed)} | ${cell(jevAt(0, false))} | ${cell(mini)} |`);
+  out(`| ${feature(id).label} | ${yes} / ${no} | ${cell(jevAt(MIN, true))} | ${cell(jevProposed)} | ${cell(jevAt(0, false))} | ${cell(mini)} | ${cell(mini54)} |`);
 }
 
 // Coût et temps
@@ -104,7 +106,8 @@ const jevCost = tokens("jev", "inputTokens") * 0.042 / 1e6, miniCost = (tokens("
 out("", "## Coût et temps (33 questions par annonce)", "", "| Système | Tokens entrée / sortie | Coût total | Par annonce | Temps moyen |", "|---|---|---|---|---|",
   `| Jev (0,042 $/M entrée) | ${tokens("jev", "inputTokens")} / — | ${jevCost.toFixed(4)} $ | ${(jevCost / items.length).toFixed(6)} $ | ${ms("jev")} |`,
   `| gpt-5-mini (0,25 / 2 $/M) | ${tokens("mini", "inputTokens")} / ${tokens("mini", "outputTokens")} | ${miniCost.toFixed(4)} $ | ${(miniCost / items.length).toFixed(6)} $ | ${ms("mini")} |`,
-  `| gpt-5.5 (vérité) | ${tokens("truth", "inputTokens")} / ${tokens("truth", "outputTokens")} | — | — | ${ms("truth")} |`);
+  `| gpt-5.4-mini (0,75 / 4,5 $/M) | ${tokens("mini54", "inputTokens")} / ${tokens("mini54", "outputTokens")} | ${((tokens("mini54", "inputTokens") * 0.75 + tokens("mini54", "outputTokens") * 4.5) / 1e6).toFixed(4)} $ | ${((tokens("mini54", "inputTokens") * 0.75 + tokens("mini54", "outputTokens") * 4.5) / 1e6 / items.length).toFixed(6)} $ | ${ms("mini54")} |`,
+  `| gpt-5.5 (vérité, 5 / 30 $/M) | ${tokens("truth", "inputTokens")} / ${tokens("truth", "outputTokens")} | ${((tokens("truth", "inputTokens") * 5 + tokens("truth", "outputTokens") * 30) / 1e6).toFixed(4)} $ | ${((tokens("truth", "inputTokens") * 5 + tokens("truth", "outputTokens") * 30) / 1e6 / items.length).toFixed(6)} $ | ${ms("truth")} |`);
 
 // Désaccords, pour arbitrage
 const disagreements = items.flatMap(item => IDS.flatMap(id => {

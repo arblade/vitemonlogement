@@ -23,6 +23,25 @@ baignoire, étage, transports). « Charges comprises » est une question ambigu�
 « oui » pour gpt-5.5) : à reformuler. Le LLM garde résumé, adresse et critères libres. Reproduire :
 `bench/collecte.ts` (Apify), `bench/etude.ts` (appels payants, mis en cache), `bench/analyse.ts` (gratuit).
 
+## Étude du 05/10 (2) : critères qualitatifs, et gpt-5.4-mini
+Mêmes 188 annonces, 12 critères subjectifs (calme, lumineux, bon état, vue, cachet, spacieux, rangements, bien situé,
+économe en énergie, étudiant, famille, standing) ; Jev, gpt-5-mini, gpt-5.4-mini, vérité gpt-5.5, arbitrage à la main.
+Rapport : `reports/etude-jev-qualitatif-2026-10-05.md`.
+
+| | Jev ≥ 0,85 | gpt-5-mini | gpt-5.4-mini |
+|---|---|---|---|
+| Précision / rappel (qualitatif) | **98,3 %** (≈ 99,5 % après arbitrage) / 72 % | 89,4 % / 91 % | 87,4 % / 91 % |
+| Contradictions (oui au lieu de non) | **0** | 8 | 15 |
+| Précision / rappel (catalogue, 33 questions) | 98,6 % / 65 à 79 % | 90,6 % / 95 % | 72,0 % / 95 % |
+| Coût / temps par annonce (12 critères) | **0,00009 $ / 0,19 s** | 0,0012 $ / 5 s | 0,0019 $ / 1,7 s |
+
+Conclusions : **Jev tient aussi sur le qualitatif** ; « spacieux » et « économe en énergie » se calculent (surface par
+pièce, lettre du DPE) plutôt qu'ils ne se lisent ; gpt-5.4-mini n'apporte rien en lecture (pire sur le catalogue).
+**Organisation conseillée** : Jev sur toutes les annonces pour un catalogue générique (≈ 32 caractéristiques + ≈ 10
+critères qualitatifs + type d'offre, ≈ 0,0003 $ et < 0,5 s) ; le LLM pour le résumé, l'adresse, les critères libres
+hors catalogue et les critères de l'utilisateur que Jev laisse sous le seuil. Reproduire : `bench/etude-quali.ts`,
+`bench/analyse-quali.ts`.
+
 ## Ce qu'est Jev
 - Modèle de **décision typée** de TypeSafe (San Francisco), ouvert en accès anticipé le 15/09/2026. Il **n'écrit pas de
   texte** : on lui donne un texte (« state », jusqu'à 32 000 tokens) et des questions typées, il répond à chacune, en

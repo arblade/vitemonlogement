@@ -62,7 +62,7 @@ async function jev(item: Item): Promise<Reading> {
 }
 
 const READERS: Record<string, (item: Item) => Promise<Reading>> = {
-  jev, mini: item => openai(MINI_MODEL, "low", item), truth: item => openai(TRUTH_MODEL, "medium", item),
+  jev, mini: item => openai(MINI_MODEL, "low", item), mini54: item => openai("gpt-5.4-mini", "low", item), truth: item => openai(TRUTH_MODEL, "medium", item),
 };
 
 export function loadItems(): Item[] {
