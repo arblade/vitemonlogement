@@ -16,7 +16,8 @@ import { extraSourceItems, itemRefreshedAt, normalize, positionOf, scoreListing 
 import { matchesKnownBasics } from "./criteria";
 import { actorRequest, canReadPages } from "./housing-search";
 import { interleave, normalizeExtra, startExtraSources } from "./sources";
-import { finishPass, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
+import { finishPass, isPrecise, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
+import { ensureAccess } from "../../lib/access";
 import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
 import { currentParisSlot, nextParisTime } from "../../lib/paris-time";
@@ -256,4 +257,6 @@ export async function analyzeListings(id: number, criteria: Criteria, listings: 
     } });
   }
   await saveAnalyzed(id, outcomes);
+  // Accès à pied (métro, tram, bus) des logements bien placés, gardé en base : la fiche et la carte l'affichent ensuite.
+  await ensureAccess(outcomes.flatMap(outcome => outcome.kind === "kept" && isPrecise(outcome.listing) ? [outcome.listing] : []));
 }

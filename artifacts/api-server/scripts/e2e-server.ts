@@ -1,10 +1,13 @@
 // Serveur pour les tests de bout en bout (pnpm test:e2e) : vraie API + front compilé, base PGlite jetable en mémoire,
 // une ancienne recherche sans propriétaire (pour vérifier son adoption par le premier compte) et AUCUN accès à Apify/OpenAI.
 // Google Routes est remplacé par un faux serveur local (trajet fixe) ; le géocodeur n'est jamais appelé (lieu déjà géocodé).
+// Ni OpenFreeMap ni OpenRouteService : l'accès à pied de l'annonce 1 est déjà en base (vraie marche, arrêt de bus),
+// celui de l'annonce 3 reste estimé.
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { openDatabase } from "@workspace/db";
-import { initDatabase } from "../src/lib/database";
+import { openDatabase, walkAccess } from "@workspace/db";
+import { db, initDatabase } from "../src/lib/database";
+import { accessKey } from "../src/lib/access";
 import { completeSearch, createSearch, setCriteria } from "../src/routes/housing/store";
 
 process.env.APIFY_BASE_URL = "http://127.0.0.1:1";
@@ -13,6 +16,9 @@ process.env.APIFY_TOKEN = "e2e";
 process.env.OPENAI_API_KEY = "e2e";
 process.env.GEOCODER_BASE_URL = "http://127.0.0.1:1";
 delete process.env.DATABASE_URL;
+process.env.OPENFREEMAP_URL = "http://127.0.0.1:1";
+process.env.ORS_BASE_URL = "http://127.0.0.1:1";
+delete process.env.ORS_API_KEY;
 
 /** Encodage « polyline » de Google, pour que le faux serveur renvoie un vrai tracé. */
 function encodePolyline(points: [number, number][]) {
@@ -82,6 +88,11 @@ const listing = (n: number) => ({
     : { lat: 50.63, lng: 3.06, geoPrecision: "city" as const }),
 });
 await completeSearch(id, [listing(1), listing(2), listing(3)], "focused");
+await db().insert(walkAccess).values({ key: accessKey(home), createdAt: Date.now(), access: JSON.stringify({
+  routed: true,
+  metro: { name: "Rihour", lat: 50.63567, lng: 3.06302, distanceMeters: 760, walkMinutes: 9, lines: [{ mode: "metro", name: "1", color: "#ffd400" }], estimated: false },
+  bus: { name: "Colpin", lat: 50.6412, lng: 3.0618, distanceMeters: 120, walkMinutes: 2, lines: [], estimated: false },
+}) });
 
 const { default: app } = await import("../src/app");
 app.listen(Number(process.env.PORT ?? 4180), () => console.log("prêt"));

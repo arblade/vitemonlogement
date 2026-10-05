@@ -71,6 +71,8 @@ export interface HousingListing {
   firstSeenAt?: string | null;
   /** false while the AI analysis is still to be done (done when the listing is displayed) */
   analyzed: boolean;
-  /** Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach */
+  /** Closest metro or tram stop on foot (OpenStreetMap stations; real walk from OpenRouteService once computed, estimated before), only for a precise position (street number or street); null when none within reach */
   nearestStop?: NearestStop | null;
+  /** Closest bus stop on foot (OpenFreeMap tiles, walk from OpenRouteService or estimated), once computed; no lines */
+  nearestBusStop?: NearestStop | null;
 }

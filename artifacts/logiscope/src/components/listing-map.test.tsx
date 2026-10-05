@@ -8,11 +8,9 @@ import { listing, mockFetch } from '@/test/fixtures';
 
 // jsdom n'a pas de WebGL : la carte MapLibre est remplacée par un témoin des données reçues (le vrai rendu est vérifié en e2e).
 vi.mock('@/components/listing-map-canvas', () => ({
-  default: ({ radius, places, routes, stop, showLines, onZoom }: { radius: number; places: HousingPlace[]; routes: ListingRoute[]; stop?: NearestStop | null; showLines?: boolean; onZoom?: (zoom: number) => void }) =>
+  default: ({ radius, places, routes, stop, busStop, showLines }: { radius: number; places: HousingPlace[]; routes: ListingRoute[]; stop?: NearestStop | null; busStop?: NearestStop | null; showLines?: boolean }) =>
     <div data-testid="canvas" data-radius={radius} data-places={places.map(place => place.id).join(',')} data-routes={routes.map(route => route.placeId).join(',')}
-      data-stop={stop?.name ?? ''} data-lines={String(showLines)}>
-      <button type="button" onClick={() => onZoom?.(12)}>dézoomer</button><button type="button" onClick={() => onZoom?.(15)}>zoomer</button>
-    </div>,
+      data-stop={stop?.name ?? ''} data-bus={busStop?.name ?? ''} data-lines={String(showLines)}/>,
 }));
 
 const home = { lat: 50.6408, lng: 3.0611 };
@@ -259,53 +257,51 @@ describe('Encart « Où se trouve le logement »', () => {
     expect(calls).toHaveLength(0);
   });
 
-  const gambetta: NearestStop = { name: 'Gambetta', lat: 50.6331, lng: 3.0526, distanceMeters: 720, walkMinutes: 12, lines: [{ mode: 'metro', name: '1', color: '#ffcd00' }] };
+  const gambetta: NearestStop = { name: 'Gambetta', lat: 50.6331, lng: 3.0526, distanceMeters: 720, walkMinutes: 12, lines: [{ mode: 'metro', name: '1', color: '#ffcd00' }], estimated: true };
+  const colpin: NearestStop = { name: 'Colpin', lat: 50.6402, lng: 3.0618, distanceMeters: 140, walkMinutes: 2, lines: [], estimated: false };
 
-  it('station la plus proche : marche estimée, nom, ligne dans sa couleur, distance ; repérée sur la carte', async () => {
+  it('station encore estimée : « ≈ », nom, ligne dans sa couleur, distance à vol d’oiseau ; repérée sur la carte', async () => {
     mockFetch([]);
     renderMap({ listing: precise({ nearestStop: gambetta }) });
-    const stop = screen.getByTestId('map-stop-1');
-    expect(stop).toHaveTextContent('12 min à pied· Métro Gambetta');
+    const stop = screen.getByTestId('map-stop-1-metro');
+    expect(stop).toHaveTextContent('≈ 12 min à pied· Métro Gambetta');
     expect(stop).toHaveTextContent('720 m à vol d’oiseau ; temps de marche estimé, sans itinéraire.');
     expect(screen.getByText('M1')).toHaveStyle({ background: '#ffcd00', color: '#222222' });
+    expect(screen.queryByTestId('map-stop-1-bus')).not.toBeInTheDocument();
     expect(await screen.findByTestId('canvas')).toHaveAttribute('data-stop', 'Gambetta');
   });
 
-  it('sans station à distance de marche (ou position imprécise) : rien n’est annoncé', async () => {
+  it('marche calculée (OpenRouteService) : minutes sans « ≈ », distance à pied ; arrêt de bus en dessous, repéré sur la carte', async () => {
     mockFetch([]);
-    renderMap({ listing: precise({ nearestStop: null }) });
+    renderMap({ listing: precise({ nearestStop: { ...gambetta, estimated: false, walkMinutes: 11, distanceMeters: 880 }, nearestBusStop: colpin }) });
+    expect(screen.getByTestId('map-stop-1-metro')).toHaveTextContent(/^11 min à pied· Métro Gambetta.*880 m à pied\.$/);
+    expect(screen.getByTestId('map-stop-1-metro')).not.toHaveTextContent('≈');
+    const bus = screen.getByTestId('map-stop-1-bus');
+    expect(bus).toHaveTextContent(/^2 min à pied· Bus Colpin140 m à pied\.$/);
+    expect(await screen.findByTestId('canvas')).toHaveAttribute('data-bus', 'Colpin');
+  });
+
+  it('sans station ni arrêt à distance de marche (ou position imprécise) : rien n’est annoncé', async () => {
+    mockFetch([]);
+    renderMap({ listing: precise({ nearestStop: null, nearestBusStop: null }) });
     await screen.findByTestId('canvas');
     expect(screen.queryByTestId('map-stop-1')).not.toBeInTheDocument();
     expect(screen.getByTestId('canvas')).toHaveAttribute('data-stop', '');
   });
 
-  it('lignes de tram et de métro : masquées par défaut, l’interrupteur les montre avec leur légende, choix mémorisé', async () => {
+  it('lignes de tram et de métro : masquées par défaut, l’interrupteur les montre, choix mémorisé sur l’appareil', async () => {
     localStorage.clear();
     mockFetch([]);
     const { unmount } = renderMap();
     const toggle = screen.getByRole('switch', { name: 'Lignes tram · métro' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(await screen.findByTestId('canvas')).toHaveAttribute('data-lines', 'false');
-    expect(screen.queryByTestId('toggle-lines-1-legend')).not.toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByTestId('canvas')).toHaveAttribute('data-lines', 'true');
-    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('MétroTram');
     unmount();
     renderMap();
     expect(screen.getByRole('switch', { name: 'Lignes tram · métro' })).toHaveAttribute('aria-checked', 'true');
-    localStorage.clear();
-  });
-
-  it('lignes demandées mais carte trop dézoomée (les tuiles ne les ont qu’à partir du zoom 14) : on invite à zoomer', async () => {
-    localStorage.clear();
-    mockFetch([]);
-    renderMap();
-    fireEvent.click(screen.getByRole('switch', { name: 'Lignes tram · métro' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'dézoomer' }));
-    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('Zoomez pour voir les lignes');
-    fireEvent.click(screen.getByRole('button', { name: 'zoomer' }));
-    expect(screen.getByTestId('toggle-lines-1-legend')).toHaveTextContent('MétroTram');
     localStorage.clear();
   });
 });

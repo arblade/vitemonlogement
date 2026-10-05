@@ -3,7 +3,9 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import test, { after, before, beforeEach } from "node:test";
 import { issueSession, SESSION_COOKIE, visitorIdForUser } from "../../lib/auth";
-import { closeDatabase } from "../../lib/database";
+import { closeDatabase, db } from "../../lib/database";
+import { accessKey } from "../../lib/access";
+import { walkAccess } from "@workspace/db";
 import { createUser } from "../../lib/users";
 import { useMemoryDatabase } from "../../test/helpers";
 import { parsePlaces } from "./ai";
@@ -118,13 +120,21 @@ test("la position et les lieux de vie sont enregistrés en base et relus avec la
   assert.equal((await getSearch(id))?.listings.find(item => item.id === precise.id)?.geoPrecision, "streetNumber");
 });
 
-test("GET recherche : station de métro la plus proche à pied pour l'adresse exacte ; rien pour une simple commune", async () => {
+test("GET recherche : station de métro la plus proche (estimée) pour l'adresse exacte ; vraie marche et bus une fois calculés ; rien pour une commune", async () => {
   const { id, cookie, precise, vague } = await searchFor("carte-station@test.fr");
-  const body = await (await fetch(`${base}/housing/searches/${id}`, { headers: { cookie } })).json() as { listings: { id: number; nearestStop: { name: string; walkMinutes: number; distanceMeters: number; lines: { mode: string }[] } | null }[] };
-  const stop = body.listings.find(item => item.id === precise.id)?.nearestStop;
-  assert.ok(stop && stop.name && stop.walkMinutes >= 1 && stop.distanceMeters > 0, JSON.stringify(stop));
-  assert.ok(stop.lines.some(line => line.mode === "metro"), "Rennes : métro");
-  assert.equal(body.listings.find(item => item.id === vague.id)?.nearestStop, null);
+  type Stop = { name: string; walkMinutes: number; distanceMeters: number; estimated: boolean; lines: { mode: string }[] } | null;
+  const read = async () => (await (await fetch(`${base}/housing/searches/${id}`, { headers: { cookie } })).json() as { listings: { id: number; nearestStop: Stop; nearestBusStop: Stop }[] }).listings;
+  const before = (await read()).find(item => item.id === precise.id)!;
+  assert.ok(before.nearestStop && before.nearestStop.walkMinutes >= 1 && before.nearestStop.estimated, JSON.stringify(before.nearestStop));
+  assert.ok(before.nearestStop.lines.some(line => line.mode === "metro"), "Rennes : métro");
+  assert.equal(before.nearestBusStop, null, "arrêt de bus : seulement une fois calculé");
+  const routedStop = { name: "Sainte-Anne", lat: 48.1145, lng: -1.6806, distanceMeters: 910, walkMinutes: 12, lines: [{ mode: "metro", name: "A", color: "#ed1c24" }], estimated: false };
+  const bus = { name: "Lices", lat: 48.111, lng: -1.681, distanceMeters: 230, walkMinutes: 3, lines: [], estimated: false };
+  await db().insert(walkAccess).values({ key: accessKey(precise as { lat: number; lng: number }), access: JSON.stringify({ metro: routedStop, bus, routed: true }), createdAt: Date.now() });
+  const after = await read();
+  assert.deepEqual(after.find(item => item.id === precise.id)?.nearestStop, routedStop);
+  assert.deepEqual(after.find(item => item.id === precise.id)?.nearestBusStop, bus);
+  assert.deepEqual([after.find(item => item.id === vague.id)?.nearestStop, after.find(item => item.id === vague.id)?.nearestBusStop], [null, null]);
 });
 
 const path = [[38.5, -120.2], [40.7, -120.95], [43.252, -126.453]];

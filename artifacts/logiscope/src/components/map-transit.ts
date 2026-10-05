@@ -1,15 +1,14 @@
 import type maplibregl from 'maplibre-gl';
-import type { LineLayerSpecification, SymbolLayerSpecification } from 'maplibre-gl';
+import type { GeoJSONSource, LineLayerSpecification, SymbolLayerSpecification } from 'maplibre-gl';
 
-// Transports en commun sur le fond de carte, lus dans les tuiles OpenFreeMap déjà chargées (schéma OpenMapTiles) :
-// aucune requête ni clé en plus. Couche « poi » : stations (classe railway, sous-classes subway, tram_stop, station,
-// halt) et arrêts de bus (classe bus). Couche « transportation » : voies de métro et de tram (classe transit).
+// Transports en commun sur la carte, sans Google :
+// - stations et arrêts en gris, lus dans les tuiles OpenFreeMap déjà chargées (schéma OpenMapTiles, couche « poi » :
+//   classe railway, sous-classes subway, tram_stop, station, halt ; classe bus) ;
+// - lignes de métro et de tram en option, dans leurs couleurs officielles, servies par notre API (/api/transit/lines,
+//   tracés OpenStreetMap) pour la zone affichée : traits continus, à tous les zooms.
 export const TILE_SOURCE = 'openmaptiles';
-export const METRO_COLOR = '#3056d3';
-export const TRAM_COLOR = '#8e44ad';
-export const LINE_LAYERS = ['transit-lines-tunnel', 'transit-lines'] as const;
-/** Les tuiles n'ont les voies de métro et de tram (et les arrêts de tram) qu'à partir du zoom 14. */
-export const LINES_MIN_ZOOM = 14;
+export const LINES_SOURCE = 'transit-lines';
+export const LINE_LAYERS = ['transit-lines-casing', 'transit-lines', 'transit-lines-label'] as const;
 
 const disc = (fill: string, glyph: string) =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="${fill}" stroke="#ffffff" stroke-width="1.5"/>`
@@ -31,24 +30,9 @@ export const TRANSIT_ICONS: Record<string, string> = {
   'vml-bus': disc('#9a9a9a', GLYPHS.bus),
 };
 
-const isLine = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false];
-const transitTracks = ['all', isLine, ['==', ['get', 'class'], 'transit'], ['match', ['get', 'subclass'], ['subway', 'tram', 'light_rail'], true, false]];
-const lineColor = ['match', ['get', 'subclass'], 'subway', METRO_COLOR, TRAM_COLOR];
-const lineWidth = ['interpolate', ['linear'], ['zoom'], 14, 2.5, 17, 5];
-
-/**
- * Couches à ajouter au style : voies de métro et de tram (masquées tant qu'on ne les demande pas ; en tunnel, en
- * tirets), puis arrêts de bus (à partir du zoom 15, sans nom) et stations (métro, tram, gare ; nom au zoom 15).
- */
-export function transitLayers(showLines: boolean): (LineLayerSpecification | SymbolLayerSpecification)[] {
-  const visibility = showLines ? 'visible' : 'none';
+/** Stations (métro, tram, gare ; nom au zoom 15) et arrêts de bus (à partir du zoom 15, sans nom), lus dans les tuiles. */
+export function stopLayers(): SymbolLayerSpecification[] {
   return [
-    { id: 'transit-lines-tunnel', type: 'line', source: TILE_SOURCE, 'source-layer': 'transportation', minzoom: LINES_MIN_ZOOM,
-      filter: ['all', transitTracks, ['==', ['get', 'brunnel'], 'tunnel']] as never,
-      layout: { visibility, 'line-cap': 'butt' }, paint: { 'line-color': lineColor as never, 'line-width': lineWidth as never, 'line-opacity': .75, 'line-dasharray': [2, 1.2] } },
-    { id: 'transit-lines', type: 'line', source: TILE_SOURCE, 'source-layer': 'transportation', minzoom: LINES_MIN_ZOOM,
-      filter: ['all', transitTracks, ['!=', ['get', 'brunnel'], 'tunnel']] as never,
-      layout: { visibility, 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': lineColor as never, 'line-width': lineWidth as never } },
     { id: 'transit-bus', type: 'symbol', source: TILE_SOURCE, 'source-layer': 'poi', minzoom: 15,
       filter: ['all', ['==', ['get', 'class'], 'bus'], ['match', ['get', 'subclass'], ['bus_stop', 'bus_station'], true, false]] as never,
       layout: { 'icon-image': 'vml-bus', 'icon-size': .75, 'icon-padding': 1 }, paint: { 'icon-opacity': .9 } },
@@ -65,6 +49,37 @@ export function transitLayers(showLines: boolean): (LineLayerSpecification | Sym
   ];
 }
 
+const lineWidth = ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 17, 6];
+const casingWidth = ['interpolate', ['linear'], ['zoom'], 10, 3.5, 14, 6.5, 17, 9];
+
+/**
+ * Lignes de métro et de tram : liseré blanc puis trait plein de la couleur officielle (métro au-dessus du tram, ordre
+ * des entités), nom de la ligne le long du trait au zoom 13. Masquées tant qu'on ne les demande pas.
+ */
+export function lineLayers(showLines: boolean): (LineLayerSpecification | SymbolLayerSpecification)[] {
+  const visibility = showLines ? 'visible' : 'none';
+  return [
+    { id: 'transit-lines-casing', type: 'line', source: LINES_SOURCE, layout: { visibility, 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#ffffff', 'line-width': casingWidth as never, 'line-opacity': .9 } },
+    { id: 'transit-lines', type: 'line', source: LINES_SOURCE, layout: { visibility, 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': ['get', 'color'] as never, 'line-width': lineWidth as never } },
+    { id: 'transit-lines-label', type: 'symbol', source: LINES_SOURCE, minzoom: 13,
+      layout: { visibility, 'symbol-placement': 'line', 'symbol-spacing': 320, 'text-field': ['get', 'name'] as never, 'text-font': ['Noto Sans Regular'], 'text-size': 12 },
+      paint: { 'text-color': ['get', 'color'] as never, 'text-halo-color': '#ffffff', 'text-halo-width': 2 } },
+  ];
+}
+
+/** Zone demandée au serveur : la vue, élargie d'un tiers de chaque côté (on peut déplacer la carte sans recharger). */
+export function linesArea(bounds: { west: number; south: number; east: number; north: number }) {
+  const padX = (bounds.east - bounds.west) / 3, padY = (bounds.north - bounds.south) / 3;
+  const round = (value: number) => Math.round(value * 1e4) / 1e4;
+  return { west: round(bounds.west - padX), south: round(bounds.south - padY), east: round(bounds.east + padX), north: round(bounds.north + padY) };
+}
+export const linesUrl = (area: ReturnType<typeof linesArea>) =>
+  `/api/transit/lines?west=${area.west}&south=${area.south}&east=${area.east}&north=${area.north}`;
+const inside = (inner: ReturnType<typeof linesArea>, outer: ReturnType<typeof linesArea>) =>
+  inner.west >= outer.west && inner.east <= outer.east && inner.south >= outer.south && inner.north <= outer.north;
+
 function loadIcon(map: maplibregl.Map, id: string, svg: string) {
   if (map.hasImage(id)) return;
   const image = new Image(40, 40);
@@ -72,32 +87,45 @@ function loadIcon(map: maplibregl.Map, id: string, svg: string) {
   image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+const viewOf = (map: maplibregl.Map) => {
+  const bounds = map.getBounds();
+  return { west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() };
+};
+
 /**
- * Ajoute stations et voies au fond de carte (après son chargement). Sans la source des tuiles (style de secours des
- * tests, fournisseur changé), ne fait rien : la carte reste utilisable. Renvoie vrai si les couches sont posées.
+ * Ajoute stations, arrêts et lignes à la carte (après le chargement du style). Les lignes sont redemandées quand la vue
+ * sort de la zone déjà chargée. Sans la source des tuiles (style de secours, autre fournisseur) : pas de stations, mais
+ * les lignes restent. Sans police déclarée : icônes seules, sans noms. Renvoie vrai si les stations sont posées.
  */
 export function addTransitLayers(map: maplibregl.Map, showLines: boolean) {
+  const named = Boolean(map.getStyle().glyphs);
+  const add = (layer: LineLayerSpecification | SymbolLayerSpecification) => {
+    if (map.getLayer(layer.id)) return;
+    if (layer.type === 'symbol' && !named) {
+      if (layer.id === 'transit-lines-label') return;
+      delete (layer.layout as Record<string, unknown>)['text-field'];
+    }
+    map.addLayer(layer);
+  };
+  let loaded = linesArea(viewOf(map));
+  if (!map.getSource(LINES_SOURCE)) map.addSource(LINES_SOURCE, { type: 'geojson', data: linesUrl(loaded) });
+  lineLayers(showLines).forEach(add);
+  map.on('moveend', () => {
+    if (inside(viewOf(map), loaded)) return;
+    loaded = linesArea(viewOf(map));
+    (map.getSource(LINES_SOURCE) as GeoJSONSource | undefined)?.setData(linesUrl(loaded));
+  });
+
   if (!map.getSource(TILE_SOURCE)) return false;
   // Icône pas encore prête au premier affichage : MapLibre la demande, on la fournit dès qu'elle est décodée.
   map.on('styleimagemissing', event => { const svg = TRANSIT_ICONS[event.id]; if (svg) loadIcon(map, event.id, svg); });
   for (const [id, svg] of Object.entries(TRANSIT_ICONS)) loadIcon(map, id, svg);
-  // Sans police déclarée par le style, un nom de station serait refusé : icônes seules.
-  const named = Boolean(map.getStyle().glyphs);
-  for (const layer of transitLayers(showLines)) {
-    if (map.getLayer(layer.id)) continue;
-    if (!named && layer.type === 'symbol') delete (layer.layout as Record<string, unknown>)['text-field'];
-    map.addLayer(layer);
-  }
+  stopLayers().forEach(add);
   return true;
 }
 
-/**
- * Montre ou masque les voies ; renvoie leur état réel (faux si les couches n'existent pas). Avec `zoomIn` (carte d'un
- * seul logement), les montrer sur une carte trop dézoomée (les tuiles n'en ont pas) la rapproche au zoom 14, sans
- * changer son centre ; la carte des résultats ne bouge pas (les logements sortiraient du cadre).
- */
-export function setTransitLines(map: maplibregl.Map, showLines: boolean, zoomIn = false) {
+/** Montre ou masque les lignes ; renvoie leur état réel (faux si les couches n'existent pas). */
+export function setTransitLines(map: maplibregl.Map, showLines: boolean) {
   for (const id of LINE_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', showLines ? 'visible' : 'none');
-  if (zoomIn && showLines && map.getLayer(LINE_LAYERS[1]) && map.getZoom() < LINES_MIN_ZOOM) map.easeTo({ zoom: LINES_MIN_ZOOM, duration: 300 });
   return Boolean(map.getLayer(LINE_LAYERS[1])) && map.getLayoutProperty(LINE_LAYERS[1], 'visibility') === 'visible';
 }

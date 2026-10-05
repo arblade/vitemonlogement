@@ -186,9 +186,11 @@ async function checkListingMap(page) {
   assert.equal(await page.locator("[data-testid=listing-map-1] .vml-line").count(), 0);
   const box = await page.locator("[data-testid=listing-map-canvas]").boundingBox();
   assert.ok(box && box.width > 200 && box.height >= 250, `carte visible (${JSON.stringify(box)})`);
-  // Station de métro la plus proche (base OpenStreetMap du serveur) : marche estimée, repère sur la carte.
-  assert.match(await text(page, "[data-testid=map-stop-1]"), /\d+ min à pied[\s\S]*Métro [\s\S]*à vol d’oiseau/);
+  // Accès à pied (calculé, en base) : métro Rihour à 9 min, bus Colpin à 2 min, repérés sur la carte.
+  assert.match(await text(page, "[data-testid=map-stop-1-metro]"), /^9 min à pied[\s\S]*Métro Rihour[\s\S]*760 m à pied\.$/);
+  assert.match(await text(page, "[data-testid=map-stop-1-bus]"), /^2 min à pied[\s\S]*Bus Colpin/);
   await page.waitForSelector("[data-testid=listing-map-1] [data-testid=map-marker-stop]");
+  await page.waitForSelector("[data-testid=listing-map-1] [data-testid=map-marker-bus]");
   // Fond de carte : stations grises posées ; lignes de tram et de métro masquées, puis montrées par l'interrupteur.
   await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-transit") === "true", canvas);
   assert.equal(await page.getAttribute(canvas, "data-lines"), "false");
@@ -234,7 +236,11 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       // Station de métro ou de tram la plus proche, à pied : sur la carte d'une adresse exacte, pas d'une simple commune.
-      assert.match(await text(page, "[data-testid=card-stop-1]"), /^\d+ min à pied[\s\S]*Métro/, name);
+      assert.match(await text(page, "[data-testid=card-stop-1-metro]"), /^9 min à pied[\s\S]*Métro Rihour/, name);
+      assert.match(await text(page, "[data-testid=card-stop-1-bus]"), /^2 min à pied[\s\S]*Bus Colpin/, name);
+      // Annonce 3 (rue lue dans la description) : pas encore calculée, station estimée (« ≈ »), pas de bus.
+      assert.match(await text(page, "[data-testid=card-stop-3-metro]"), /^≈ \d+ min à pied/, name);
+      assert.equal(await page.locator("[data-testid=card-stop-3-bus]").count(), 0, name);
       assert.equal(await page.locator("[data-testid=card-stop-2]").count(), 0, `${name} : commune seulement, pas de station annoncée`);
       for (const gone of [/Vos critères/i, /Autres caractéristiques/i, /Détails, sources et preuves/i, /01 · Le Bon Coin/i]) assert.doesNotMatch(card, gone, name);
       // Boutons sur une ligne chacun, sans retour à la ligne du texte : principal seul (mobile) ou les trois alignés (desktop).
@@ -494,7 +500,9 @@ test("carte des résultats (mobile puis desktop) : seuls l'adresse exacte et la 
       assert.ok(toggleBox && toggleBox.height >= 32, `${name} : interrupteur tactile (${JSON.stringify(toggleBox)})`);
       await page.click("[data-testid=toggle-lines-results]");
       await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "true", resultsCanvas);
-      await page.waitForSelector("[data-testid=toggle-lines-results-legend]");
+      // Les lignes viennent de notre API, pour la zone affichée : métro 1 de Lille dans sa couleur officielle.
+      const lines = await page.evaluate(() => fetch("/api/transit/lines?west=3&south=50.6&east=3.1&north=50.7").then(response => response.json()));
+      assert.ok(lines.features.some(feature => feature.properties.mode === "metro" && feature.properties.name === "1" && feature.properties.color === "#ffd400"), name);
       await page.click("[data-testid=toggle-lines-results]");
       await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-lines") === "false", resultsCanvas);
       assert.match(await text(page, "[data-testid=results-map-note]"), /2 logements sur la carte \(dont 1 d’après l’adresse citée dans la description\).*1 autre n’a qu’un quartier ou une commune/s, name);

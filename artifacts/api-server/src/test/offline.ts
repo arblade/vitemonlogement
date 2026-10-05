@@ -16,3 +16,6 @@ delete process.env.ALERT_EMAIL;
 process.env.JEV_BASE_URL = "http://127.0.0.1:1";
 delete process.env.JEV_API_KEY;
 delete process.env.ANALYSIS_ENGINE;
+process.env.ORS_BASE_URL = "http://127.0.0.1:1";
+delete process.env.ORS_API_KEY;
+process.env.OPENFREEMAP_URL = "http://127.0.0.1:1";

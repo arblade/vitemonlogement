@@ -18,14 +18,13 @@ const lngLat = ({ lat, lng }: LatLng): [number, number] => [lng, lat];
  * Carte de tous les logements à position précise : une pastille de prix par logement (un bouton : clavier et lecteur
  * d'écran compris), les lieux de vie de la demande en repères. Recréée quand les données changent.
  */
-export default function ResultsMapCanvas({ items, places, viewed, onPick, showLines = false, onZoom }: {
+export default function ResultsMapCanvas({ items, places, viewed, onPick, showLines = false }: {
   items: MappedListing[];
   places: LocatedPlace[];
   viewed: ReadonlySet<number>;
   onPick: (id: number) => void;
-  /** Voies de tram et de métro du fond de carte affichées. */
+  /** Lignes de tram et de métro affichées (couleurs officielles). */
   showLines?: boolean;
-  onZoom?: (zoom: number) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -33,8 +32,6 @@ export default function ResultsMapCanvas({ items, places, viewed, onPick, showLi
   pick.current = onPick;
   const linesRef = useRef(showLines);
   linesRef.current = showLines;
-  const zoomRef = useRef(onZoom);
-  zoomRef.current = onZoom;
   const [failed, setFailed] = useState(false);
   const [linesShown, setLinesShown] = useState(false);
   const [transit, setTransit] = useState<boolean | null>(null);
@@ -84,8 +81,6 @@ export default function ResultsMapCanvas({ items, places, viewed, onPick, showLi
       setTransit(transit);
       setLinesShown(transit && linesRef.current);
     });
-    map.on('zoomend', () => zoomRef.current?.(map.getZoom()));
-    zoomRef.current?.(map.getZoom());
     mapRef.current = map;
     map.on('error', () => undefined); // tuiles injoignables : les pastilles restent utilisables
 

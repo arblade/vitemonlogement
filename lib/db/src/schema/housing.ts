@@ -137,3 +137,12 @@ export const travelRoutes = pgTable("travel_routes", {
   segments: text("segments"),
   createdAt: bigint("created_at", { mode: "number" }).notNull(),
 });
+
+// Accès à pied depuis un logement (station de métro ou de tram et arrêt de bus les plus proches), clé = position
+// arrondie à ~1 m : partagé entre recherches. `access` (JSON) : { metro, bus, routed } ; `routed` faux = marche
+// estimée (OpenRouteService absent ou en panne), recalculée quand il revient.
+export const walkAccess = pgTable("walk_access", {
+  key: text("key").primaryKey(),
+  access: text("access").notNull(),
+  createdAt: bigint("created_at", { mode: "number" }).notNull(),
+});

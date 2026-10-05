@@ -245,14 +245,28 @@ export const CreateHousingSearchResponse = zod.object({
   "name": zod.string(),
   "lat": zod.number(),
   "lng": zod.number(),
-  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
-  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
   "lines": zod.array(zod.object({
   "mode": zod.enum(['metro', 'tram']),
   "name": zod.string(),
   "color": zod.string().nullable()
 }))
-}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations; real walk from OpenRouteService once computed, estimated before), only for a precise position (street number or street); null when none within reach'),
+  "nearestBusStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest bus stop on foot (OpenFreeMap tiles, walk from OpenRouteService or estimated), once computed; no lines')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -369,14 +383,28 @@ export const GetHousingSearchResponse = zod.object({
   "name": zod.string(),
   "lat": zod.number(),
   "lng": zod.number(),
-  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
-  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
   "lines": zod.array(zod.object({
   "mode": zod.enum(['metro', 'tram']),
   "name": zod.string(),
   "color": zod.string().nullable()
 }))
-}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations; real walk from OpenRouteService once computed, estimated before), only for a precise position (street number or street); null when none within reach'),
+  "nearestBusStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest bus stop on foot (OpenFreeMap tiles, walk from OpenRouteService or estimated), once computed; no lines')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -504,14 +532,28 @@ export const AnalyzeHousingSearchResponse = zod.object({
   "name": zod.string(),
   "lat": zod.number(),
   "lng": zod.number(),
-  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
-  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
   "lines": zod.array(zod.object({
   "mode": zod.enum(['metro', 'tram']),
   "name": zod.string(),
   "color": zod.string().nullable()
 }))
-}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations; real walk from OpenRouteService once computed, estimated before), only for a precise position (street number or street); null when none within reach'),
+  "nearestBusStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest bus stop on foot (OpenFreeMap tiles, walk from OpenRouteService or estimated), once computed; no lines')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))
@@ -631,14 +673,28 @@ export const RefreshHousingSearchResponse = zod.object({
   "name": zod.string(),
   "lat": zod.number(),
   "lng": zod.number(),
-  "distanceMeters": zod.number().int().describe('Straight-line distance from the listing'),
-  "walkMinutes": zod.number().int().describe('Estimated walk (straight line x 1.3 detour, 4.8 km/h)'),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
   "lines": zod.array(zod.object({
   "mode": zod.enum(['metro', 'tram']),
   "name": zod.string(),
   "color": zod.string().nullable()
 }))
-}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations, walk estimated from the straight-line distance), only for a precise position (street number or street); null when none within reach')
+}),zod.null()]).optional().describe('Closest metro or tram stop on foot (OpenStreetMap stations; real walk from OpenRouteService once computed, estimated before), only for a precise position (street number or street); null when none within reach'),
+  "nearestBusStop": zod.union([zod.object({
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "distanceMeters": zod.number().int().describe('Walking distance (OpenRouteService), or straight-line distance when estimated'),
+  "walkMinutes": zod.number().int().describe('Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated'),
+  "estimated": zod.boolean().describe('true = walk estimated from the straight-line distance, not routed'),
+  "lines": zod.array(zod.object({
+  "mode": zod.enum(['metro', 'tram']),
+  "name": zod.string(),
+  "color": zod.string().nullable()
+}))
+}),zod.null()]).optional().describe('Closest bus stop on foot (OpenFreeMap tiles, walk from OpenRouteService or estimated), once computed; no lines')
 })),
   "routingAvailable": zod.boolean().optional().describe('Travel times can be computed (a routing key is configured)')
 }))

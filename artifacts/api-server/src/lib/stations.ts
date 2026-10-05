@@ -42,16 +42,20 @@ export const walkMinutes = (crow: number) => Math.max(1, Math.round(crow * DETOU
 /** Au-delà (≈ 30 min de marche estimée), on ne cite pas de station : elle n'est pas « à proximité ». */
 export const MAX_STOP_METERS = 1_850;
 
-/** Station de métro ou de tram la plus proche d'un point, ou null s'il n'y en a aucune à distance de marche. */
-export function nearestStop(point: { lat: number; lng: number }, list: Station[] = stations): NearestStop | null {
+/** Stations de métro ou de tram à distance de marche, les plus proches d'abord (au plus `limit`). */
+export function stationsNear(point: { lat: number; lng: number }, limit = 3, list: Station[] = stations): NearestStop[] {
   // Préfiltre grossier en degrés (1° de latitude ≈ 111 km) avant le calcul exact.
   const dLat = MAX_STOP_METERS / 111_000;
   const dLng = dLat / Math.max(0.2, Math.cos(point.lat * Math.PI / 180));
-  let best: Station | null = null, distance = MAX_STOP_METERS;
+  const found: NearestStop[] = [];
   for (const station of list) {
     if (Math.abs(station.lat - point.lat) > dLat || Math.abs(station.lng - point.lng) > dLng) continue;
     const d = crowMeters(point, station);
-    if (d <= distance) [best, distance] = [station, d];
+    if (d <= MAX_STOP_METERS) found.push({ ...station, distanceMeters: Math.round(d), walkMinutes: walkMinutes(d) });
   }
-  return best && { ...best, distanceMeters: Math.round(distance), walkMinutes: walkMinutes(distance) };
+  return found.sort((a, b) => a.distanceMeters - b.distanceMeters).slice(0, limit);
 }
+
+/** Station de métro ou de tram la plus proche d'un point, ou null s'il n'y en a aucune à distance de marche. */
+export const nearestStop = (point: { lat: number; lng: number }, list: Station[] = stations): NearestStop | null =>
+  stationsNear(point, 1, list)[0] ?? null;

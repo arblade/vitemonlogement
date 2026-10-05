@@ -1,9 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { Bike, Briefcase, Car, Footprints, GraduationCap, MapPin, Navigation, TrainFront } from 'lucide-react';
 import { getGetListingRoutesQueryKey, useGetListingRoutes, type HousingListing, type HousingPlace, type ListingRoute, type TravelMode } from '@workspace/api-client-react';
-import { NearestStopLine } from '@/components/nearest-stop';
+import { NearestStops } from '@/components/nearest-stop';
 import { TransitLinesToggle, useTransitLines } from '@/components/transit-toggle';
-import { LINES_MIN_ZOOM } from '@/components/map-transit';
 import { crowDistance, formatDistance, formatDuration, listingArea, locatedPlaces, MODE_LABEL, ROUTE_COLOR, textOn } from '@/lib/geo';
 
 // MapLibre n'est chargé qu'à l'ouverture d'une fiche qui a une position.
@@ -91,7 +90,6 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
   const allRoutes = routesQuery.data?.routes ?? NO_ROUTES;
   const { modes, selected, shown: routes, setPicked } = useTravelChoice(allRoutes);
   const [showLines, toggleLines] = useTransitLines();
-  const [zoom, setZoom] = useState<number | null>(null);
   if (!area || !home) return null;
   return <section aria-labelledby={`map-${listing.id}`} data-testid={`listing-map-${listing.id}`} className="border-b border-line-soft py-7">
     <div className="mb-4 flex items-start justify-between gap-3">
@@ -100,12 +98,12 @@ export function ListingMap({ listing, searchId, places = [], routingAvailable = 
         <p data-testid={`map-precision-${listing.id}`} className="mt-1 text-xs text-stone">{precisionText(listing)}</p>
       </div>
     </div>
-    {listing.nearestStop && <div className="mb-3"><NearestStopLine stop={listing.nearestStop} testId={`map-stop-${listing.id}`} detailed/></div>}
+    <div className="mb-3 empty:hidden"><NearestStops listing={listing} testId={`map-stop-${listing.id}`} detailed/></div>
     <div className="relative isolate h-[260px] overflow-hidden rounded-2xl border border-line bg-sage md:h-[340px]">
       <Suspense fallback={<div className="grid h-full place-items-center text-xs text-stone">Chargement de la carte…</div>}>
-        <ListingMapCanvas home={home} radius={area.radius} places={located} routes={routes} stop={listing.nearestStop} showLines={showLines} onZoom={setZoom}/>
+        <ListingMapCanvas home={home} radius={area.radius} places={located} routes={routes} stop={listing.nearestStop} busStop={listing.nearestBusStop} showLines={showLines}/>
       </Suspense>
-      <TransitLinesToggle show={showLines} onToggle={toggleLines} testId={`toggle-lines-${listing.id}`} zoomHint={zoom != null && zoom < LINES_MIN_ZOOM}/>
+      <TransitLinesToggle show={showLines} onToggle={toggleLines} testId={`toggle-lines-${listing.id}`}/>
     </div>
     {area.precise && modes.length > 0 && <div role="radiogroup" aria-label="Trajet affiché" className="mt-3 flex gap-2">
       {modes.map(mode => {

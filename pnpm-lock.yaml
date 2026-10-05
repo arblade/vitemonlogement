@@ -158,6 +158,9 @@ importers:
 
   artifacts/api-server:
     dependencies:
+      '@mapbox/vector-tile':
+        specifier: 2.0.5
+        version: 2.0.5
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -179,6 +182,9 @@ importers:
       openai:
         specifier: ^7.23.0
         version: 7.23.0(undici@8.11.2)(zod@3.25.76)
+      pbf:
+        specifier: 4.0.2
+        version: 4.0.2
       pg:
         specifier: ^8.16.3
         version: 8.23.0

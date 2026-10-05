@@ -1,9 +1,8 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { MapPin, X } from 'lucide-react';
 import type { HousingListing, HousingPlace } from '@workspace/api-client-react';
 import { locatedPlaces, mappedListings } from '@/lib/geo';
-import { LINES_MIN_ZOOM } from '@/components/map-transit';
 import { TransitLinesToggle, useTransitLines } from '@/components/transit-toggle';
 
 // MapLibre n'est chargé qu'à l'ouverture de la carte.
@@ -27,7 +26,6 @@ export function ResultsMap({ listings, places = [], viewedIds, open, onOpenChang
   const hidden = listings.length - items.length;
   const fromText = items.filter(item => item.listing.geoSource === 'description').length;
   const [showLines, toggleLines] = useTransitLines();
-  const [zoom, setZoom] = useState<number | null>(null);
   return <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#222222]/75 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"/>
@@ -45,9 +43,9 @@ export function ResultsMap({ listings, places = [], viewedIds, open, onOpenChang
         </div>
         <div className="relative isolate min-h-0 flex-1 bg-sage">
           <Suspense fallback={<div className="grid h-full place-items-center text-xs text-stone">Chargement de la carte…</div>}>
-            <ResultsMapCanvas items={items} places={located} viewed={viewedIds} onPick={onPick} showLines={showLines} onZoom={setZoom}/>
+            <ResultsMapCanvas items={items} places={located} viewed={viewedIds} onPick={onPick} showLines={showLines}/>
           </Suspense>
-          {items.length > 0 && <TransitLinesToggle show={showLines} onToggle={toggleLines} testId="toggle-lines-results" zoomHint={zoom != null && zoom < LINES_MIN_ZOOM}/>}
+          {items.length > 0 && <TransitLinesToggle show={showLines} onToggle={toggleLines} testId="toggle-lines-results"/>}
         </div>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>

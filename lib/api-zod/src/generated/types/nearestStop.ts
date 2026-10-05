@@ -11,9 +11,11 @@ export interface NearestStop {
   name: string;
   lat: number;
   lng: number;
-  /** Straight-line distance from the listing */
+  /** Walking distance (OpenRouteService), or straight-line distance when estimated */
   distanceMeters: number;
-  /** Estimated walk (straight line x 1.3 detour, 4.8 km/h) */
+  /** Walk on foot (OpenRouteService), or estimate (straight line x 1.3 detour, 4.8 km/h) when estimated */
   walkMinutes: number;
+  /** true = walk estimated from the straight-line distance, not routed */
+  estimated: boolean;
   lines: StopLine[];
 }

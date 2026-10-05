@@ -1,29 +1,40 @@
 import { describe, expect, it, vi } from 'vitest';
 import type maplibregl from 'maplibre-gl';
-import { addTransitLayers, LINE_LAYERS, LINES_MIN_ZOOM, setTransitLines, TILE_SOURCE, TRANSIT_ICONS, transitLayers } from '@/components/map-transit';
+import { addTransitLayers, LINE_LAYERS, lineLayers, linesArea, linesUrl, LINES_SOURCE, setTransitLines, stopLayers, TILE_SOURCE, TRANSIT_ICONS } from '@/components/map-transit';
 import { lineLabel, stopKind } from '@/components/nearest-stop';
 
-/** Carte factice : juste ce que le module appelle (sources, couches, images, visibilité). */
-function fakeMap(withSource = true, glyphs = true) {
-  const layers = new Map<string, { layout?: Record<string, unknown> }>();
+type Handler = (...args: unknown[]) => void;
+/** Carte factice : juste ce que le module appelle (sources, couches, images, visibilité, déplacements). */
+function fakeMap({ tiles = true, glyphs = true } = {}) {
+  const layers = new Map<string, { type: string; layout?: Record<string, unknown> }>();
+  const sources = new Map<string, { data?: unknown; setData: (data: unknown) => void }>();
+  if (tiles) sources.set(TILE_SOURCE, { setData: () => undefined });
+  const handlers = new Map<string, Handler[]>();
+  const view = { west: 3.0, south: 50.6, east: 3.1, north: 50.66 };
   const map = {
-    layers,
-    getSource: vi.fn((id: string) => withSource && id === TILE_SOURCE ? {} : undefined),
+    layers, sources, view,
+    getSource: (id: string) => sources.get(id),
+    addSource: vi.fn((id: string, spec: { data: unknown }) => {
+      const source = { data: spec.data, setData: vi.fn((data: unknown) => { source.data = data; }) };
+      sources.set(id, source);
+    }),
     getLayer: (id: string) => layers.get(id),
-    addLayer: vi.fn((layer: { id: string; layout?: Record<string, unknown> }) => { layers.set(layer.id, { layout: { ...layer.layout } }); }),
+    addLayer: vi.fn((layer: { id: string; type: string; layout?: Record<string, unknown> }) => { layers.set(layer.id, { type: layer.type, layout: { ...layer.layout } }); }),
     setLayoutProperty: (id: string, key: string, value: unknown) => { layers.get(id)!.layout![key] = value; },
     getLayoutProperty: (id: string, key: string) => layers.get(id)!.layout![key],
     getStyle: () => ({ glyphs: glyphs ? 'https://fonts/{fontstack}/{range}.pbf' : undefined }),
-    hasImage: () => false, addImage: vi.fn(), on: vi.fn(), zoom: 15, getZoom(this: { zoom: number }) { return this.zoom; }, easeTo: vi.fn(),
+    getBounds: () => ({ getWest: () => view.west, getSouth: () => view.south, getEast: () => view.east, getNorth: () => view.north }),
+    hasImage: () => false, addImage: vi.fn(),
+    on: vi.fn((event: string, handler: Handler) => { handlers.set(event, [...handlers.get(event) ?? [], handler]); }),
+    fire: (event: string) => handlers.get(event)?.forEach(handler => handler({})),
   };
   return map;
 }
+const asMap = (map: ReturnType<typeof fakeMap>) => map as unknown as maplibregl.Map;
 
-describe('fond de carte : transports', () => {
+describe('carte : transports', () => {
   it('stations (métro, tram, gare) et arrêts de bus lus dans la couche « poi » des tuiles, en icônes grises', () => {
-    const layers = transitLayers(false);
-    const stations = layers.find(layer => layer.id === 'transit-stations')!;
-    const bus = layers.find(layer => layer.id === 'transit-bus')!;
+    const [bus, stations] = stopLayers();
     expect(JSON.stringify(stations.filter)).toContain('"railway"');
     for (const subclass of ['subway', 'tram_stop', 'station', 'halt']) expect(JSON.stringify(stations.filter)).toContain(`"${subclass}"`);
     expect(JSON.stringify(bus.filter)).toContain('"bus_stop"');
@@ -33,52 +44,53 @@ describe('fond de carte : transports', () => {
     for (const svg of Object.values(TRANSIT_ICONS)) expect(svg).toMatch(/fill="#(6f6f6f|9a9a9a)"/);
   });
 
-  it('voies de métro et de tram (classe transit) : masquées par défaut, visibles sur demande, à partir du zoom 14', () => {
-    const hidden = transitLayers(false).filter(layer => (LINE_LAYERS as readonly string[]).includes(layer.id));
-    expect(hidden).toHaveLength(2);
-    for (const layer of hidden) {
-      expect(layer).toMatchObject({ 'source-layer': 'transportation', minzoom: LINES_MIN_ZOOM, layout: { visibility: 'none' } });
-      expect(JSON.stringify(layer.filter)).toContain('"transit"');
+  it('lignes : traits pleins (aucun tiret) dans la couleur officielle de chaque ligne, à tous les zooms ; masquées par défaut', () => {
+    const layers = lineLayers(false);
+    expect(layers.map(layer => layer.id)).toEqual([...LINE_LAYERS]);
+    for (const layer of layers) {
+      expect(layer.source).toBe(LINES_SOURCE);
+      expect(layer.layout).toMatchObject({ visibility: 'none' });
+      expect(JSON.stringify(layer)).not.toContain('dasharray');
     }
-    for (const layer of transitLayers(true).filter(layer => (LINE_LAYERS as readonly string[]).includes(layer.id))) expect(layer.layout).toMatchObject({ visibility: 'visible' });
+    const line = layers.find(layer => layer.id === 'transit-lines')!;
+    expect(line.paint).toMatchObject({ 'line-color': ['get', 'color'] });
+    expect(line.minzoom).toBeUndefined();
+    for (const layer of lineLayers(true)) expect(layer.layout).toMatchObject({ visibility: 'visible' });
   });
 
-  it('pose les couches et icônes, puis bascule les lignes sans recréer la carte ; sans la source des tuiles, ne fait rien', () => {
+  it('zone demandée au serveur : la vue élargie d’un tiers de chaque côté', () => {
+    const area = linesArea({ west: 3, south: 50.6, east: 3.3, north: 50.9 });
+    expect(area).toEqual({ west: 2.9, south: 50.5, east: 3.4, north: 51 });
+    expect(linesUrl(area)).toBe('/api/transit/lines?west=2.9&south=50.5&east=3.4&north=51');
+  });
+
+  it('pose lignes puis stations ; redemande les lignes seulement quand la vue sort de la zone chargée ; bascule sans recréer la carte', () => {
     const map = fakeMap();
-    expect(addTransitLayers(map as unknown as maplibregl.Map, false)).toBe(true);
-    expect([...map.layers.keys()]).toEqual(['transit-lines-tunnel', 'transit-lines', 'transit-bus', 'transit-stations']);
-    expect(map.on).toHaveBeenCalledWith('styleimagemissing', expect.any(Function));
-    expect(setTransitLines(map as unknown as maplibregl.Map, true)).toBe(true);
-    expect(LINE_LAYERS.map(id => map.layers.get(id)!.layout!.visibility)).toEqual(['visible', 'visible']);
-    expect(setTransitLines(map as unknown as maplibregl.Map, false)).toBe(false);
-    expect(LINE_LAYERS.map(id => map.layers.get(id)!.layout!.visibility)).toEqual(['none', 'none']);
-
-    const bare = fakeMap(false);
-    expect(addTransitLayers(bare as unknown as maplibregl.Map, true)).toBe(false);
-    expect(bare.addLayer).not.toHaveBeenCalled();
-    expect(setTransitLines(bare as unknown as maplibregl.Map, true)).toBe(false);
-    expect(bare.easeTo).not.toHaveBeenCalled();
+    expect(addTransitLayers(asMap(map), false)).toBe(true);
+    expect([...map.layers.keys()]).toEqual([...LINE_LAYERS, 'transit-bus', 'transit-stations']);
+    const source = map.sources.get(LINES_SOURCE)!;
+    const first = source.data;
+    expect(first).toMatch(/^\/api\/transit\/lines\?west=2\.96.*&north=50\.68$/);
+    map.view.east = 3.11; map.fire('moveend'); // petit déplacement : encore dans la zone
+    expect(source.setData).not.toHaveBeenCalled();
+    Object.assign(map.view, { west: 3.5, east: 3.6 }); map.fire('moveend');
+    expect(source.setData).toHaveBeenCalledTimes(1);
+    expect(source.data).not.toBe(first);
+    expect(setTransitLines(asMap(map), true)).toBe(true);
+    expect(LINE_LAYERS.map(id => map.layers.get(id)!.layout!.visibility)).toEqual(['visible', 'visible', 'visible']);
+    expect(setTransitLines(asMap(map), false)).toBe(false);
   });
 
-  it('fiche : lignes demandées sur une carte trop dézoomée → rapprochée au zoom 14 ; déjà assez près, lignes masquées ou carte des résultats : rien ne bouge', () => {
-    const map = fakeMap();
-    addTransitLayers(map as unknown as maplibregl.Map, false);
-    setTransitLines(map as unknown as maplibregl.Map, true);
-    expect(map.easeTo).not.toHaveBeenCalled();
-    map.zoom = 12.4;
-    setTransitLines(map as unknown as maplibregl.Map, false, true);
-    expect(map.easeTo).not.toHaveBeenCalled();
-    setTransitLines(map as unknown as maplibregl.Map, true); // carte des résultats : ne bouge pas
-    expect(map.easeTo).not.toHaveBeenCalled();
-    setTransitLines(map as unknown as maplibregl.Map, true, true);
-    expect(map.easeTo).toHaveBeenCalledWith(expect.objectContaining({ zoom: LINES_MIN_ZOOM }));
-    expect(map.easeTo).toHaveBeenCalledTimes(1);
-  });
+  it('style sans source de tuiles : pas de stations, mais les lignes restent ; sans police : ni noms de stations ni noms de lignes', () => {
+    const bare = fakeMap({ tiles: false });
+    expect(addTransitLayers(asMap(bare), true)).toBe(false);
+    expect([...bare.layers.keys()]).toEqual([...LINE_LAYERS]);
+    expect(setTransitLines(asMap(bare), true)).toBe(true);
 
-  it('style sans police : stations en icônes seules (un nom serait refusé par MapLibre)', () => {
-    const map = fakeMap(true, false);
-    addTransitLayers(map as unknown as maplibregl.Map, false);
-    const added = map.addLayer.mock.calls.map(([layer]) => layer as { id: string; layout: Record<string, unknown> });
+    const mute = fakeMap({ glyphs: false });
+    addTransitLayers(asMap(mute), false);
+    expect(mute.layers.has('transit-lines-label')).toBe(false);
+    const added = mute.addLayer.mock.calls.map(([layer]) => layer as { id: string; layout: Record<string, unknown> });
     expect(added.find(layer => layer.id === 'transit-stations')!.layout['text-field']).toBeUndefined();
     expect(added.find(layer => layer.id === 'transit-stations')!.layout['icon-image']).toBeDefined();
   });

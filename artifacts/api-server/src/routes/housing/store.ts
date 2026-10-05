@@ -3,6 +3,7 @@ import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
 import { nearestStop } from "../../lib/stations";
+import { accessKey, storedAccess, type Access } from "../../lib/access";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
@@ -293,19 +294,24 @@ export async function completeSearch(id: number, listings: Omit<Listing, "id">[]
 /** Recherche telle qu'exposée au navigateur (dates en ISO). */
 export async function getPublicSearch(id: number) {
   const search = await getSearch(id);
-  return search && { ...search, listings: search.listings.map(publicListing) };
+  if (!search) return search;
+  const access = await storedAccess(search.listings.filter(isPrecise));
+  return { ...search, listings: search.listings.map(listing => publicListing(listing, access)) };
 }
 
 /**
- * Annonce telle qu'exposée au navigateur : dates en ISO, sans le code postal. Station de métro ou de tram la plus proche
- * calculée à la volée (base en mémoire, sans appel) et seulement depuis une position précise : depuis un quartier ou
- * une commune, la marche annoncée serait fausse.
+ * Annonce telle qu'exposée au navigateur : dates en ISO, sans le code postal. Accès à pied seulement depuis une position
+ * précise (depuis un quartier ou une commune, la marche annoncée serait fausse) : celui calculé et gardé en base (vraie
+ * marche OpenRouteService, arrêt de bus compris), sinon la station la plus proche avec une marche estimée.
  */
-export function publicListing(listing: Listing) {
+export function publicListing(listing: Listing, access: Map<string, Access> = new Map()) {
   const { postcode: _postcode, postedAt, refreshedAt, firstSeenAt, analyzed, ...rest } = listing;
+  const known = isPrecise(listing) ? access.get(accessKey(listing)) : undefined;
+  const estimate = isPrecise(listing) ? nearestStop(listing) : null;
   return {
     ...rest, postedAt: iso(postedAt), refreshedAt: iso(refreshedAt), firstSeenAt: iso(firstSeenAt), analyzed: analyzed !== false,
-    nearestStop: isPrecise(listing) ? nearestStop(listing) : null,
+    nearestStop: known ? known.metro : estimate && { ...estimate, estimated: true },
+    nearestBusStop: known?.bus ?? null,
   };
 }
 

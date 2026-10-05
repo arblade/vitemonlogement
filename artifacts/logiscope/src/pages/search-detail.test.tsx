@@ -114,16 +114,23 @@ describe('Page résultats : contenu', () => {
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
-  it('station de métro ou de tram la plus proche : « 9 min à pied » sur la carte, avec le nom et les lignes ; rien sans station', () => {
+  it('accès à pied sur la carte : métro ou tram (nom, lignes), puis bus ; « ≈ » si la marche est estimée ; rien sans arrêt', () => {
     api.state.data = search({ listings: [
-      listing(1, { nearestStop: { name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: 540, walkMinutes: 9, lines: [{ mode: 'metro', name: 'B', color: '#00a3e0' }, { mode: 'tram', name: 'T2', color: null }] } }),
-      listing(2, { nearestStop: null }),
+      listing(1, {
+        nearestStop: { name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: 640, walkMinutes: 9, estimated: false, lines: [{ mode: 'metro', name: 'B', color: '#00a3e0' }, { mode: 'tram', name: 'T2', color: null }] },
+        nearestBusStop: { name: 'Gerland', lat: 45.7, lng: 4.8, distanceMeters: 150, walkMinutes: 2, estimated: false, lines: [] },
+      }),
+      listing(2, { nearestStop: { name: 'Gare', lat: 45.7, lng: 4.8, distanceMeters: 900, walkMinutes: 19, estimated: true, lines: [{ mode: 'tram', name: 'T1', color: null }] }, nearestBusStop: null }),
+      listing(3, { nearestStop: null, nearestBusStop: null }),
     ] });
     renderPage();
-    const stop = screen.getByTestId('card-stop-1');
-    expect(stop).toHaveTextContent('9 min à pied· Métro et tram Jean Jaurès');
-    expect(within(stop).getByLabelText('Lignes B, T2')).toBeInTheDocument();
-    expect(screen.queryByTestId('card-stop-2')).not.toBeInTheDocument();
+    const metro = screen.getByTestId('card-stop-1-metro');
+    expect(metro).toHaveTextContent('9 min à pied· Métro et tram Jean Jaurès');
+    expect(within(metro).getByLabelText('Lignes B, T2')).toBeInTheDocument();
+    expect(screen.getByTestId('card-stop-1-bus')).toHaveTextContent('2 min à pied· Bus Gerland');
+    expect(screen.getByTestId('card-stop-2-metro')).toHaveTextContent('≈ 19 min à pied· Tram Gare');
+    expect(screen.queryByTestId('card-stop-2-bus')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('card-stop-3')).not.toBeInTheDocument();
   });
 
   it('« Fiche complète » est le bouton principal et ouvre la fiche ; « Voir sur … » et « Comparer » restent à côté', async () => {

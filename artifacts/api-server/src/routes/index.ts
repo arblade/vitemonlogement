@@ -5,6 +5,7 @@ import configRouter from "./config";
 import housingRouter from "./housing";
 import placesRouter from "./places";
 import favoritesRouter from "./favorites";
+import transitRouter from "./transit";
 import { mailPreferencesRouter, unsubscribeRouter } from "./mail";
 import { requireAuth } from "../lib/auth";
 
@@ -17,6 +18,7 @@ router.use(requireAuth); // tout ce qui suit exige la session ; /healthz et /aut
 router.use(configRouter);
 router.use(placesRouter);
 router.use(favoritesRouter);
+router.use(transitRouter);
 router.use(housingRouter);
 router.use(mailPreferencesRouter);
 
