@@ -1,8 +1,27 @@
 # Étude : Jev (TypeSafe) pour lire les annonces à moindre coût (03/10/2026)
 
-**Statut : implémenté sur la branche `jev` (03/10), désactivé par défaut** (`ANALYSIS_ENGINE=llm`). Jev n'a jamais été
-appelé pour de vrai : il faut l'accès (liste d'attente) puis le banc d'essai. Sources publiques uniquement : chiffres du
-fournisseur, non vérifiés par nous.
+**Statut : implémenté, désactivé par défaut** (`ANALYSIS_ENGINE=llm`). **Mesuré pour de vrai le 05/10** (accès obtenu,
+modèle `jev-latest`, champ `model` obligatoire : `JEV_MODEL=jev-latest`) : voir « Étude du 05/10 » ci-dessous et
+`reports/etude-jev-2026-10-05.md`.
+
+## Étude du 05/10 : Jev contre gpt-5-mini, vérité gpt-5.5
+188 annonces réelles (155 Le Bon Coin de 8 villes, collectées le 05/10, + 33 échantillons du dépôt), mêmes 33
+questions (type d'offre + 32 caractéristiques) posées à Jev, à gpt-5-mini (effort faible) et à gpt-5.5 (vérité) ;
+désaccords relus à la main (les 15 erreurs de Jev, 25 de gpt-5-mini).
+
+| | Jev (production : mot-clé + 0,85) | Jev proposé (mot-clé sur 8 sujets) | gpt-5-mini |
+|---|---|---|---|
+| Précision des oui/non | **98,6 %** (≈ 99 % après arbitrage) | 98,6 % | 90,6 % (≈ 94 % après arbitrage) |
+| Rappel | 65 % | 79 % | **95 %** |
+| Réponses inventées (texte muet) | **7** | 11 | 145 |
+| Type d'offre | 99,5 % | — | 99,5 % |
+| Coût / temps par annonce (33 questions) | **0,00016 $ / 0,16 s** | idem | 0,0019 $ / 8 s |
+
+Verdict : **Jev utilisable pour le type d'offre et le catalogue**, plus sûr que gpt-5-mini (qui déduit des « non »
+d'une absence), 12 fois moins cher, 50 fois plus rapide ; il se tait plus souvent (filtre mot-clé trop étroit :
+baignoire, étage, transports). « Charges comprises » est une question ambiguë (HC + charges = « non » pour Jev et mini,
+« oui » pour gpt-5.5) : à reformuler. Le LLM garde résumé, adresse et critères libres. Reproduire :
+`bench/collecte.ts` (Apify), `bench/etude.ts` (appels payants, mis en cache), `bench/analyse.ts` (gratuit).
 
 ## Ce qu'est Jev
 - Modèle de **décision typée** de TypeSafe (San Francisco), ouvert en accès anticipé le 15/09/2026. Il **n'écrit pas de
