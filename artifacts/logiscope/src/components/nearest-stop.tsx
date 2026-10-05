@@ -26,13 +26,13 @@ export function StopLines({ lines }: { lines: StopLine[] }) {
 export const NEAR_WALK_MINUTES = 15;
 
 /**
- * Badge de la carte d'annonce : « Métro < 5 min » ou « Tram < 10 min », sans nom de station ni de ligne. Le temps est
+ * Badge de la carte d'annonce : « Métro à 5 min » ou « Tram à 10 min », sans nom de station ni de ligne. Le temps est
  * arrondi au palier de 5 minutes au-dessus (la marche est de toute façon approximative) ; rien au-delà de 15 minutes.
  */
 export function transitBadge(stop: Pick<NearestStop, 'lines' | 'walkMinutes'> | null | undefined) {
   if (!stop || stop.walkMinutes > NEAR_WALK_MINUTES) return null;
   const metro = stop.lines.some(line => line.mode === 'metro');
-  return { metro, text: `${metro ? 'Métro' : 'Tram'} < ${Math.max(5, Math.ceil(stop.walkMinutes / 5) * 5)} min` };
+  return { metro, text: `${metro ? 'Métro' : 'Tram'} à ${Math.max(5, Math.ceil(stop.walkMinutes / 5) * 5)} min` };
 }
 
 /** Arrêt le plus proche, à pied, pour la fiche : station de métro ou de tram, ou arrêt de bus (`bus`), avec la distance. */

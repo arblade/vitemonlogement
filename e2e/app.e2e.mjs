@@ -191,6 +191,19 @@ async function checkListingMap(page) {
   assert.match(await text(page, "[data-testid=map-stop-1-bus]"), /^2 min à pied[\s\S]*Bus Colpin/);
   await page.waitForSelector("[data-testid=listing-map-1] [data-testid=map-marker-stop]");
   await page.waitForSelector("[data-testid=listing-map-1] [data-testid=map-marker-bus]");
+  // Le nom de la station (et celui de l'arrêt de bus) reste dans sa pastille : icône et texte entre ses bords.
+  const pills = await page.evaluate(() => [...document.querySelectorAll("[data-testid=listing-map-1] .vml-stop")].map(pill => {
+    const box = pill.getBoundingClientRect(), icon = pill.querySelector("img").getBoundingClientRect(), range = document.createRange();
+    range.selectNodeContents(pill.querySelector("span"));
+    const text = range.getBoundingClientRect();
+    return { name: pill.textContent, left: box.left, right: box.right, iconLeft: icon.left, iconWidth: icon.width, textLeft: text.left, textRight: text.right };
+  }));
+  assert.equal(pills.length, 2, "station et arrêt de bus repérés");
+  for (const pill of pills) {
+    assert.ok(pill.iconWidth >= 20, `${pill.name} : icône visible (${pill.iconWidth} px)`);
+    assert.ok(pill.iconLeft >= pill.left - 0.5 && pill.textLeft >= pill.iconLeft + pill.iconWidth - 0.5, `${pill.name} : le texte suit l'icône`);
+    assert.ok(pill.textRight <= pill.right + 0.5, `${pill.name} : le nom ne dépasse pas de sa pastille (texte jusqu'à ${Math.round(pill.textRight)}, pastille jusqu'à ${Math.round(pill.right)})`);
+  }
   // Fond de carte : stations grises posées ; lignes de tram et de métro masquées, puis montrées par l'interrupteur.
   await page.waitForFunction(sel => document.querySelector(sel)?.getAttribute("data-transit") === "true", canvas);
   assert.equal(await page.getAttribute(canvas, "data-lines"), "false");
@@ -236,7 +249,7 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       // Station de métro ou de tram la plus proche, à pied : sur la carte d'une adresse exacte, pas d'une simple commune.
-      assert.equal((await text(page, "[data-testid=card-transit-1]")).trim(), "Métro < 10 min", `${name} : badge métro (9 min à pied), sans nom de station ni de ligne`);
+      assert.equal((await text(page, "[data-testid=card-transit-1]")).trim(), "Métro à 10 min", `${name} : badge métro (9 min à pied), sans nom de station ni de ligne`);
       assert.doesNotMatch(card, /Rihour|Colpin|M1/, `${name} : ni station, ni ligne, ni bus sur la carte`);
       // Annonce 3 (rue lue dans la description) : accès pas encore calculé, station estimée à ~16 min, donc pas « proche » ;
       // annonce 2 (commune seulement) : pas de position, pas de badge.

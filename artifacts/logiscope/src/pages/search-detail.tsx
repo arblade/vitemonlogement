@@ -128,7 +128,7 @@ const STATUS_TEXT = { confirmed: 'confirmé', contradicted: 'ne correspond pas',
  * vous avez demandé), puis quelques atouts que l'annonce confirme (neutres). Ni « non », ni ce que l'annonce ne dit pas.
  */
 function cardChips(id: number, criteria: HousingCriterionResult[], features: HousingFeature[], nearestStop: HousingListing['nearestStop']) {
-  // Métro ou tram proche : un atout comme les autres (« Métro < 5 min »), juste après vos critères ; le détail est dans la fiche.
+  // Métro ou tram proche : un atout comme les autres (« Métro à 5 min »), juste après vos critères ; le détail est dans la fiche.
   const transit = transitBadge(nearestStop);
   const all = [
     ...criteria.map(result => ({ key: `c-${result.id}`, testId: `card-criterion-${id}-${result.id}`, tone: result.status, text: result.label,
