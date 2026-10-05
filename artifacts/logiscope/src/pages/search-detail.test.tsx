@@ -115,25 +115,25 @@ describe('Page résultats : contenu', () => {
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
-  it('métro ou tram proche : un badge « Métro à 5 min » parmi les autres, sans nom de station ni de ligne ; rien au-delà de 15 min', () => {
+  it('métro ou tram proche : un badge « Métro à 4 min » (le temps de la fiche, non arrondi) parmi les autres, sans nom de station ni de ligne ; rien au-delà de 15 min', () => {
     const stop = (walkMinutes: number, mode: 'metro' | 'tram', estimated = false) => ({
       name: 'Jean Jaurès', lat: 45.7, lng: 4.8, distanceMeters: walkMinutes * 70, walkMinutes, estimated, lines: [{ mode, name: mode === 'metro' ? 'B' : 'T2', color: '#00a3e0' }],
     });
     api.state.data = search({ listings: [
       listing(1, { nearestStop: stop(4, 'metro') }),
-      listing(2, { nearestStop: stop(7, 'tram', true) }),
+      listing(2, { nearestStop: stop(12, 'tram', true) }),
       listing(3, { nearestStop: stop(15, 'metro') }),
       listing(4, { nearestStop: stop(16, 'metro') }),
       listing(5, { nearestStop: null }),
     ] });
     renderPage();
-    expect(screen.getByTestId('card-transit-1')).toHaveTextContent('Métro à 5 min');
-    expect(screen.getByTestId('card-transit-2')).toHaveTextContent('Tram à 10 min');
+    expect(screen.getByTestId('card-transit-1')).toHaveTextContent('Métro à 4 min');
+    expect(screen.getByTestId('card-transit-2')).toHaveTextContent('Tram à 12 min');
     expect(screen.getByTestId('card-transit-3')).toHaveTextContent('Métro à 15 min');
     for (const id of [4, 5]) expect(screen.queryByTestId(`card-transit-${id}`)).not.toBeInTheDocument();
     // Dans la rangée des badges, juste après le critère demandé ; ni station, ni ligne, ni « à pied » sur la carte.
     const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
-    expect(chips.slice(0, 2)).toEqual(['chat accepté : à vérifier', 'Métro à 5 min']);
+    expect(chips.slice(0, 2)).toEqual(['chat accepté : à vérifier', 'Métro à 4 min']);
     expect(within(screen.getByTestId('card-listing-1')).queryByText(/Jean Jaurès|à pied|M?B$/)).toBeNull();
     expect(screen.getByTestId('card-transit-1').querySelector('svg')).not.toBeNull();
   });

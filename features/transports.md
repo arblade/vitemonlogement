@@ -47,10 +47,11 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
 - **Seulement pour une position précise** ; pas de « métro dans le quartier » pour les annonces placées au quartier
   ou à la commune (décidé le 05/10).
 - **Affichage** (revu le 05/10 sur demande) : sur la **carte d'annonce**, un simple badge dans la rangée des
-  caractéristiques, juste après vos critères : « Métro à 5 min » ou « Tram à 10 min » (palier de 5 minutes au-dessus ;
-  « Métro » dès qu'une ligne de métro dessert la station), **sans nom de station ni de ligne** ; rien si la station est à
-  plus de 15 minutes, et pas de badge bus sur la carte. Dans la **fiche**, le détail : « 9 min à pied · Métro Rihour M1 »
-  (« ≈ » si estimé), la distance (« 760 m à pied »), puis « 2 min à pied · Bus Colpin », les deux repérés sur la carte.
+  caractéristiques, juste après vos critères : « Métro à 12 min » ou « Tram à 5 min », **sans nom de station ni de
+  ligne**. Le temps est **exactement celui de la fiche** (corrigé : un arrondi au palier de 5 min affichait « 15 min » sur
+  le badge et « 12 min » dans la fiche) ; « Métro » dès qu'une ligne de métro dessert la station ; **pas de badge au-delà
+  de 15 minutes** à pied, ni pour le bus. Dans la **fiche**, le détail : « 12 min à pied · Métro Rihour M1 » (« ≈ » si
+  estimé), la distance (« 760 m à pied »), puis « 2 min à pied · Bus Colpin », les deux repérés sur la carte.
 - API : `nearestStop` et `nearestBusStop` de `HousingListing` (nom, position, distance, minutes, lignes, `estimated`).
 
 ### 3. Lignes de tram et de métro, en couleurs officielles (2e étape, 05/10)
@@ -87,8 +88,8 @@ demandes sont faisables sans Google et sans coût**, avec des données OpenStree
   `map.test.ts` (l'API renvoie l'estimation, puis la vraie marche et le bus une fois en base, rien pour une commune).
 - Front : `map-transit.test.ts` (couches, traits pleins, couleur par ligne, zone demandée, rechargement au
   déplacement, style sans tuiles ou sans police), `listing-map.test.tsx` (métro et bus dans la fiche, « ≈ »,
-  interrupteur), `search-detail.test.tsx` (badge sur la carte d'annonce : paliers, seuil de 15 min, pas de nom).
-- Navigateur (`e2e/app.e2e.mjs`, mobile puis desktop) : badge « Métro à 10 min » sans station sur la carte d'annonce,
+  interrupteur), `search-detail.test.tsx` (badge sur la carte d'annonce : même temps que la fiche, seuil de 15 min, pas de nom).
+- Navigateur (`e2e/app.e2e.mjs`, mobile puis desktop) : badge « Métro à 9 min » sans station sur la carte d'annonce,
   métro et bus détaillés dans la fiche, repères, pas de badge pour une station estimée à plus de 15 min, lignes servies par l'API, interrupteur sur la fiche et sur la carte
   des résultats. Aucun service extérieur (OpenFreeMap et ORS coupés, accès de l'annonce 1 déjà en base).
 

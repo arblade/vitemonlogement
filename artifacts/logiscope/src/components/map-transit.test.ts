@@ -110,15 +110,18 @@ describe('station la plus proche : libellés', () => {
 
 describe('badge métro / tram de la carte d’annonce', () => {
   const stop = (walkMinutes: number, ...modes: ('metro' | 'tram')[]) => ({ walkMinutes, lines: modes.map(mode => ({ mode, name: 'X', color: null })) });
-  it('palier de 5 minutes au-dessus, « Métro » dès qu’une ligne de métro dessert la station, rien au-delà de 15 minutes', () => {
-    expect(transitBadge(stop(1, 'metro'))?.text).toBe('Métro à 5 min');
+  it('le temps exact de la fiche (jamais arrondi), « Métro » dès qu’une ligne de métro dessert la station, rien au-delà de 15 minutes', () => {
+    expect(transitBadge(stop(1, 'metro'))?.text).toBe('Métro à 1 min');
     expect(transitBadge(stop(5, 'tram'))?.text).toBe('Tram à 5 min');
-    expect(transitBadge(stop(6, 'tram'))?.text).toBe('Tram à 10 min');
+    expect(transitBadge(stop(12, 'tram'))?.text).toBe('Tram à 12 min');
     expect(transitBadge(stop(10, 'metro', 'tram'))?.text).toBe('Métro à 10 min');
-    expect(transitBadge(stop(11, 'metro'))?.text).toBe('Métro à 15 min');
     expect(transitBadge(stop(15, 'metro'))?.text).toBe('Métro à 15 min');
     expect(transitBadge(stop(16, 'metro'))).toBeNull();
     expect(transitBadge(null)).toBeNull();
     expect(transitBadge(undefined)).toBeNull();
+  });
+
+  it('le badge et la fiche disent la même chose : même nombre de minutes, de 1 à 15', () => {
+    for (let minutes = 1; minutes <= 15; minutes++) expect(transitBadge(stop(minutes, 'metro'))?.text).toBe(`Métro à ${minutes} min`);
   });
 });

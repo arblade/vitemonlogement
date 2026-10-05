@@ -249,7 +249,7 @@ test("cartes (mobile puis desktop) : « Fiche complète » en bouton principal o
       if (process.env.E2E_SCREENSHOTS) await page.screenshot({ path: `${process.env.E2E_SCREENSHOTS}/resultats-entete-${name}.png` });
       const card = await text(page, "[data-testid=card-listing-1]");
       // Station de métro ou de tram la plus proche, à pied : sur la carte d'une adresse exacte, pas d'une simple commune.
-      assert.equal((await text(page, "[data-testid=card-transit-1]")).trim(), "Métro à 10 min", `${name} : badge métro (9 min à pied), sans nom de station ni de ligne`);
+      assert.equal((await text(page, "[data-testid=card-transit-1]")).trim(), "Métro à 9 min", `${name} : badge métro, le même temps que la fiche (9 min à pied, jamais arrondi), sans nom de station ni de ligne`);
       assert.doesNotMatch(card, /Rihour|Colpin|M1/, `${name} : ni station, ni ligne, ni bus sur la carte`);
       // Annonce 3 (rue lue dans la description) : accès pas encore calculé, station estimée à ~16 min, donc pas « proche » ;
       // annonce 2 (commune seulement) : pas de position, pas de badge.
