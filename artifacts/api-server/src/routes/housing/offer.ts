@@ -7,13 +7,31 @@
 
 // `\b` ne reconnaît pas les lettres accentuées (« à », « é ») : bornes explicites.
 const L = "a-zà-ÿ";
-const HOUSING = new RegExp(`(?<![${L}0-9])(?:appartements?|apparts?|appts?|logements?|studios?|studettes?|maisons?|locations?|colocations?|chambres?|duplex|lofts?|[tf][1-6])(?![${L}0-9])`, "i");
+const HOUSING = new RegExp(`(?<![${L}0-9])(?:appartements?|apparts?|appts?|logements?|un bien|studios?|studettes?|maisons?|locations?|colocations?|chambres?|duplex|lofts?|[tf][1-6])(?![${L}0-9])`, "i");
 // « à louer » = le propriétaire ; « cherche à louer » = un chercheur (le mot juste avant le dit).
-const OFFERS = new RegExp(`(?<!(?:cherch|recherch)[${L}]*\\s)(?<![${L}])(?:à|a) louer(?![${L}])|(?<![${L}])(?:je|nous|on) (?:loue|louons|propose|proposons)(?![${L}])`, "i");
+const RENT_OFFER = new RegExp(`(?<!(?:cherch|recherch)[${L}]*\\s)(?<![${L}])(?:à|a) louer(?![${L}])`, "gi");
+const SAYS_OFFER = new RegExp(`(?<![${L}])(?:je|nous|on) (?:loue|louons|propose|proposons)(?![${L}])`, "i");
+// « Recherche maison à louer », « Je recherche un bien à louer pour ma famille » : « à louer » décrit ce qui est cherché.
+const SEEK_THEN_RENT = new RegExp(`(?<![${L}])(?:recherch|cherch)(?:e|es|ons|ent|ant)?(?![${L}])([^.!?\\n;]{0,70}?)(?:à|a) louer$`, "i");
 // Pas « recherché(e) » : c'est un adjectif (« un quartier recherché »).
 const SEEKS = new RegExp(`(?<![${L}])(?:recherch|cherch)(?:e|es|ons|ent|ant)?(?![${L}])`, "gi");
 // Ce qui est cherché est une personne (un propriétaire cherche des occupants), pas un logement.
 const LANDLORD_SEEKS = /^\s*(?:un |une |des |nos |notre |votre )?(?:futur |futurs |bon |bons |bonne |sérieux |sérieuse )*(?:co)?(?:locataires?|couples?|étudiant\w*|personnes?|profils?|candidat\w*|dossiers?|familles?|jeunes? |salariés?|actifs?)/i;
+
+/**
+ * Le texte propose-t-il un logement ? « à louer » ou « je loue » : oui, sauf quand « à louer » complète un verbe de
+ * recherche de la même phrase (« Recherche maison à louer ») et que ce qui est cherché n'est pas une personne
+ * (« Cherche un locataire pour mon appartement à louer » reste une offre).
+ */
+function proposesHousing(text: string) {
+  if (SAYS_OFFER.test(text)) return true;
+  for (const match of text.matchAll(RENT_OFFER)) {
+    const before = text.slice(Math.max(0, match.index - 120), match.index + match[0].length);
+    const sought = SEEK_THEN_RENT.exec(before)?.[1];
+    if (sought === undefined || LANDLORD_SEEKS.test(sought.replace(/^\s*(?:pour|d['’])\s*/i, ""))) return true;
+  }
+  return false;
+}
 
 /** Quelqu'un dit chercher un logement (et non pas : un propriétaire cherche un locataire). */
 function seeksHousing(text: string) {
@@ -30,7 +48,7 @@ export function isSeekerAd({ adType, title, description }: { adType?: unknown; t
   const type = typeof adType === "string" ? adType.trim().toLowerCase() : "";
   if (type && type !== "offer") return true; // « demand »…
   const head = description.slice(0, 200);
-  if (OFFERS.test(`${title} ${head}`)) return false; // « à louer », « je loue » : c'est une offre, quoi que dise la suite
+  if (proposesHousing(`${title} ${head}`)) return false; // « à louer », « je loue » : c'est une offre, quoi que dise la suite
   return seeksHousing(title) || seeksHousing(head);
 }
 

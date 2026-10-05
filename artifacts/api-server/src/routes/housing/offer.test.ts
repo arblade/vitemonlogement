@@ -44,6 +44,29 @@ test("texte : un propriétaire ou une agence qui propose un logement n'est jamai
   assert.equal(seeker("T2", "Appartement T2 à louer. Disponible de suite, recherche un locataire."), false);
 });
 
+test("« … à louer » après un verbe de recherche : c'est une demande, pas une offre (annonces réelles Rennes du 05/10/2026)", () => {
+  // Le Bon Coin les rangeait en « offer » dans Locations ; « à louer » complète ici ce qui est cherché.
+  assert.equal(seeker("Demande", "Urgent: Je recherche un bien à louer pour ma famille de 4 personnes qui vient en vacance tout le mois de décembre."), true);
+  assert.equal(seeker("Recherche maison à louer – Rennes / Pacé / Betton", "Bonjour, Je recherche une maison à louer pour moi et ma mère, à Rennes ou dans les alentours, notamment à Pacé, Betton ou dans les communes proches. Nous recherchons idéalement une maison avec 2 chambres."), true);
+  assert.equal(seeker("Recherche petite maison", "Couples retraités recherchent petite maison ou appartement rdc dept 35 ou 56"), true);
+  for (const title of ["Recherche appartement à louer Lille", "Cherchons maison à louer sur Rennes", "Famille recherche un T3 à louer", "Je recherche studio à louer, budget 500 €"]) {
+    assert.equal(seeker(title), true, title);
+  }
+});
+
+test("« à louer » reste une offre quand ce qui est cherché est un locataire, quand la recherche vient après, ou dans une autre phrase", () => {
+  for (const [title, description] of [
+    ["Recherche locataire pour appartement T2 à louer", "Merci de me contacter."],
+    ["Cherchons locataires sérieux pour belle maison à louer", "Merci de me contacter."],
+    ["Cherche couple sérieux, appartement à louer", "Merci de me contacter."],
+    ["Maison à louer", "Je recherche une famille calme, sans animaux."],
+    ["Maison à louer", "Située à Pacé. Recherche un locataire solvable pour ce bien."],
+    ["T2", "Je recherche un locataire. Appartement à louer de suite."],
+    ["Appartement T3 à louer", "Cherche locataire, dossier solide demandé."],
+    ["Maison 4 chambres", "Maison à louer à Rennes, proche commerces. Je cherche une famille."],
+  ] as const) assert.equal(seeker(title, description), false, `${title} / ${description}`);
+});
+
 test("Le Bon Coin (fatihtahta) : une demande est écartée, une offre garde son comportement", () => {
   const ad = { url: "https://www.leboncoin.fr/ad/locations/9001", title: "Appartement T2 à Lille", description: "Beau T2 lumineux à louer.", price: 650, area: 40, rooms: 2 };
   assert.ok(normalize({ ...fatihRecord(ad), listing_type: "offer" }, criteria), "offre gardée");

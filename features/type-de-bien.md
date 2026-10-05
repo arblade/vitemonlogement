@@ -36,10 +36,13 @@ d'ailleurs jamais une annonce (il retire 15 points de score).
 - Le nombre est faible : peu de maisons à moins de 1000 € dans un rayon de 5 km autour de Rennes.
 
 ## Constats de l'essai, non traités ici
-1. **Demandes prises pour des offres.** « Demande » (« Je recherche un bien à louer pour ma famille »), « Recherche maison à
-   louer – Rennes / Pacé / Betton » ont été gardées : leur texte contient « à louer », ce que `isSeekerAd` (`offer.ts`) lit
-   comme une offre (« quoi que dise la suite »), alors que Le Bon Coin les range en `offer`. « Recherche petite maison »
-   (sans « à louer ») est bien écartée.
+1. **Demandes prises pour des offres. Corrigé le 05/10** (`offer.ts`, `proposesHousing`) : « Demande » (« Je recherche un bien à
+   louer pour ma famille ») et « Recherche maison à louer – Rennes / Pacé / Betton » étaient gardées, car leur texte contient
+   « à louer », lu comme une offre (« quoi que dise la suite ») : l'exception ne couvrait que « recherche à louer » collés.
+   Désormais, « à louer » ne vaut pas offre quand il complète un verbe de recherche de la même phrase (« Recherche maison à
+   louer »), sauf si ce qui est cherché est une personne (« Cherche locataire pour mon appartement à louer » reste une offre),
+   ni quand la recherche vient après ou dans une autre phrase. « un bien » compte comme un logement cherché. Rejoué sur les
+   10 annonces réelles de l'essai : les deux demandes sont écartées, rien d'autre ne change.
 2. **Annonces non logements en « Autre »** (bureaux, chambre) : écartées ensuite par l'analyse (`offer` non habitable / chambre,
    avec citation), au prix d'une lecture IA ; « Location domaine » (20 pièces, 350 €) et « Location maison à la chambre » passent.
 3. **« À moins de 30 min de l'aéroport »** n'est pas un lieu de vie reconnu (`places` vide) : c'est un souhait lu dans le
@@ -48,5 +51,5 @@ d'ailleurs jamais une annonce (il retire 15 points de score).
 
 ## Tests
 `type-de-bien.test.ts` (requête, `declaredType`, `matchesPropertyType`, lecture, de bout en bout avec faux LLM et faux
-Apify : maison demandée, valeur inattendue du LLM) ; `search-detail.test.tsx` (ligne « Type de bien ») ; `e2e/app.e2e.mjs`
+Apify : maison demandée, valeur inattendue du LLM) ; `offer.test.ts` (demandes « … à louer », offres qui gardent « à louer ») ; `search-detail.test.tsx` (ligne « Type de bien ») ; `e2e/app.e2e.mjs`
 (« Votre demande » dit « Appartement »). Vérifié en cassant volontairement le filtre et la requête : les tests échouent.
