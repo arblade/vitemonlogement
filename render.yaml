@@ -45,6 +45,9 @@ services:
         sync: false
       - key: JEV_API_KEY
         sync: false
+      # Facultatif : modèle Jev (défaut : jev-latest).
+      - key: JEV_MODEL
+        sync: false
       # Facultatifs : expéditeur et adresse de réponse des e-mails (défaut : alertes@vitemonlogement.fr).
       - key: MAIL_FROM
         sync: false

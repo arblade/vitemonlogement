@@ -11,6 +11,8 @@ export type JevResult = { answers: Record<string, JevAnswer>; inputTokens: numbe
 export type JevDecide = (state: string, questions: Record<string, JevChoiceQuestion>) => Promise<JevResult>;
 
 export const DEFAULT_JEV_URL = "https://api.typesafe.ai/v1/systemone";
+/** L'API exige un modèle (422 sinon) ; seul `jev-latest` est accepté sur l'accès TypeSafe (essayé le 05/10). */
+export const DEFAULT_JEV_MODEL = "jev-latest";
 
 export const jevConfigured = () => Boolean(process.env.JEV_API_KEY?.trim());
 
@@ -49,14 +51,14 @@ export function readAnswers(body: unknown, names: string[]): Record<string, JevA
   return answers;
 }
 
-/** Appel réel à Jev (JEV_API_KEY ; JEV_BASE_URL et JEV_MODEL facultatifs). */
+/** Appel réel à Jev (JEV_API_KEY ; JEV_BASE_URL et JEV_MODEL facultatifs : `jev-latest` par défaut). */
 export const jevDecide: JevDecide = async (state, questions) => {
   const key = process.env.JEV_API_KEY?.trim();
   if (!key) throw new Error("JEV_API_KEY n'est pas configurée.");
   const response = await fetch(process.env.JEV_BASE_URL?.trim() || DEFAULT_JEV_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ ...(process.env.JEV_MODEL?.trim() ? { model: process.env.JEV_MODEL.trim() } : {}), state, questions }),
+    body: JSON.stringify({ model: process.env.JEV_MODEL?.trim() || DEFAULT_JEV_MODEL, state, questions }),
     signal: AbortSignal.timeout(intEnv("JEV_TIMEOUT_MS", 15_000)),
   });
   const body = await response.json().catch(() => null) as Record<string, unknown> | null;

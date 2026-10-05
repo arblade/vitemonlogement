@@ -1,5 +1,5 @@
 import type { HousingCriterion, HousingCriterionResult, HousingFeature, HousingListing } from '@workspace/api-client-react';
-import { ArrowUpDown, Bath, BedDouble, Building2, Car, Check, CookingPot, DoorOpen, Euro, Flame, Leaf, MapPin, Receipt, Ruler, Sofa, Sun, Trees, Warehouse, Wifi, Zap, type LucideIcon } from 'lucide-react';
+import { ArrowUpDown, Bath, BedDouble, Building2, Car, Check, CookingPot, DoorOpen, Euro, Eye, Flame, Landmark, Layers, Leaf, Lightbulb, MapPin, Receipt, Ruler, Sofa, Sun, Trees, Volume1, Warehouse, Wifi, Zap, type LucideIcon } from 'lucide-react';
 import { formatPrice } from '@/components/site-shell';
 
 /** Icône (trait fin) de chaque repère essentiel, partagée par la carte et la fiche détaillée. */
@@ -128,7 +128,8 @@ const featureIcons: [RegExp, LucideIcon][] = [
   [/\b(ascenseur)\b/, ArrowUpDown], [/\b(etage)\b/, Building2], [/\b(chambres?)\b/, BedDouble], [/\b(salles? de bain|salle d eau|douche)\b/, Bath],
   [/\b(classe energie|dpe)\b/, Zap], [/\b(ges|emissions)\b/, Leaf], [/\b(chauffage)\b/, Flame], [/\b(charges|honoraires|depot)\b/, Receipt],
   [/\b(parking|stationnement|garage|box)\b/, Car], [/\b(meuble)\b/, Sofa], [/\b(balcon|terrasse|loggia|exposition)\b/, Sun], [/\b(jardin)\b/, Trees],
-  [/\b(cave|cellier|grenier)\b/, Warehouse], [/\b(cuisine)\b/, CookingPot], [/\b(fibre|internet|wifi)\b/, Wifi],
+  [/\b(cave|cellier|grenier|velos?)\b/, Warehouse], [/\b(cuisine)\b/, CookingPot], [/\b(fibre|internet|wifi)\b/, Wifi],
+  [/\b(vue)\b/, Eye], [/\b(cachet)\b/, Landmark], [/\b(duplex)\b/, Layers], [/\b(lumineux)\b/, Lightbulb], [/\b(calme)\b/, Volume1],
 ];
 /** Icône au trait de chaque caractéristique (repère visuel, toujours accompagné du texte) ; coche discrète par défaut. */
 export function featureIcon(label: string): LucideIcon {
@@ -144,4 +145,48 @@ const featureRanks: [RegExp, number][] = [
 export function sortFeatures<T extends Pick<HousingFeature, 'label' | 'value'>>(features: T[]): T[] {
   const rank = (feature: T) => (isAbsent(feature) ? 100 : 0) + (featureRanks.find(([pattern]) => pattern.test(normalize(feature.label)))?.[1] ?? 4);
   return features.map((feature, index) => ({ feature, index })).sort((a, b) => rank(a.feature) - rank(b.feature) || a.index - b.index).map(({ feature }) => feature);
+}
+
+/** Thèmes de la fiche : l'information se lit par sujet plutôt que dans une longue liste. */
+export const FEATURE_GROUPS = [
+  { id: 'outside', title: 'Extérieur et annexes' },
+  { id: 'inside', title: 'Intérieur' },
+  { id: 'building', title: 'Immeuble' },
+  { id: 'area', title: 'Quartier' },
+  { id: 'terms', title: 'Conditions' },
+  { id: 'other', title: 'Autres' },
+] as const;
+export type FeatureGroupId = typeof FEATURE_GROUPS[number]['id'];
+
+const groupPatterns: [RegExp, FeatureGroupId][] = [
+  [/\b(balcon|loggia|terrasse|jardin|exterieur|cour|vue|velos?|cave|cellier|grenier|parking|stationnement|garage|box|exposition)\b/, 'outside'],
+  [/\b(ascenseur|etage|rez de chaussee|interphone|digicode|visiophone|gardien|concierge)\b/, 'building'],
+  [/\b(transports?|metro|tram|calme|bien situe)\b/, 'area'],
+  [/\b(meuble|charges|honoraires|depot|animaux|etudiants?|visale|apl|colocation|frais d agence|chauffage|classe energie|dpe|ges|emissions)\b/, 'terms'],
+  [/\b(chambres?|salles? de bain|salle d eau|duplex|cuisine|lave|baignoire|wc|vitrage|climatisation|cheminee|parquet|rangements?|lumineux|cachet|bon etat|renove|fibre|internet|wifi)\b/, 'inside'],
+];
+export function featureGroup(label: string): FeatureGroupId {
+  const key = normalize(label);
+  return groupPatterns.find(([pattern]) => pattern.test(key))?.[1] ?? 'other';
+}
+
+/** Les caractéristiques de la fiche par thème, dans l'ordre de lecture ; un thème vide n'apparaît pas. */
+export function groupFeatures<T extends Pick<HousingFeature, 'label' | 'value'>>(features: T[]) {
+  const sorted = sortFeatures(features);
+  return FEATURE_GROUPS.map(group => ({ ...group, features: sorted.filter(feature => featureGroup(feature.label) === group.id) })).filter(group => group.features.length);
+}
+
+/**
+ * Atouts montrables d'un coup d'œil sur la carte, du plus parlant au moins parlant. Seuls ceux que l'annonce confirme
+ * (jamais un « non », jamais ce que l'annonce ne dit pas) ; le reste est dans la fiche.
+ */
+const atoutRanks: [RegExp, number][] = [
+  [/\b(terrasse|balcon|loggia|jardin|exterieur)\b/, 0], [/\b(vue)\b/, 1], [/\b(dernier etage)\b/, 2], [/\b(ascenseur)\b/, 3],
+  [/\b(parking|stationnement|garage|box)\b/, 4], [/\b(meuble)\b/, 5], [/\b(cachet|duplex)\b/, 6], [/\b(lumineux)\b/, 7], [/\b(calme)\b/, 8],
+];
+export function cardAtouts<T extends Pick<HousingFeature, 'label' | 'value'>>(features: T[]): T[] {
+  const rank = (feature: T) => atoutRanks.find(([pattern]) => pattern.test(normalize(feature.label)))?.[1];
+  return features.map((feature, index) => ({ feature, index, rank: rank(feature) }))
+    .filter((entry): entry is { feature: T; index: number; rank: number } => entry.rank !== undefined && !isAbsent(entry.feature))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index).map(entry => entry.feature);
 }

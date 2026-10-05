@@ -2,9 +2,12 @@
  * Étage 2 de la lecture d'une annonce : Jev tranche ce que Le Bon Coin ne dit pas, pour les caractéristiques du
  * catalogue et les critères de l'utilisateur qui en relèvent, plus le type d'offre (logement entier, chambre…).
  *
- * Garde-fous (Jev ne cite pas le texte) :
- *  - une question n'est posée que si le sujet apparaît dans l'annonce (mot-clé), et la phrase qui le contient sert de
- *    preuve affichée ; sans mot-clé, rien n'est tranché (le critère va au LLM, qui doit citer) ;
+ * Jev lit tout le catalogue sur chaque annonce (une seule requête, ≈ 0,0002 $), pas seulement les sujets cités par
+ * l'utilisateur. Garde-fous (Jev ne cite pas le texte ; mesuré le 05/10 sur 188 annonces : 98,6 % de précision) :
+ *  - sujets « à risque » (balcon, terrasse, duplex…, `guard`) : question posée seulement si le mot-clé apparaît ;
+ *  - un « non » et toute appréciation (calme, lumineux…) ne sont retenus qu'avec la phrase de l'annonce qui les porte,
+ *    affichée comme preuve ; sans phrase, un critère de l'utilisateur va au LLM, qui doit citer ;
+ *  - ce que l'annonce ne dit pas n'est jamais affiché (ni « non » ni « à vérifier » : seulement si demandé) ;
  *  - une réponse n'est retenue qu'au-dessus d'un seuil de probabilité (JEV_MIN_CONFIDENCE, 0,85) ;
  *  - écarter une annonce (chambre, local) exige 0,90 (JEV_HIDE_CONFIDENCE) ET une phrase qui le montre.
  * « Non précisé » n'est jamais un « non ».
@@ -54,9 +57,9 @@ export async function readWithJev(listing: Pick<Listing, "title" | "description"
   // Seul un « oui » des champs fait foi ; un « non » (souvent non rempli) est revérifié dans la description.
   const known = new Set(listing.features.filter(feature => feature.source === "annonce" && !saysNo(feature.value)).map(feature => feature.label));
   const isKnown = (feature: CatalogueFeature) => (LBC_LABELS[feature.id] ?? [feature.label]).some(label => known.has(label));
-  // Caractéristiques à demander : pas déjà données par Le Bon Coin, et dont le sujet apparaît dans l'annonce.
+  // Caractéristiques à demander : pas déjà données par Le Bon Coin ; les sujets à risque seulement s'ils sont cités.
   const asked = new Map<string, CatalogueFeature>();
-  for (const feature of CATALOGUE) if (feature.id !== "outdoor" && !isKnown(feature) && feature.keyword.test(text)) asked.set(feature.id, feature);
+  for (const feature of CATALOGUE) if (feature.id !== "outdoor" && !isKnown(feature) && (!feature.guard || feature.keyword.test(text))) asked.set(feature.id, feature);
   // Critères de l'utilisateur qui relèvent du catalogue (« balcon », « chat accepté »…), même composite (« extérieur »).
   const featureOf = (check: CriterionResult) => check.id.startsWith("wish-") ? catalogueFor(check.label) : undefined;
   const wishes = checks.filter(check => (check.status === "unknown" || isWeakStructured(check)) && featureOf(check));
@@ -71,7 +74,11 @@ export async function readWithJev(listing: Pick<Listing, "title" | "description"
   for (const feature of asked.values()) {
     const choice = sure(feature.id);
     const evidence = sentenceWith(text, feature.keyword);
-    if ((choice === "yes" || choice === "no") && evidence) presence.set(feature.id, { value: choice, evidence });
+    if (choice !== "yes" && choice !== "no") continue;
+    if (choice === "no" && feature.yesOnly) continue;
+    // Un « oui » sur un sujet sans risque se passe de phrase (« buanderie » pour le lave-linge) ; un « non » ou une appréciation, jamais.
+    if (!evidence && (choice === "no" || feature.guard || feature.kind === "qualitative")) continue;
+    presence.set(feature.id, { value: choice, evidence: evidence ?? "" });
   }
 
   const features: Feature[] = [...presence.entries()].filter(([id]) => !isKnown(catalogueFeature(id)!)).map(([id, found]) => ({
@@ -80,7 +87,7 @@ export async function readWithJev(listing: Pick<Listing, "title" | "description"
   const verdicts: Record<string, Verdict> = {};
   for (const check of wishes) {
     const found = presence.get(featureOf(check)!.id);
-    if (!found) continue; // pas tranché : le LLM le lira (et devra citer)
+    if (!found?.evidence) continue; // pas tranché, ou sans phrase à citer : le LLM le lira (et devra citer)
     const satisfied = (found.value === "yes") !== wantsAbsence(check.label);
     verdicts[criterionKey(check)] = { status: satisfied ? "confirmed" : "contradicted", value: found.value === "yes" ? "Oui" : "Non", evidence: found.evidence };
   }

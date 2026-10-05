@@ -95,22 +95,23 @@ describe('Page résultats : contenu', () => {
     expect(within(card).getByTestId('card-criterion-1-wish-1')).toHaveTextContent(/à vérifier/i);
   });
 
-  it('carte allégée : critères puis caractéristiques en une rangée de pastilles, sans titres, ni rang · site, ni lien « Détails, sources et preuves »', () => {
+  it('carte allégée : critères puis atouts confirmés en une rangée de pastilles, sans titres, ni rang · site, ni lien « Détails, sources et preuves »', () => {
     api.state.data = search({ listings: [listing(1, { features: [
-      { label: 'Ascenseur', value: 'Non', source: 'annonce', evidence: '' },
-      { label: 'Étage', value: '3', source: 'annonce', evidence: '' },
-      { label: 'Chambres', value: '1 ch.', source: 'annonce', evidence: '' },
-      { label: 'Classe énergie', value: 'd', source: 'annonce', evidence: '' },
-      { label: 'Cave', value: '', source: 'ia', evidence: 'cave' },
-      { label: 'Charges', value: '60 €', source: 'annonce', evidence: '' },
+      { label: 'Meublé', value: '', source: 'annonce', evidence: '' },
+      { label: 'Cachet', value: '', source: 'ia', evidence: 'charmant' },
+      { label: 'Parking', value: '', source: 'annonce', evidence: '' },
+      { label: 'Ascenseur', value: 'Oui', source: 'annonce', evidence: '' },
+      { label: 'Dernier étage', value: '', source: 'annonce', evidence: '' },
+      { label: 'Vue dégagée', value: '', source: 'ia', evidence: 'vue sur Fourvière' },
+      { label: 'Terrasse', value: '', source: 'ia', evidence: 'terrasse de 10 m2' },
     ] })] });
     renderPage();
     const card = screen.getByTestId('card-listing-1');
     for (const gone of ['Vos critères', 'Autres caractéristiques', 'Détails, sources et preuves', '01 ·', 'dans le détail']) expect(card).not.toHaveTextContent(gone);
     const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
-    // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les caractéristiques en mots simples,
-    // dans l’ordre de lecture (pièces, étage, équipements, énergie, charges, absent) ; 6 pastilles au plus.
-    expect(chips).toEqual(['chat accepté : à vérifier', '1 chambre', '3e étage', 'Cave', 'DPE D', 'Charges 60 €', '+1']);
+    // Le critère passe en premier (statut lu par les lecteurs d’écran), puis les atouts du plus parlant au moins parlant
+    // (extérieur, vue, dernier étage, ascenseur, parking, meublé, cachet) ; 6 pastilles au plus.
+    expect(chips).toEqual(['chat accepté : à vérifier', 'Terrasse', 'Vue dégagée', 'Dernier étage', 'Ascenseur', 'Parking', '+2']);
     expect(within(card).getByTestId('card-feature-1-0').querySelector('svg')).not.toBeNull();
   });
 
@@ -131,6 +132,22 @@ describe('Page résultats : contenu', () => {
     expect(screen.getByTestId('card-stop-2-metro')).toHaveTextContent('≈ 19 min à pied· Tram Gare');
     expect(screen.queryByTestId('card-stop-2-bus')).not.toBeInTheDocument();
     expect(screen.queryByTestId('card-stop-3')).not.toBeInTheDocument();
+  });
+
+  it('carte : jamais de « non », ni de caractéristique anodine ; « à vérifier » seulement pour un critère demandé', () => {
+    api.state.data = search({ listings: [listing(1, { features: [
+      { label: 'Ascenseur', value: 'Non', source: 'annonce', evidence: '' },
+      { label: 'Animaux acceptés', value: 'Non', source: 'ia', evidence: 'animaux non acceptés' },
+      { label: 'Étage', value: '3', source: 'annonce', evidence: '' },
+      { label: 'Chambres', value: '1 ch.', source: 'annonce', evidence: '' },
+      { label: 'Classe énergie', value: 'd', source: 'annonce', evidence: '' },
+      { label: 'Lave-vaisselle', value: '', source: 'ia', evidence: 'lave-vaisselle' },
+      { label: 'Cave', value: '', source: 'ia', evidence: 'cave' },
+    ] })] });
+    renderPage();
+    const chips = within(screen.getByTestId('card-facts-1')).getAllByRole('listitem').map(item => item.textContent);
+    // Seul le critère demandé ; le reste est dans la fiche.
+    expect(chips).toEqual(['chat accepté : à vérifier']);
   });
 
   it('« Fiche complète » est le bouton principal et ouvre la fiche ; « Voir sur … » et « Comparer » restent à côté', async () => {
@@ -496,10 +513,30 @@ describe('Page résultats : fiche détaillée', () => {
     await user.click(screen.getByTestId('button-open-listing-1'));
     const features = within(await screen.findByTestId('dialog-listing-1')).getByTestId('features-1');
     const items = within(features).getAllByRole('listitem');
-    expect(items.map(item => item.textContent)).toEqual(['3e étage', 'Balcon', 'Ascenseur : absent']);
+    // Par thème (extérieur, puis immeuble) ; dans un thème, ce qui manque est barré, en dernier.
+    expect(items.map(item => item.textContent)).toEqual(['Balcon', '3e étage', 'Ascenseur : absent']);
+    expect(within(features).getAllByRole('heading').map(heading => heading.textContent)).toEqual(['Extérieur et annexes', 'Immeuble']);
     expect(items.every(item => item.querySelector('svg'))).toBe(true);
     expect(items[2].querySelector('.line-through')).toHaveTextContent('Ascenseur');
     expect(features).not.toHaveTextContent(/plein sud|floor_number|Lu dans la description|Indiqué dans l’annonce|Extrait/);
+  });
+
+  it('caractéristiques par thème : un thème sans élément n\'apparaît pas, le ressenti et les conditions ont leur place', async () => {
+    const user = userEvent.setup();
+    api.state.data = search({ listings: [listing(1, { features: [
+      { label: 'Meublé', value: '', source: 'annonce', evidence: '' },
+      { label: 'Lumineux', value: '', source: 'ia', evidence: 'très lumineux' },
+      { label: 'Proche transports', value: '', source: 'ia', evidence: 'métro à 3 min' },
+      { label: 'Duplex', value: '', source: 'ia', evidence: 'duplex' },
+      { label: 'Vue dégagée', value: '', source: 'ia', evidence: 'vue sur Fourvière' },
+    ] })] });
+    renderPage();
+    await user.click(screen.getByTestId('button-open-listing-1'));
+    const features = within(await screen.findByTestId('dialog-listing-1')).getByTestId('features-1');
+    expect(within(features).getAllByRole('heading').map(heading => heading.textContent)).toEqual(['Extérieur et annexes', 'Intérieur', 'Quartier', 'Conditions']);
+    expect(within(within(features).getByTestId('features-group-1-inside')).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Lumineux', 'Duplex']);
+    expect(within(within(features).getByTestId('features-group-1-outside')).getAllByRole('listitem').map(item => item.textContent)).toEqual(['Vue dégagée']);
+    expect(within(features).queryByTestId('features-group-1-building')).toBeNull();
   });
 
   it('caractéristiques : au-delà de 12, les 10 premières puis « Afficher les N caractéristiques »', async () => {

@@ -1,8 +1,46 @@
 # Étude : Jev (TypeSafe) pour lire les annonces à moindre coût (03/10/2026)
 
-**Statut : implémenté sur la branche `jev` (03/10), désactivé par défaut** (`ANALYSIS_ENGINE=llm`). Jev n'a jamais été
-appelé pour de vrai : il faut l'accès (liste d'attente) puis le banc d'essai. Sources publiques uniquement : chiffres du
-fournisseur, non vérifiés par nous.
+**Statut : implémenté, désactivé par défaut** (`ANALYSIS_ENGINE=llm`). **Mesuré pour de vrai le 05/10** (accès obtenu,
+modèle `jev-latest`, champ `model` obligatoire : `JEV_MODEL=jev-latest`) : voir « Étude du 05/10 » ci-dessous et
+`reports/etude-jev-2026-10-05.md`.
+
+## Étude du 05/10 : Jev contre gpt-5-mini, vérité gpt-5.5
+188 annonces réelles (155 Le Bon Coin de 8 villes, collectées le 05/10, + 33 échantillons du dépôt), mêmes 33
+questions (type d'offre + 32 caractéristiques) posées à Jev, à gpt-5-mini (effort faible) et à gpt-5.5 (vérité) ;
+désaccords relus à la main (les 15 erreurs de Jev, 25 de gpt-5-mini).
+
+| | Jev (production : mot-clé + 0,85) | Jev proposé (mot-clé sur 8 sujets) | gpt-5-mini |
+|---|---|---|---|
+| Précision des oui/non | **98,6 %** (≈ 99 % après arbitrage) | 98,6 % | 90,6 % (≈ 94 % après arbitrage) |
+| Rappel | 65 % | 79 % | **95 %** |
+| Réponses inventées (texte muet) | **7** | 11 | 145 |
+| Type d'offre | 99,5 % | — | 99,5 % |
+| Coût / temps par annonce (33 questions) | **0,00016 $ / 0,16 s** | idem | 0,0019 $ / 8 s |
+
+Verdict : **Jev utilisable pour le type d'offre et le catalogue**, plus sûr que gpt-5-mini (qui déduit des « non »
+d'une absence), 12 fois moins cher, 50 fois plus rapide ; il se tait plus souvent (filtre mot-clé trop étroit :
+baignoire, étage, transports). « Charges comprises » est une question ambiguë (HC + charges = « non » pour Jev et mini,
+« oui » pour gpt-5.5) : à reformuler. Le LLM garde résumé, adresse et critères libres. Reproduire :
+`bench/collecte.ts` (Apify), `bench/etude.ts` (appels payants, mis en cache), `bench/analyse.ts` (gratuit).
+
+## Étude du 05/10 (2) : critères qualitatifs, et gpt-5.4-mini
+Mêmes 188 annonces, 12 critères subjectifs (calme, lumineux, bon état, vue, cachet, spacieux, rangements, bien situé,
+économe en énergie, étudiant, famille, standing) ; Jev, gpt-5-mini, gpt-5.4-mini, vérité gpt-5.5, arbitrage à la main.
+Rapport : `reports/etude-jev-qualitatif-2026-10-05.md`.
+
+| | Jev ≥ 0,85 | gpt-5-mini | gpt-5.4-mini |
+|---|---|---|---|
+| Précision / rappel (qualitatif) | **98,3 %** (≈ 99,5 % après arbitrage) / 72 % | 89,4 % / 91 % | 87,4 % / 91 % |
+| Contradictions (oui au lieu de non) | **0** | 8 | 15 |
+| Précision / rappel (catalogue, 33 questions) | 98,6 % / 65 à 79 % | 90,6 % / 95 % | 72,0 % / 95 % |
+| Coût / temps par annonce (12 critères) | **0,00009 $ / 0,19 s** | 0,0012 $ / 5 s | 0,0019 $ / 1,7 s |
+
+Conclusions : **Jev tient aussi sur le qualitatif** ; « spacieux » et « économe en énergie » se calculent (surface par
+pièce, lettre du DPE) plutôt qu'ils ne se lisent ; gpt-5.4-mini n'apporte rien en lecture (pire sur le catalogue).
+**Organisation conseillée** : Jev sur toutes les annonces pour un catalogue générique (≈ 32 caractéristiques + ≈ 10
+critères qualitatifs + type d'offre, ≈ 0,0003 $ et < 0,5 s) ; le LLM pour le résumé, l'adresse, les critères libres
+hors catalogue et les critères de l'utilisateur que Jev laisse sous le seuil. Reproduire : `bench/etude-quali.ts`,
+`bench/analyse-quali.ts`.
 
 ## Ce qu'est Jev
 - Modèle de **décision typée** de TypeSafe (San Francisco), ouvert en accès anticipé le 15/09/2026. Il **n'écrit pas de
@@ -125,6 +163,25 @@ OpenAI est déjà faible face à Apify (≈ 20 % de la dépense) : Jev réduit s
 | 1 | Accès (liste d'attente TypeSafe, ou Cloudflare Workers AI / AI/ML API) | — | — |
 | 2 | Banc d'essai : les 69 annonces réelles déjà utilisées, vérité annotée à la main sur ≈ 15 caractéristiques + type d'offre + 3 critères ; Jev contre gpt-5-mini : justesse, faux « oui », tokens réellement facturés, latence | 1 jour | < 1 $ |
 | 3 | Si concluant : moteur Jev derrière `ANALYSIS_ENGINE`, catalogue de caractéristiques, seuils, garde-fou mots-clés ; résumé et adresse au LLM à l'ouverture de la fiche ; tests (faux Jev, comme les faux Apify/OpenAI) | 2 jours | — |
+
+## Mise à jour du 05/10 : lecture de tout le catalogue, appréciations, affichage par thème
+Suite à l'étude (voir plus haut), développé et testé, **toujours derrière `ANALYSIS_ENGINE=jev`** (défaut : LLM seul) :
+- **Jev lit tout le catalogue sur chaque annonce** (une requête, ≈ 0,0002 $), plus 6 appréciations (calme, lumineux,
+  bon état, vue dégagée, cachet, rangements). Seuls les sujets « à risque » (balcon, terrasse, jardin, duplex,
+  dernier étage, parking, colocation, charges : `guard`) exigent que le mot-clé figure dans l'annonce.
+- **Rien n'est affiché de ce que l'annonce ne dit pas.** Un « non » et toute appréciation ne sont retenus qu'avec la
+  phrase de l'annonce qui les porte ; « charges comprises » : seul un « oui » (ambigu sinon) ; un critère demandé que
+  rien ne tranche reste « à vérifier » (et seulement lui).
+- **Un souhait qui vise plusieurs sujets** (« terrasse ou balcon », « calme et proche métro ») reste au LLM ;
+  « calme », « lumineux », « bon état », « vue dégagée » sont tranchés par Jev avec citation.
+- **Rejeu sur les 188 annonces de l'étude (sans les champs Le Bon Coin) : précision 99,5 %, rappel 70 %**, 7,7
+  caractéristiques affichées par annonce, 5 inventées, 2 contradictions.
+- **Modèle Jev** : `jev-latest` par défaut (l'API refuse un appel sans modèle), `JEV_MODEL` pour changer.
+- **Carte** : critères de l'utilisateur d'abord, puis des atouts confirmés (extérieur, vue, dernier étage, ascenseur,
+  parking, meublé, cachet/duplex, lumineux, calme), 6 pastilles au plus ; jamais de « non ». **Fiche** : caractéristiques
+  par thème (extérieur et annexes, intérieur, immeuble, quartier, conditions, autres). Maquette : `features/maquettes/affichage-criteres.html`.
+- **Pas fait** : « spacieux » (m² par pièce) et énergie (lettre du DPE) calculés par règle : seuils à valider.
+  Pas de nouvelle version d'analyse : les annonces déjà en cache gardent leur lecture jusqu'à une nouvelle analyse.
 
 ## Implémenté (branche `jev`)
 Trois étages, du plus sûr au plus cher, autour d'un **catalogue de 33 caractéristiques** (`routes/housing/catalogue.ts`) :

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Check, Zap } from 'lucide-react';
 import type { HousingListing } from '@workspace/api-client-react';
-import { featureIcon, featureText, listingFacts, sortFeatures } from '@/components/listing-facts';
+import { cardAtouts, featureGroup, featureIcon, featureText, groupFeatures, listingFacts, sortFeatures } from '@/components/listing-facts';
 
 const text = (label: string, value = '') => featureText({ label, value });
 
@@ -90,5 +90,42 @@ describe('Une même caractéristique n’apparaît qu’une fois (signalé : én
       { label: 'Chauffage', value: 'collectif gaz', source: 'annonce' }, { label: 'Eau chaude', value: 'collective', source: 'ia' },
       { label: 'Consommation énergétique', value: '180 kWh/m²/an', source: 'ia' }, { label: 'Charges', value: '60 €', source: 'annonce' },
     ])).toHaveLength(4);
+  });
+});
+
+describe('atouts de la carte et thèmes de la fiche', () => {
+  const f = (label: string, value = '') => ({ label, value });
+
+  it('cardAtouts : seulement des atouts confirmés, du plus parlant au moins parlant ; jamais un « non » ni une caractéristique anodine', () => {
+    const labels = cardAtouts([
+      f('Meublé'), f('Chambres', '2 ch.'), f('Cachet'), f('Ascenseur', 'Non'), f('Lave-vaisselle'), f('Parking'), f('Terrasse'), f('Calme'),
+      f('Classe énergie', 'c'), f('Vue dégagée'), f('Animaux acceptés', 'Non'), f('Dernier étage'),
+    ]).map(feature => feature.label);
+    expect(labels).toEqual(['Terrasse', 'Vue dégagée', 'Dernier étage', 'Parking', 'Meublé', 'Cachet', 'Calme']);
+  });
+
+  it('featureGroup : chaque caractéristique du catalogue a son thème', () => {
+    const groups: Record<string, string[]> = {
+      outside: ['Balcon', 'Terrasse', 'Jardin', 'Cave', 'Parking', 'Local vélo', 'Vue dégagée', 'Extérieur'],
+      inside: ['Cuisine équipée', 'Lave-linge', 'Lave-vaisselle', 'Baignoire', 'WC séparés', 'Double vitrage', 'Climatisation', 'Cheminée', 'Parquet', 'Duplex', 'Rénové', 'Lumineux', 'Cachet', 'Rangements', 'Bon état', 'Chambres', 'Salles de bain'],
+      building: ['Ascenseur', 'Dernier étage', 'Rez-de-chaussée', 'Étage', 'Interphone', 'Gardien'],
+      area: ['Proche transports', 'Calme'],
+      terms: ['Meublé', 'Charges comprises', 'Animaux acceptés', 'Colocation acceptée', 'Étudiants acceptés', 'Garantie Visale', 'APL possible', "Sans frais d'agence", 'Chauffage', 'Classe énergie', 'Emissions GES'],
+    };
+    for (const [group, labels] of Object.entries(groups)) for (const label of labels) expect(featureGroup(label), label).toBe(group);
+    expect(featureGroup('Quelque chose')).toBe('other');
+  });
+
+  it('groupFeatures : thèmes dans l\'ordre de lecture, thèmes vides omis, absent en dernier dans son thème', () => {
+    const grouped = groupFeatures([f('Ascenseur', 'Non'), f('Étage', '3'), f('Meublé'), f('Balcon'), f('Interphone')]);
+    expect(grouped.map(group => [group.id, group.features.map(feature => feature.label)])).toEqual([
+      ['outside', ['Balcon']], ['building', ['Étage', 'Interphone', 'Ascenseur']], ['terms', ['Meublé']],
+    ]);
+  });
+
+  it('chaque atout de la carte a une icône propre (pas la coche générique)', () => {
+    for (const label of ['Terrasse', 'Vue dégagée', 'Dernier étage', 'Ascenseur', 'Parking', 'Meublé', 'Cachet', 'Duplex', 'Lumineux', 'Calme']) {
+      expect(featureIcon(label), label).not.toBe(featureIcon('Quelque chose'));
+    }
   });
 });
