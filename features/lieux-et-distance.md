@@ -35,10 +35,21 @@ restait centrée sur la ville (rayon de 5 km) alors que l'aéroport est à ~7 km
 - Les annonces dont le critère est « Ne correspond pas » restent affichées (comme pour les autres critères), avec le
   score réduit ; elles ne sont pas masquées.
 
+## Essai réel du 06/10 (`pnpm test:prod`, ≈ 0,05 € au total) : deux défauts trouvés et corrigés
+Le premier essai (zone centrée sur l'aéroport) a ramené des annonces de Rennes centre : Le Bon Coin ne lisait que la commune.
+Lectures directes de l'acteur (10 annonces, plafond 0,02 $) :
+- **Format de l'URL** : `locations=Nom_CP__lat_lng_rayonVille_rayonChoisi`, **deux nombres** à la fin. L'app n'en envoyait
+  qu'un : le **rayon était ignoré** (seule la commune ressortait, même à 30 km) et les **villes à trait d'union**
+  (Aix-en-Provence, Saint-Étienne, Saint-Jacques-de-la-Lande…) **ne renvoyaient aucune annonce**. Avec deux nombres : Rennes à
+  30 km ramène Le Rheu, Orgères, Janzé ; Aix-en-Provence ramène Fuveau, Ventabren…
+- **Conséquence pour toutes les recherches** : le rayon (5 km par défaut) est désormais honoré, donc les communes voisines
+  entrent dans les résultats, comme prévu à l'origine ; et les villes à trait d'union fonctionnent.
+- **Zone centrée hors de la commune** : le nom envoyé est celui de la commune la plus proche du centre (`nearestCommune`).
+  Essai final : « autour de l'aéroport de Rennes, à moins de 5 km » → 14 annonces à Bruz, Rennes, Orgères, Le Rheu ; les
+  annonces à position précise sont à 5,3–6,2 km de l'aéroport (positions floues d'environ 1 km), et non autour du centre de Rennes.
+
 ## Limites connues, à faire
 - **Durées réelles** : la clé Google (`travel.ts`) permettrait de trancher les « À vérifier » ; non branché (coût).
-- **Format d'URL Le Bon Coin non vérifié en réel** pour un centre hors de la commune (nom et code postal de la ville
-  gardés, coordonnées et rayon du lieu) : à contrôler avec `pnpm test:prod` (payant, sur demande du propriétaire).
 - Plusieurs lieux repères : le plus serré fixe la zone ; au plus 3 lieux par demande.
 - « Près d'un aéroport » sans nom précis (sans lieu cité) n'est pas géré.
 - Pas de capture d'écran : seul un libellé de pastille de critère change (composant existant, vérifié sans débordement

@@ -1,5 +1,5 @@
 import type { Criteria } from "./store";
-import { resolvePlace } from "../../lib/places";
+import { nearestCommune, resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
 import { realEstateTypes } from "./property-type";
 import { queryMinRooms } from "./criteria";
@@ -74,12 +74,15 @@ const bound = (min: number | null | undefined, max: number | null | undefined) =
 export function leboncoinSearchUrl(criteria: Criteria, term: string | null): string | null {
   const place = resolvePlace(criteria.location);
   if (place.status !== "resolved") return null;
-  const { name, postalCodes } = place.commune;
   const { lat, lon, radiusKm } = searchZone(criteria, place.commune);
+  // Le site lit d'abord la commune nommée : la zone recentrée ailleurs porte le nom de sa propre commune.
+  const { name, postalCodes } = lat === place.commune.lat && lon === place.commune.lon ? place.commune : nearestCommune(lat, lon);
   const radiusMeters = Math.round(radiusKm * 1000);
   const params = new URLSearchParams({
     category: "10",
-    locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}`,
+    // Format du site : Nom_CP__lat_lng_rayonDeLaVille_rayonChoisi. Avec un seul nombre (essai réel du 06/10/2026), le
+    // rayon était ignoré (seule la commune ressortait) et les noms à trait d'union (Aix-en-Provence) ne donnaient rien.
+    locations: `${name}_${postalCodes[0] ?? ""}__${lat.toFixed(5)}_${lon.toFixed(5)}_${radiusMeters}_${radiusMeters}`,
     real_estate_type: realEstateTypes(criteria.propertyType),
   });
   const ranges = { rooms: bound(queryMinRooms(criteria), criteria.maxRooms), square: bound(criteria.minArea, criteria.maxArea), price: bound(criteria.minPrice, criteria.maxPrice) };

@@ -3,6 +3,7 @@ import test, { after, before } from "node:test";
 import { eq } from "drizzle-orm";
 import { housingSearches } from "@workspace/db";
 import { closeDatabase, db } from "../lib/database";
+import { airKm } from "../lib/distance";
 import { createWorker } from "../lib/worker";
 import { interpret } from "../routes/housing/ai";
 import { isHousingListingUrl } from "../routes/housing/housing-search";
@@ -46,4 +47,45 @@ test("prod : recherche complète Apify + analyse OpenAI, de bout en bout", { tim
   }
   assert.ok(search.listings.some(listing => listing.aiSummary), "au moins un résumé IA est produit");
   console.log(`# prod : ${search.listings.length} annonces, statut ${status}`);
+});
+
+test("prod : « à Rennes, à moins de 30 min de l'aéroport » (double contrainte) et « autour de l'aéroport » (centré) sont bien lus par OpenAI", async () => {
+  const double = (await interpret("Une maison à Rennes, à moins de 30 min en voiture de l'aéroport de Rennes")).places?.[0];
+  assert.match(double?.address ?? "", /a[ée]roport/i);
+  assert.equal(double?.maxMinutes, 30);
+  assert.equal(double?.centered, false, "la ville est aussi une contrainte");
+  const around = (await interpret("Un appartement autour de l'aéroport de Rennes, à moins de 5 km")).places?.[0];
+  assert.match(around?.address ?? "", /a[ée]roport/i);
+  assert.equal(around?.maxKm, 5);
+  assert.equal(around?.centered, true, "recherche centrée sur le lieu");
+});
+
+test("prod : recherche centrée sur l'aéroport de Rennes, les annonces sont bien lues autour de l'aéroport (URL Le Bon Coin réelle)", { timeout: 240_000 }, async () => {
+  const id = await createSearch("Un logement à louer autour de l'aéroport de Rennes, à moins de 5 km");
+  const worker = createWorker({ owner: "prod-airport" });
+  let status = "running";
+  for (let i = 0; i < 40 && status === "running"; i++) {
+    await db().update(housingSearches).set({ nextCheckAt: 0 }).where(eq(housingSearches.id, id));
+    await worker.tick();
+    const [row] = await db().select().from(housingSearches).where(eq(housingSearches.id, id));
+    status = row.status;
+    if (status === "running") await new Promise(resolve => setTimeout(resolve, 5_000));
+  }
+  const search = await getSearch(id);
+  assert.equal(status, "completed", `recherche non terminée : ${status}`);
+  const place = search?.criteria.places?.[0];
+  assert.ok(place?.lat != null && place.lng != null, "aéroport géocodé");
+  assert.ok(airKm({ lat: place.lat!, lng: place.lng! }, { lat: 48.0709, lng: -1.733 }) < 1.5, `aéroport mal placé : ${place.resolved}`);
+  assert.ok(search && search.listings.length > 0, "au moins une annonce attendue");
+  const placed = search.listings.filter(listing => listing.lat != null && listing.lng != null && (listing.geoPrecision === "street" || listing.geoPrecision === "streetNumber"));
+  const distances = placed.map(listing => Math.round(airKm({ lat: listing.lat!, lng: listing.lng! }, { lat: place.lat!, lng: place.lng! }) * 10) / 10);
+  console.log(`# prod aéroport : ${search.listings.length} annonces, ${placed.length} à position précise, distances à l'aéroport (km) : ${distances.join(", ")}`);
+  console.log(`# prod aéroport : villes des annonces : ${[...new Set(search.listings.map(listing => listing.location))].join(", ")}`);
+  console.log(`# prod aéroport : critères ${JSON.stringify(search.criteria.checks?.map(check => check.label))}`);
+  // Cercle de 5 km autour de l'aéroport, positions floues d'environ 1 km : tout près de l'aéroport…
+  assert.ok(placed.length > 0 && placed.every((_, index) => distances[index] <= 7), `annonces trop loin de l'aéroport : ${distances.join(", ")}`);
+  // …et pas un cercle autour du centre de Rennes (à ~6 km de l'aéroport) : des annonces en sortent.
+  const rennesCentre = { lat: 48.1114, lng: -1.6794 };
+  const outside = search.listings.filter(listing => listing.lat != null && listing.lng != null && airKm({ lat: listing.lat, lng: listing.lng }, rennesCentre) > 5);
+  assert.ok(outside.length > 0, "toutes les annonces sont dans les 5 km du centre de Rennes : la zone n'a pas bougé");
 });

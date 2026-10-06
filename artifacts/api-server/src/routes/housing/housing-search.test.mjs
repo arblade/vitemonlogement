@@ -17,7 +17,7 @@ test("ville reconnue : acteur fatihtahta, URL limitée aux appartements et maiso
   assert.equal(url(request).origin + url(request).pathname, "https://www.leboncoin.fr/recherche");
   assert.equal(params.get("category"), "10", "catégorie Locations : jamais de vente");
   assert.equal(params.get("real_estate_type"), "1,2", "jamais de parking, terrain ni « autre »");
-  assert.match(params.get("locations"), /^Quimper_29000__47\.\d{5}_-4\.\d{5}_5000$/);
+  assert.match(params.get("locations"), /^Quimper_29000__47\.\d{5}_-4\.\d{5}_5000_5000$/);
   assert.equal(params.get("rooms"), "1-2");
   assert.equal(params.get("square"), "30-50");
   assert.equal(params.get("price"), "400-1200");

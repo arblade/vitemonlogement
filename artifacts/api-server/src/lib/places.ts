@@ -73,3 +73,18 @@ export function canonicalLocation(text: string): string {
   const resolution = resolvePlace(text);
   return resolution.status === "resolved" ? resolution.commune.name : text;
 }
+
+/**
+ * Commune dont le centre est le plus proche d'un point. Le Bon Coin cherche d'après le nom et le code postal de la
+ * commune, pas d'après les coordonnées seules (constaté en réel le 06/10/2026) : une zone centrée hors de la commune
+ * recherchée doit donc porter le nom de la commune où elle est centrée.
+ */
+export function nearestCommune(lat: number, lon: number): Commune {
+  const cos = Math.cos(lat * Math.PI / 180);
+  let best = entries[0], bestDistance = Infinity;
+  for (const entry of entries) {
+    const distance = (entry.lat - lat) ** 2 + ((entry.lon - lon) * cos) ** 2;
+    if (distance < bestDistance) { best = entry; bestDistance = distance; }
+  }
+  return strip(best);
+}

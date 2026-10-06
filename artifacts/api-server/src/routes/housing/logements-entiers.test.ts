@@ -109,7 +109,7 @@ test("« T1 ou T2 à Lille » : appartements et maisons de 1 à 2 pièces demand
   assert.equal(params.get("real_estate_type"), "1,2");
   assert.equal(params.get("rooms"), "1-2");
   assert.equal(params.get("price"), "min-700");
-  assert.match(String(params.get("locations")), /^Lille_59000__50\.\d+_3\.\d+_5000$/);
+  assert.match(String(params.get("locations")), /^Lille_59000__50\.\d+_3\.\d+_5000_5000$/);
 
   // Parkings (libellé ou code) et vente écartés à la lecture, T3 écarté par le maximum de pièces, résidence coliving
   // écartée par l'analyse (gardée en base, masquée) : 7 annonces analysées d'emblée, en 2 lots de 5 au plus.

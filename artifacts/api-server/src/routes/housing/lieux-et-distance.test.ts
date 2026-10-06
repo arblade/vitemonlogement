@@ -8,7 +8,7 @@ import { fatihRecord } from "../../test/fatih";
 import { analyze, parsePlaces, type JsonLlm } from "./ai";
 import { checksFor, evaluateStructured, withPlaceChecks } from "./criteria";
 import { housingActorInput, searchZone } from "./housing-search";
-import { resolvePlace } from "../../lib/places";
+import { nearestCommune, resolvePlace } from "../../lib/places";
 import type { Criteria, Listing, Place } from "./store";
 
 const lille = (resolvePlace("Lille") as { commune: { lat: number; lon: number } }).commune;
@@ -49,8 +49,22 @@ test("searchZone : « à Lille ET à moins de X de l'aéroport » → le plus pe
 });
 
 test("URL Le Bon Coin : la zone recentrée y figure (coordonnées et rayon en mètres)", () => {
-  assert.match(urlOf(criteriaOf([airport({ centered: true, maxKm: 3 })])).get("locations") ?? "", /__50\.56200_3\.08900_3000$/);
-  assert.match(urlOf(criteriaOf([airport({ maxKm: 20 })])).get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000$`));
+  assert.match(urlOf(criteriaOf([airport({ centered: true, maxKm: 3 })])).get("locations") ?? "", /__50\.56200_3\.08900_3000_3000$/);
+  assert.match(urlOf(criteriaOf([airport({ maxKm: 20 })])).get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000_5000$`));
+});
+
+test("URL Le Bon Coin : une zone recentrée porte le nom de SA commune (le site cherche d'après le nom, constaté en réel), la ville recherchée sinon", () => {
+  const rennesAirport = { ...airport({ centered: true, maxKm: 5 }), lat: 48.070897, lng: -1.733001 };
+  const centered = urlOf({ ...criteriaOf([rennesAirport]), location: "Rennes" }).get("locations") ?? "";
+  assert.match(centered, /^Saint-Jacques-de-la-Lande_35136__48\.07090_-1\.73300_5000_5000$/);
+  assert.match(urlOf(criteriaOf([airport({ maxKm: 20 })])).get("locations") ?? "", /^Lille_/, "double contrainte : la ville recherchée");
+  assert.equal(nearestCommune(lille.lat, lille.lon).name, "Lille");
+});
+
+test("URL Le Bon Coin : le rayon est le DERNIER nombre (deux nombres après les coordonnées) ; une ville à trait d'union y figure sous son nom", () => {
+  // Constaté en réel le 06/10/2026 : avec un seul nombre le rayon était ignoré, et « Aix-en-Provence » ne renvoyait rien.
+  const aix = urlOf({ location: "Aix-en-Provence", intent: "rent", keywords: "", radius: 12 }).get("locations") ?? "";
+  assert.match(aix, /^Aix-en-Provence_13\d{3}__\d+\.\d{5}_\d+\.\d{5}_12000_12000$/);
 });
 
 test("withPlaceChecks : un critère de proximité par lieu contraint ; la ville cède la place quand la recherche est centrée ; sans doublon", () => {
@@ -172,7 +186,7 @@ test("« autour de l'aéroport de Lille, à moins de 3 km » : recherche centré
   const search = await getSearch(id);
   const place = search?.criteria.places?.[0];
   assert.deepEqual([place?.lat, place?.lng, place?.resolved, place?.maxKm, place?.centered], [AIRPORT.lat, AIRPORT.lng, "Aéroport de Lille-Lesquin, Lesquin", 3, true]);
-  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", /__50\.56200_3\.08900_3000$/, "zone lue : 3 km autour de l'aéroport, pas autour du centre de Lille");
+  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", /__50\.56200_3\.08900_3000_3000$/, "zone lue : 3 km autour de l'aéroport, pas autour du centre de Lille");
   assert.deepEqual(search?.criteria.checks?.map(check => check.id), ["distance-place-1"], "plus de critère « Lieu : Lille »");
   const near = search?.listings.find(item => item.url.endsWith("/1"))?.criterionResults.find(check => check.id === "distance-place-1");
   const far = search?.listings.find(item => item.url.endsWith("/2"))?.criterionResults.find(check => check.id === "distance-place-1");
@@ -187,7 +201,7 @@ test("« à Lille, à moins de 20 km de l'aéroport » : double contrainte, zone
   const id = await createSearch("Un T2 à Lille, à moins de 20 km de l'aéroport");
   assert.equal((await runToCompletion(id)).status, "completed");
   const search = await getSearch(id);
-  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000$`));
+  assert.match(new URL(runInputs[0].startUrls[0]).searchParams.get("locations") ?? "", new RegExp(`__${lille.lat.toFixed(5)}_${lille.lon.toFixed(5)}_5000_5000$`));
   assert.deepEqual(search?.criteria.checks?.map(check => check.id), ["location", "distance-place-1"]);
   for (const listing of search?.listings ?? []) assert.equal(listing.criterionResults.find(check => check.id === "distance-place-1")?.status, "confirmed", listing.url);
 });
