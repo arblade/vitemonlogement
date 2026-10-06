@@ -1,5 +1,5 @@
 import type { Criteria } from "./store";
-import { nearestCommune, resolvePlace } from "../../lib/places";
+import { resolvePlace } from "../../lib/places";
 import { extraSourceOf } from "./sources";
 import { realEstateTypes } from "./property-type";
 import { queryMinRooms } from "./criteria";
@@ -75,8 +75,8 @@ export function leboncoinSearchUrl(criteria: Criteria, term: string | null): str
   const place = resolvePlace(criteria.location);
   if (place.status !== "resolved") return null;
   const { lat, lon, radiusKm } = searchZone(criteria, place.commune);
-  // Le site lit d'abord la commune nommée : la zone recentrée ailleurs porte le nom de sa propre commune.
-  const { name, postalCodes } = lat === place.commune.lat && lon === place.commune.lon ? place.commune : nearestCommune(lat, lon);
+  // Ce sont les coordonnées et le rayon qui décident (essai réel du 06/10/2026) : le nom reste celui de la ville recherchée.
+  const { name, postalCodes } = place.commune;
   const radiusMeters = Math.round(radiusKm * 1000);
   const params = new URLSearchParams({
     category: "10",

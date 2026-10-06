@@ -1,10 +1,16 @@
 import { logger } from "./logger";
+import { matchAirport } from "./airports";
+import { resolvePlace } from "./places";
 import type { Place } from "../routes/housing/store";
 
 /** Géocodeur de l'IGN (Géoplateforme), gratuit et sans clé. GEOCODER_BASE_URL permet de le remplacer (tests). */
 const baseUrl = () => process.env.GEOCODER_BASE_URL || "https://data.geopf.fr/geocodage";
 
-export type GeocodedPoint = { lat: number; lng: number; label: string };
+/**
+ * `searchCity` (lieux repères) : ville où chercher quand la demande n'en donne pas d'autre, reconnue par la base des
+ * communes (« Rennes » pour son aéroport, sinon la commune du lieu avec son département : « Fretin (59) »).
+ */
+export type GeocodedPoint = { lat: number; lng: number; label: string; searchCity?: string };
 
 type Feature = { geometry?: { coordinates?: unknown }; properties?: Record<string, unknown> };
 
@@ -89,7 +95,8 @@ async function landmark(query: string, fetcher: typeof fetch): Promise<GeocodedP
   const cityName = Array.isArray(props.city) ? props.city[0] : props.city;
   // La gare de Rennes s'appelle « Rennes » dans la base : on garde alors le nom demandé.
   const label = fold(props.toponym) === fold(cityName) ? query : [props.toponym, cityName].filter(Boolean).join(", ");
-  return { ...point(best)!, label: label || query };
+  const department = Array.isArray(props.depcode) ? props.depcode[0] : props.depcode;
+  return { ...point(best)!, label: label || query, ...(cityName ? { searchCity: department ? `${cityName} (${department})` : String(cityName) } : {}) };
 }
 
 /** OpenStreetMap (Nominatim), gratuit mais limité (1 requête par seconde, User-Agent exigé) : dernier recours, lieux repères seulement. */
@@ -121,10 +128,22 @@ async function nominatimLandmark(query: string, city: string, fetcher: typeof fe
 }
 
 /**
- * Lieu repère cité avec une contrainte de distance (aéroport, gare, hôpital…) : lieux de l'IGN d'abord (nom seul :
- * ajouter la ville à la requête la fait échouer), puis adresse ou lieu comme `geocode`, enfin OpenStreetMap.
+ * Lieu repère cité avec une contrainte de distance (aéroport, gare, hôpital…) : grands aéroports d'abord (table
+ * airports.ts, l'IGN confondant « aéroport de Lyon » avec Bron), puis lieux de l'IGN (nom seul : ajouter la ville à la
+ * requête la fait échouer), puis adresse ou lieu comme `geocode`, enfin OpenStreetMap.
  */
 export async function geocodeLandmark(address: string, city = "", fetcher: typeof fetch = fetch): Promise<GeocodedPoint | null> {
+  const airport = matchAirport(address, city);
+  if (airport.status === "found") {
+    const { name, lat, lng, commune, department, serves } = airport.airport;
+    const served = serves.length ? resolvePlace(serves[0]) : null;
+    return { lat, lng, label: `${name}, ${commune}`, searchCity: served?.status === "resolved" ? served.commune.name : `${commune} (${department})` };
+  }
+  // Paris : Roissy ou Orly ? L'index de l'IGN répondrait Le Bourget : mieux vaut ne rien placer que se tromper.
+  if (airport.status === "ambiguous") {
+    logger.info({ address, candidates: airport.candidates.map(candidate => candidate.name) }, "Ambiguous airport, left unlocated");
+    return null;
+  }
   try {
     const found = await landmark(address, fetcher);
     if (found) return found;

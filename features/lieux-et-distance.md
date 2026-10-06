@@ -29,6 +29,25 @@ restait centrée sur la ville (rayon de 5 km) alors que l'aéroport est à ~7 km
    - position approximative (quartier, commune) : marge de 2 km ; sans position : « À vérifier » ;
    - recalculé quand la position est lue dans la description (`analyzeListings`) ; **jamais envoyé au LLM**.
 
+## Compléments du 05/10 au soir (essais réels de l'API IGN)
+- **Grands aéroports** (`lib/airports.ts`, consultée avant l'IGN, sans appel réseau) : l'index des lieux de l'IGN se trompe
+  sur les cas les plus courants. « Aéroport de Lyon » → **Lyon-Bron** (aviation d'affaires), alors que tout le monde entend
+  Saint-Exupéry, à ~17 km, qui n'y existe que comme « lieu-dit habité » (catégorie écartée) ; « aéroport de Paris » →
+  **Le Bourget** en premier, à égalité de score avec Roissy et Orly ; « aéroport Nantes » (sans « de ») → rien. Table de
+  16 aéroports (coordonnées et communes de l'IGN) : noms propres (Roissy, CDG, Orly, Saint-Exupéry, Mérignac, Blagnac…),
+  villes desservies, et « l'aéroport » tout court = celui de la ville recherchée. **« Aéroport de Paris » reste ambigu :
+  rien n'est placé** (le lieu s'affiche « adresse introuvable », le critère reste « À vérifier ») plutôt que Le Bourget.
+- **Ville vide** (`routes/housing/anchor.ts`, `placeCriteria`) : quand le LLM ne comprend aucune ville (2 fois sur 3 sur la
+  demande signalée), la ville vient du lieu repère (ville desservie par l'aéroport, sinon commune du lieu) et la recherche
+  est centrée dessus, au lieu d'échouer avec « Indiquez une ville ».
+- **Ville citée seulement dans le nom du lieu** (« …de l'aéroport de Rennes ») : ce n'est pas une contrainte de ville. Si le
+  LLM ne met pas `centered`, le code le fait (`cityOnlyNamesPlace`) : la recherche couvre ~17 km autour de l'aéroport
+  (30 min en voiture) au lieu de 5 km autour du centre de Rennes (sans Bruz, Chavagne…). « À Rennes, à moins de 30 min de
+  l'aéroport » garde la double contrainte. Le prompt d'interprétation le dit aussi.
+- Mesures IGN (05/10) : bien placés par l'index des lieux : aéroports de Rennes, Nantes (avec « de »), Toulouse, Nice,
+  Lille, Strasbourg, Montpellier, Brest, Marseille ; gare de Nantes. Filtre utile non utilisé : `category=aérodrome` +
+  `depcode`. « CHU Brest » ne trouve que des stations de tram (Nominatim prend le relais en production).
+
 ## Choix
 - Nominatim seulement en secours : politique d'usage (1 requête/s, User-Agent) et résultats moins fiables sur les gares ;
   l'IGN suffit pour la plupart des lieux. Volume négligeable (une requête au plus par lieu et par recherche).
@@ -44,8 +63,9 @@ Lectures directes de l'acteur (10 annonces, plafond 0,02 $) :
   30 km ramène Le Rheu, Orgères, Janzé ; Aix-en-Provence ramène Fuveau, Ventabren…
 - **Conséquence pour toutes les recherches** : le rayon (5 km par défaut) est désormais honoré, donc les communes voisines
   entrent dans les résultats, comme prévu à l'origine ; et les villes à trait d'union fonctionnent.
-- **Zone centrée hors de la commune** : le nom envoyé est celui de la commune la plus proche du centre (`nearestCommune`).
-  Essai final : « autour de l'aéroport de Rennes, à moins de 5 km » → 14 annonces à Bruz, Rennes, Orgères, Le Rheu ; les
+- **Zone centrée hors de la commune** : avec le bon format, ce sont les coordonnées et le rayon qui décident ; le nom reste
+  celui de la ville recherchée (essai : nom « Rennes » + coordonnées de l'aéroport + 3 km → annonces de Rennes, Bruz,
+  Chavagne, toutes près de l'aéroport). Essai final : « autour de l'aéroport de Rennes, à moins de 5 km » → 14 annonces à Bruz, Rennes, Orgères, Le Rheu ; les
   annonces à position précise sont à 5,3–6,2 km de l'aéroport (positions floues d'environ 1 km), et non autour du centre de Rennes.
 
 ## Limites connues, à faire
@@ -56,7 +76,7 @@ Lectures directes de l'acteur (10 annonces, plafond 0,02 $) :
   ni zone tactile < 32 px, mobile puis desktop, par le test navigateur).
 
 ## Tests
-`lib/distance.test.ts`, `lib/geocode.test.ts` (lieux repères), `routes/housing/lieux-et-distance.test.ts` (extraction,
-zone, critères, jamais de LLM, bout en bout « autour de » et « à Lille et à moins de »), `e2e/app.e2e.mjs` (pastille de
+`lib/distance.test.ts`, `lib/geocode.test.ts` (lieux repères), `lib/airports.test.ts`, `routes/housing/anchor.test.ts`, `routes/housing/lieux-et-distance.test.ts` (extraction,
+zone, critères, jamais de LLM, bout en bout « autour de », « à Lille et à moins de » et ville vide), `e2e/app.e2e.mjs` (pastille de
 proximité, mobile puis desktop). Essais réels (IGN et Nominatim, sans clé) du 05/10 : aéroport de Rennes, aéroport Nantes
 Atlantique, gare Lille Flandres, gare de Rennes, CHU de Rennes (via Nominatim) tous bien placés.

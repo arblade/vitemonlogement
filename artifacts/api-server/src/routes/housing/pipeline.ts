@@ -1,7 +1,6 @@
 import { logger } from "../../lib/logger";
 import { interpret } from "./ai";
-import { locatePlaces } from "../../lib/geocode";
-import { withPlaceChecks } from "./criteria";
+import { placeCriteria } from "./anchor";
 import { analyzeListings, checkPage, firstState, startPage, type PassMode } from "./reader";
 import { clearTask, FAILURE_MESSAGE, getSearchRow, pendingAnalysis, recordAttemptFailure, setCriteria, setFailure, type Criteria, type SearchRow } from "./store";
 
@@ -43,13 +42,13 @@ export async function advanceSearch(id: number): Promise<number> {
     if (!row.runId) {
       if (!isTask) {
         if (!criteria.location) {
-          criteria = await interpret(row.prompt);
+          // Lieux géocodés ; un lieu repère peut donner la ville (demande sans ville) ou devenir le centre de la recherche.
+          criteria = await placeCriteria(row.prompt, await interpret(row.prompt));
           if (!criteria.location.trim()) {
             // Définitif : redemander ne changera rien.
             await setFailure(id, "Indiquez une ville ou un département dans votre description.");
             return 0;
           }
-          if (criteria.places?.length) criteria = withPlaceChecks({ ...criteria, places: await locatePlaces(criteria.places, criteria.location) });
           await setCriteria(id, criteria);
         }
         if (criteria.intent !== "rent") {
