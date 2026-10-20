@@ -76,6 +76,11 @@ const listing = (n: number) => ({
   batch: "focused" as const, title: `Studio lumineux proche métro ${n}`, url: n === 2 ? `https://www.pap.fr/annonces/-r44280300${n}` : `https://www.leboncoin.fr/ad/locations/${n}`, description: "d", price: 590 + n * 10, area: 25, rooms: 1,
   location: "Lille", image: n === 1 ? "/favicon.svg?1" : null, images: n === 1 ? ["/favicon.svg?1", "/favicon.svg?2", "/favicon.svg?3"] : [], aiSummary: "Studio calme proche métro.", summaryEvidence: [], score: 80 - n,
   features: n === 1 ? [
+    // Pièces lues dans la description : jamais affichées (room-features.ts), les listes exactes des tests e2e le vérifient.
+    { label: "Chambre", value: "12 m²", source: "ia" as const, evidence: "chambre de 12 m²" },
+    { label: "Cuisine", value: "10 m²", source: "ia" as const, evidence: "cuisine de 10 m²" },
+    { label: "Salle de bain", value: "", source: "ia" as const, evidence: "salle de bain" },
+    { label: "WC", value: "", source: "ia" as const, evidence: "WC" },
     { label: "Meublé", value: "", source: "annonce" as const, evidence: "furnished: 1" },
     { label: "Étage", value: "3e sur 5", source: "annonce" as const, evidence: "floor_number: 3" },
     { label: "Balcon", value: "plein sud", source: "ia" as const, evidence: "un joli balcon plein sud donnant sur cour" },

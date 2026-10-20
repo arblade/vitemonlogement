@@ -8,6 +8,7 @@ import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
+import { isRoomNoise } from "./room-features";
 import type { EnergyClass, PropertyType } from "./property-type";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
@@ -252,7 +253,7 @@ export async function getSearch(id: number) {
       aiSummary: listing.aiSummary,
       summaryEvidence: JSON.parse(listing.summaryEvidence) as string[],
       criterionResults: JSON.parse(listing.criterionResults) as CriterionResult[],
-      features: (JSON.parse(listing.features) as Feature[]).filter(feature => !isStaleAvailability(feature)),
+      features: (JSON.parse(listing.features) as Feature[]).filter(feature => !isStaleAvailability(feature) && !isRoomNoise(feature)),
       lat: listing.lat, lng: listing.lng, geoPrecision: listing.geoPrecision as GeoPrecision | null,
       geoSource: listing.geoSource === "description" ? "description" as const : null, geoEvidence: listing.geoEvidence,
       postcode: listing.postcode, postedAt: listing.postedAt, refreshedAt: listing.refreshedAt, firstSeenAt: listing.firstSeenAt,
