@@ -16,7 +16,7 @@ import { extraSourceItems, itemRefreshedAt, normalize, positionOf, scoreListing 
 import { contradictsDeclared, evaluateStructured, isDistanceCheck, matchesKnownBasics } from "./criteria";
 import { actorRequest, canReadPages } from "./housing-search";
 import { interleave, normalizeExtra, startExtraSources } from "./sources";
-import { finishPass, isPrecise, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
+import { detectGone, finishPass, isPrecise, markSeen, pendingAnalysis, requestBackfill, saveAnalyzed, saveRead, setPass, type AnalysisOutcome, type Criteria, type Listing, type SearchRow } from "./store";
 import { ensureAccess } from "../../lib/access";
 import { intEnv } from "../../lib/env";
 import { logger } from "../../lib/logger";
@@ -32,6 +32,12 @@ export const maxPages = () => intEnv("READ_MAX_PAGES", 3);
 export const liveDays = () => intEnv("LIVE_SEARCH_DAYS", 4);
 /** Annonces analysées dès la fin de la lecture ; les suivantes le sont quand elles s'affichent, 20 par 20. */
 export const firstAnalysis = () => intEnv("FIRST_ANALYSIS", 20);
+/**
+ * Veille : nombre de jours de la liste relus à chaque passage pour vérifier que les annonces déjà vues sont toujours en
+ * ligne. 0 (défaut) : on s'arrête au curseur, seules les annonces à la limite de la lecture sont vérifiées. Chaque jour
+ * relu coûte les annonces mises à jour pendant ce jour (0,001 $ pièce), au-delà de ce que le passage lirait.
+ */
+export const verifyDays = () => intEnv("VERIFY_DAYS", 0);
 /** Recherche ponctuelle : les annonces les plus récentes, en une lecture. */
 export const oneShotLimit = () => Math.min(PAGE_SIZE, intEnv("ONE_SHOT_LIMIT", 15));
 
@@ -42,6 +48,10 @@ export type PassState = {
   limit: number;
   /** On s'arrête dès qu'une annonce a été mise à jour à cette date ou avant ; null : une seule page. */
   stopAt: number | null;
+  /** La dernière page lue allait jusqu'à la fin de la liste : aucune annonce en ligne n'est plus ancienne que celles lues. */
+  exhausted?: boolean;
+  /** Passage suivi : le curseur (dernière mise à jour lue au passage précédent) ; `stopAt` peut être plus ancien (VERIFY_DAYS). */
+  cursor?: number | null;
   pagesRead: number;
   newest: number | null;
   oldest: number | null;
@@ -77,7 +87,8 @@ export function firstState(mode: PassMode, row: Pick<SearchRow, "cursorAt" | "pa
   const slot = currentParisSlot(row.watchTimes ? JSON.parse(row.watchTimes) as string[] : [], now);
   const rate = (slot ? slotRates(row)[slot] : undefined) ?? row.watchRate ?? PAGE_SIZE / 12;
   const expected = rate * Math.max(0, now - cursor) / HOUR * 1.3;
-  return { ...base, mode, page: 1, limit: pageLimit(expected), stopAt: cursor, slot };
+  const verifyFrom = now - verifyDays() * 24 * HOUR;
+  return { ...base, mode, page: 1, limit: pageLimit(expected), stopAt: verifyDays() > 0 ? Math.min(cursor, verifyFrom) : cursor, cursor, slot };
 }
 
 /** Lance la lecture d'une page (et, à la toute première, des sources secondaires). */
@@ -128,13 +139,16 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
     seen.add(item.url);
     return true;
   };
+  const normalized = items.map(item => normalize(item, criteria));
   const listings = interleave([
-    items.map(item => normalize(item, criteria)).filter(keep),
+    normalized.filter(keep),
     ...extra.map(({ source, items: sourceItems }) =>
       sourceItems.map(item => normalizeExtra(source, item, criteria, "focused", listing => scoreListing(listing, criteria))).filter(keep)),
   ]);
   // Même date de première lecture pour tout le passage : ses pages restent groupées dans l'ordre d'affichage.
   const fresh = await saveRead(row.id, listings, state.startedAt);
+  // Toute annonce lue est en ligne, même celle que les filtres écartent : sert à repérer celles qui disparaissent.
+  await markSeen(row.id, normalized.flatMap(item => item ? [item.url] : []), state.startedAt);
 
   const dates = items.map(itemRefreshedAt).filter((value): value is number => value != null);
   const oldest = dates.length ? Math.min(...dates) : null;
@@ -151,7 +165,8 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
     fresh: state.fresh + fresh.length,
     newest: Math.max(state.newest ?? 0, ...dates) || null,
     oldest: oldest == null ? state.oldest : Math.min(state.oldest ?? oldest, oldest),
-    sinceCursor: state.sinceCursor + (reread || state.mode !== "watch" || state.stopAt == null ? 0 : dates.filter(date => date > state.stopAt!).length),
+    exhausted: endOfList,
+    sinceCursor: state.sinceCursor + (reread || state.mode !== "watch" || (state.cursor ?? state.stopAt) == null ? 0 : dates.filter(date => date > (state.cursor ?? state.stopAt)!).length),
     counted: (state.counted ?? state.reads) + (reread ? 0 : items.length),
   };
   if (reread) {
@@ -162,7 +177,8 @@ export async function checkPage(row: SearchRow, criteria: Criteria): Promise<"pe
     await startPage(row.id, criteria, { ...next, page: state.page + 1, limit: oldest == null ? PAGE_SIZE : nextPageLimit(dates, oldest, state.stopAt!) });
     return "continue";
   }
-  await finish(row, criteria, next, more);
+  // La relève n'est « partielle » que si le curseur n'est pas atteint : la vérification plus profonde (VERIFY_DAYS) peut s'arrêter avant.
+  await finish(row, criteria, next, more && !(state.cursor != null && next.oldest != null && next.oldest <= state.cursor));
   return "done";
 }
 
@@ -187,11 +203,20 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
   const now = Date.now();
   if (truncated) logger.info({ searchId: row.id, mode: state.mode, reads: state.reads }, "Reading stopped before its bound");
   const background = state.mode === "watch" || state.mode === "backfill";
+  // Annonces disparues : voir detectGone. Seulement avec l'acteur à URL (résultats triés) ; une panne ne casse jamais le passage.
+  if (canReadPages(criteria) && state.oldest != null) {
+    try {
+      const found = await detectGone(row.id, { oldest: state.exhausted ? -1 : state.oldest, newest: state.mode === "extend" ? state.newest : null }, state.startedAt, now);
+      if (found.missing) logger.info({ searchId: row.id, mode: state.mode, ...found }, "Listings missing from the pass");
+    } catch (error) {
+      logger.error({ err: error, searchId: row.id }, "Unable to detect disappeared listings");
+    }
+  }
   // Recherche ponctuelle ou « Étendre » : l'utilisateur attend ces annonces, on les analyse avant de rendre la main (une
   // erreur de l'IA est montrée). Veille : la lecture est d'abord enregistrée (curseur), voir plus bas.
   if (!background) await analyzeListings(row.id, criteria, await pendingAnalysis(row.id, { limit: firstAnalysis() }));
   const hours = (from: number | null, to: number | null) => from != null && to != null && to > from ? (to - from) / HOUR : null;
-  const span = state.mode === "watch" ? hours(state.stopAt, now) : hours(state.oldest, state.newest);
+  const span = state.mode === "watch" ? hours(state.cursor ?? state.stopAt, now) : hours(state.oldest, state.newest);
   // Relève : nombre exact d'annonces depuis le curseur s'il est atteint ; sinon un minimum (le débit ne peut que monter).
   const observed = span && span >= 1 ? (state.mode === "watch" ? state.sinceCursor : state.counted ?? state.reads) / span : null;
   const rate = observed == null ? row.watchRate

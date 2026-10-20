@@ -11,6 +11,8 @@ const FAVORITES_KEY = ['vml', 'favorites'] as const;
 export type FavoriteListing = Pick<HousingListing, 'url' | 'title' | 'image' | 'price' | 'area' | 'rooms' | 'location' | 'score'> & {
   searchId: number | null;
   savedAt: string;
+  /** L'annonce n'est plus en ligne sur le site (jugée disparue par les lectures de sa recherche). */
+  gone?: boolean;
 };
 type Local = { favorites: Record<string, FavoriteListing>; viewed: string[] };
 const empty: Local = { favorites: {}, viewed: [] };

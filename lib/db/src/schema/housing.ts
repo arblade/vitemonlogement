@@ -95,6 +95,11 @@ export const housingListings = pgTable("housing_listings", {
   // Analyse IA faite (1) ou à faire quand l'annonce sera affichée (0) ; demandée par le navigateur (1).
   analyzed: integer("analyzed").notNull().default(1),
   analysisRequested: integer("analysis_requested").notNull().default(0),
+  // Disparition (annonce plus en ligne sur le site) : dernier passage qui l'a vue (début du passage, ms), passages de suite
+  // où elle manquait alors qu'elle aurait dû y être, et date à laquelle on l'a jugée disparue (null : en ligne).
+  seenPassAt: bigint("seen_pass_at", { mode: "number" }).notNull().default(0),
+  missedPasses: integer("missed_passes").notNull().default(0),
+  goneAt: bigint("gone_at", { mode: "number" }),
   // Écartée après analyse (« room », « non_dwelling », « mismatch ») : gardée pour ne pas la relire, jamais affichée.
   hidden: text("hidden"),
 }, table => [unique("housing_listings_search_id_url_unique").on(table.searchId, table.url)]);

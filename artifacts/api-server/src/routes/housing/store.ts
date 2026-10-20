@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, ne, sql } from "drizzle-orm";
 import { housingListings, housingSearches } from "@workspace/db";
 import { db } from "../../lib/database";
 import { routingAvailable } from "../../lib/travel";
@@ -7,6 +7,7 @@ import { accessKey, storedAccess, type Access } from "../../lib/access";
 import { nextParisTime } from "../../lib/paris-time";
 import { enqueueMail } from "../../lib/mail-outbox";
 import { intEnv } from "../../lib/env";
+import { logger } from "../../lib/logger";
 import type { EnergyClass, PropertyType } from "./property-type";
 import { isHousingListingUrl, type ActorRequest, type SearchBatch } from "./housing-search";
 import type { ListingSource, SourceRun } from "./sources";
@@ -176,7 +177,7 @@ async function unseenCount(row: SearchRow) {
   if (row.watched === 0) return 0;
   const t = housingListings;
   const [result] = await db().select({ n: sql<number>`count(*)::int` }).from(t)
-    .where(and(eq(t.searchId, row.id), isNull(t.hidden), gt(t.firstSeenAt, row.lastVisitedAt ?? 0)));
+    .where(and(eq(t.searchId, row.id), isNull(t.hidden), isNull(t.goneAt), gt(t.firstSeenAt, row.lastVisitedAt ?? 0)));
   return Number(result?.n ?? 0);
 }
 
@@ -237,7 +238,7 @@ export async function getSearch(id: number) {
   const row = await getSearchRow(id);
   if (!row) return null;
   const t = housingListings;
-  const rows = await db().select().from(t).where(and(eq(t.searchId, id), isNull(t.hidden)))
+  const rows = await db().select().from(t).where(and(eq(t.searchId, id), isNull(t.hidden), isNull(t.goneAt)))
     // Les annonces du dernier passage d'abord, puis par date de publication : une annonce remontée ou republiée ne
     // repasse pas devant les nouvelles.
     .orderBy(desc(t.firstSeenAt), sql`COALESCE(${t.postedAt}, ${t.refreshedAt}) DESC NULLS LAST`, desc(t.score), asc(t.id));
@@ -377,6 +378,48 @@ export async function saveRead(id: number, listings: Omit<Listing, "id">[], now 
     }
   });
   return fresh;
+}
+
+/** Passages de suite où une annonce attendue manque avant de la juger disparue (2 : un défaut de lecture isolé ne suffit pas). */
+export const goneAfterPasses = () => Math.max(1, intEnv("GONE_AFTER_PASSES", 2));
+
+/**
+ * Annonces vues par le passage `passAt` (début du passage) : elles sont en ligne, ce qui efface un doute précédent et
+ * ressuscite une annonce jugée disparue à tort (ou republiée à la même adresse).
+ */
+export async function markSeen(id: number, urls: string[], passAt: number) {
+  if (!urls.length) return;
+  const t = housingListings;
+  await db().update(t).set({ seenPassAt: passAt, missedPasses: 0, goneAt: null })
+    .where(and(eq(t.searchId, id), inArray(t.url, urls)));
+}
+
+/**
+ * Fin d'un passage de lecture : détecte les annonces disparues sans aucune lecture de plus.
+ * Les résultats de Le Bon Coin sont triés de la plus récemment mise à jour à la plus ancienne, et le passage vient de lire
+ * le haut de la liste jusqu'à `oldest` : toute annonce en ligne mise à jour après `oldest` y est. Une annonce déjà connue,
+ * dans cette plage et absente du passage, n'est plus en ligne ; jugée disparue au bout de `goneAfterPasses()` passages de suite.
+ * `newest` borne la plage en haut quand la lecture ne part pas du haut de la liste (« Étendre » : une page plus ancienne).
+ */
+export async function detectGone(id: number, range: { oldest: number; newest: number | null }, passAt: number, now = Date.now()) {
+  const t = housingListings;
+  const known = await db().select({ id: t.id, seenPassAt: t.seenPassAt }).from(t)
+    .where(and(eq(t.searchId, id), eq(t.source, "leboncoin"), isNull(t.goneAt), isNull(t.hidden),
+      gt(t.refreshedAt, range.oldest), ...(range.newest == null ? [] : [lt(t.refreshedAt, range.newest)])));
+  const missing = known.filter(row => row.seenPassAt < passAt).map(row => row.id);
+  if (!missing.length) return { expected: known.length, missing: 0, gone: 0 };
+  // Aucune des annonces attendues n'est revenue : bien plus probablement une lecture défaillante (site modifié, blocage)
+  // que des disparitions en bloc. On n'en tire rien.
+  if (known.length >= 3 && missing.length === known.length) {
+    logger.warn({ searchId: id, expected: known.length }, "Every expected listing is missing from the pass: no disappearance recorded");
+    return { expected: known.length, missing: 0, gone: 0 };
+  }
+  const after = goneAfterPasses();
+  const gone = await db().update(t).set({
+    missedPasses: sql`${t.missedPasses} + 1`,
+    goneAt: sql`CASE WHEN ${t.missedPasses} + 1 >= ${after} THEN ${now}::bigint ELSE NULL END`,
+  }).where(inArray(t.id, missing)).returning({ goneAt: t.goneAt });
+  return { expected: known.length, missing: missing.length, gone: gone.filter(row => row.goneAt != null).length };
 }
 
 /** Annonces à analyser, dans l'ordre d'affichage par défaut (les plus récentes d'abord). */

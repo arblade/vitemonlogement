@@ -111,6 +111,32 @@ test("le premier compte a adopté l'ancienne recherche, et ses favoris sont en b
   await page.close();
 });
 
+test("favori dont l'annonce a disparu du site : « Plus disponible » dans les favoris, absente de la recherche (mobile puis desktop)", async () => {
+  const page = await mobile.newPage();
+  const gone = { url: "https://www.leboncoin.fr/ad/locations/4", title: "Studio disparu 4", image: null, price: 600, area: 20, rooms: 1, location: "Lille", score: 50, searchId: 1, savedAt: new Date().toISOString() };
+  assert.equal((await page.request.put(`${base}/api/favorites`, { data: gone })).status(), 200);
+  try {
+    await page.goto(base + "/searches/1");
+    await page.waitForSelector("[data-testid=card-listing-1]");
+    assert.equal(await page.locator("[data-testid=card-listing-4]").count(), 0, "une annonce disparue n'est plus proposée dans la recherche");
+    assert.doesNotMatch(await text(page, "main"), /Studio disparu 4/);
+    for (const size of [VIEWPORTS.mobile, VIEWPORTS.desktop]) {
+      await page.setViewportSize(size);
+      await page.goto(base + "/likes");
+      await page.waitForSelector("article");
+      assert.equal(await page.locator("article").count(), 2, "le favori disparu reste dans la liste");
+      const card = page.locator("article", { hasText: "Studio disparu 4" });
+      assert.match(await card.innerText(), /Plus disponible/);
+      assert.doesNotMatch(await page.locator("article", { hasText: "Studio lumineux" }).innerText(), /Plus disponible/, `${size.width}px : seule l'annonce disparue est signalée`);
+      assert.ok(await card.getByText("Plus disponible").evaluate(element => parseFloat(getComputedStyle(element).fontSize)) >= 12, "texte d'au moins 12 px");
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `${size.width}px : pas de défilement horizontal`);
+    }
+  } finally {
+    await page.request.delete(`${base}/api/favorites?url=${encodeURIComponent(gone.url)}`);
+    await page.close();
+  }
+});
+
 test("galerie (mobile) : faire défiler les photos ne grise pas l'annonce, même après rechargement", async () => {
   const page = await mobile.newPage();
   await page.goto(base + "/searches/1");

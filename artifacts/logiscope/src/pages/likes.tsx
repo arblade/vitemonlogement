@@ -18,9 +18,10 @@ export default function Likes() {
     {(error || favoritesError) && <p role="alert" className="mt-5 text-sm text-brick">{error || 'Impossible de charger vos favoris pour le moment.'}</p>}
     {favoritesLoading && <p role="status" className="mt-6 text-sm text-stone">Chargement de vos favoris…</p>}
     {!favoritesLoading && !listings.length ? <div className="mt-10 rounded-2xl border border-dashed border-[#c4c4c4] bg-mist p-8 md:p-12"><Heart className="text-brand"/><h2 className="mt-5 text-xl font-semibold">Aucun favori pour le moment.</h2><p className="mt-2 text-sm text-stone">Touchez le cœur d’une annonce pour la retrouver ici.</p><Link href="/searches" className="min-h-11 mt-6 inline-flex items-center gap-2 text-sm font-semibold underline underline-offset-4">Voir mes recherches <ArrowUpRight size={14}/></Link></div> :
-      <div className="mt-10 grid gap-5 md:grid-cols-2">{listings.map(item => <article key={listingKey(item.url)} className={`overflow-hidden rounded-2xl border border-line bg-cream ${viewed.includes(listingKey(item.url)) ? 'opacity-70' : ''}`}>
+      <div className="mt-10 grid gap-5 md:grid-cols-2">{listings.map(item => <article key={listingKey(item.url)} className={`overflow-hidden rounded-2xl border border-line bg-cream ${viewed.includes(listingKey(item.url)) || item.gone ? 'opacity-70' : ''}`}>
         {item.image && <img src={item.image} alt="" loading="lazy" className="h-48 w-full bg-sage object-cover"/>}
         <div className="p-5">
+          {item.gone && <p className="mb-2 inline-flex items-center rounded-full border border-line bg-mist px-2.5 py-1 text-xs font-semibold text-stone">Plus disponible</p>}
           <h2 className="text-lg font-semibold leading-snug">{item.title}</h2>
           <p className="mt-3 text-sm font-semibold">{formatPrice(item.price)} <span className="font-normal text-stone">· {item.area != null ? `${item.area} m²` : 'Surface non précisée'} · {item.location || 'Lieu non précisé'}</span></p>
           <div className="mt-5 flex flex-wrap gap-3">

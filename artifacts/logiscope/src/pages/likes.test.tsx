@@ -33,6 +33,22 @@ describe('Mes favoris', () => {
     expect(titles.map(title => title.textContent)).toEqual(['Studio 2', 'Studio 1']);
   });
 
+  it('signale « Plus disponible » sur un favori dont l’annonce a disparu, et seulement sur celui-là', async () => {
+    mockFetch([list([favorite(2, { gone: true }), favorite(1)])]);
+    renderPage();
+    await screen.findByText('Studio 2');
+    expect(screen.getAllByText('Plus disponible')).toHaveLength(1);
+    const gone = screen.getByText('Studio 2').closest('article')!;
+    expect(gone).toHaveTextContent('Plus disponible');
+    expect(gone).toHaveClass('opacity-70');
+    const live = screen.getByText('Studio 1').closest('article')!;
+    expect(live).not.toHaveTextContent('Plus disponible');
+    expect(live).not.toHaveClass('opacity-70');
+    // Le favori reste utilisable : retrait et lien vers la recherche toujours là.
+    expect(gone.querySelector('button')).not.toBeNull();
+    expect(gone.querySelector('a[href="/searches/3"]')).not.toBeNull();
+  });
+
   it('chaque favori renvoie à sa recherche et à l’annonce d’origine', async () => {
     mockFetch([list([favorite(1)])]);
     renderPage();

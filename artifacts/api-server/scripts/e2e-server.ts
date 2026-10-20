@@ -5,7 +5,7 @@
 // celui de l'annonce 3 reste estimé.
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { openDatabase, walkAccess } from "@workspace/db";
+import { housingListings, openDatabase, walkAccess } from "@workspace/db";
 import { db, initDatabase } from "../src/lib/database";
 import { accessKey } from "../src/lib/access";
 import { completeSearch, createSearch, setCriteria, type Place } from "../src/routes/housing/store";
@@ -94,6 +94,8 @@ const listing = (n: number) => ({
     : { lat: 50.63, lng: 3.06, geoPrecision: "city" as const }),
 });
 await completeSearch(id, [listing(1), listing(2), listing(3)], "focused");
+// Annonce 4 : déjà jugée disparue du site (jamais affichée dans la recherche) ; sert au favori « Plus disponible ».
+await db().insert(housingListings).values({ searchId: id, title: "Studio disparu 4", url: "https://www.leboncoin.fr/ad/locations/4", description: "d", score: 50, features: "[]", goneAt: Date.now() });
 await db().insert(walkAccess).values({ key: accessKey(home), createdAt: Date.now(), access: JSON.stringify({
   routed: true,
   metro: { name: "Rihour", lat: 50.63567, lng: 3.06302, distanceMeters: 760, walkMinutes: 9, lines: [{ mode: "metro", name: "1", color: "#ffd400" }], estimated: false },

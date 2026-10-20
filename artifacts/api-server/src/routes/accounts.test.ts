@@ -75,6 +75,22 @@ test("favoris : ajout, doublon ignoré, liste triée, suppression, et isolation 
   assert.equal(((await (await get("/favorites", one)).json()) as unknown[]).length, 1);
 });
 
+test("favoris : un favori dont l'annonce a disparu de sa recherche est signalé « gone », sans être retiré", async () => {
+  const cookie = await signUp("disparue@example.com");
+  const put = (item: object) => fetch(`${base}/favorites`, { method: "PUT", headers: { "content-type": "application/json", cookie }, body: JSON.stringify(item) });
+  for (const n of [11, 12, 13]) assert.equal((await put(listing(n))).status, 200);
+  assert.equal((await put({ ...listing(14), searchId: null })).status, 200, "favori sans recherche d'origine");
+  const { db } = await import("../lib/database");
+  const { housingListings } = await import("@workspace/db");
+  const row = (n: number, goneAt: number | null) => ({ searchId: 1, title: `Studio ${n}`, url: listing(n).url, description: "", score: 0, features: "[]", goneAt });
+  // 11 : disparue ; 12 : en ligne ; 13 : inconnue de la recherche ; 14 : sans recherche. Une disparue d'une autre recherche ne compte pas.
+  const { createSearch } = await import("./housing/store");
+  const other = await createSearch("autre recherche");
+  await db().insert(housingListings).values([row(11, Date.now()), row(12, null), { ...row(13, Date.now()), searchId: other }, { ...row(14, Date.now()), searchId: other }]);
+  const mine = await (await get("/favorites", cookie)).json() as { url: string; gone: boolean }[];
+  assert.deepEqual(Object.fromEntries(mine.map(item => [item.url.split("/").pop(), item.gone])), { 11: true, 12: false, 13: false, 14: false });
+});
+
 test("favoris : données invalides refusées, import des favoris du navigateur", async () => {
   const cookie = await signUp("import@example.com");
   const put = (item: unknown) => fetch(`${base}/favorites`, { method: "PUT", headers: { "content-type": "application/json", cookie }, body: JSON.stringify(item) });

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, sql } from "drizzle-orm";
-import { favorites } from "@workspace/db";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { favorites, housingListings } from "@workspace/db";
 import { db } from "../lib/database";
 
 const router: IRouter = Router();
@@ -49,7 +49,15 @@ async function save(userId: number, favorite: Favorite) {
 
 router.get("/favorites", async (req, res) => {
   const rows = await db().select().from(t).where(eq(t.userId, req.userId!)).orderBy(desc(t.savedAt)).limit(MAX_FAVORITES);
-  res.json(rows.map(({ userId: _userId, listingKey: _key, ...favorite }) => favorite));
+  // « Plus disponible » : l'annonce a été jugée disparue par les lectures de la recherche d'où vient le favori. Le favori reste
+  // (c'est un choix de l'utilisateur), seulement signalé.
+  const searchIds = [...new Set(rows.flatMap(row => row.searchId == null ? [] : [row.searchId]))];
+  const goneRows = searchIds.length
+    ? await db().select({ searchId: housingListings.searchId, url: housingListings.url }).from(housingListings)
+      .where(and(inArray(housingListings.searchId, searchIds), isNotNull(housingListings.goneAt)))
+    : [];
+  const gone = new Set(goneRows.map(row => `${row.searchId}|${listingKey(row.url)}`));
+  res.json(rows.map(({ userId: _userId, listingKey: key, ...favorite }) => ({ ...favorite, gone: favorite.searchId != null && gone.has(`${favorite.searchId}|${key}`) })));
 });
 
 router.put("/favorites", async (req, res): Promise<void> => {
