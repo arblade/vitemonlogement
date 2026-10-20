@@ -98,6 +98,7 @@ router.put("/housing/searches/:id/watch", async (req, res): Promise<void> => {
   const times = [...new Set(body.data.times)].sort();
   await startWatching(row.id, req.userId!, times, nextParisTime(times, Date.now())!);
   res.json(WatchHousingSearchResponse.parse((await getSearch(row.id))!));
+  wakeWorker(); // le worker recalcule son prochain réveil : la première relève peut être proche
 });
 
 router.delete("/housing/searches/:id/watch", async (req, res): Promise<void> => {

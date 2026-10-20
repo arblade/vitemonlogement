@@ -2,7 +2,7 @@
 // envoyés au tour suivant ; leur contenu est composé au moment de l'envoi (annonces analysées entre-temps, désinscription,
 // veille arrêtée). Chaque e-mail a une clé unique : une relève reprise ne l'envoie jamais deux fois, et la même clé sert
 // de clé d'idempotence chez Resend. En cas d'erreur, nouvel essai plus tard (5 au plus).
-import { and, asc, eq, lt, lte, ne } from "drizzle-orm";
+import { and, asc, eq, lt, lte, ne, sql } from "drizzle-orm";
 import { mailOutbox, users } from "@workspace/db";
 import { db } from "./database";
 import { logger } from "./logger";
@@ -114,6 +114,13 @@ export async function compose(row: Row, now = Date.now()): Promise<Composed> {
 export function digestLabelAt(times: readonly string[], passAt: number) {
   const slot = currentParisSlotAt(times, passAt);
   return slot && passAt - slot.at < 15 * 60_000 ? slot.at : passAt;
+}
+
+/** Plus proche essai d'envoi (ms) d'un e-mail en attente ; null si aucun. */
+export async function nextMailAt(): Promise<number | null> {
+  const [row] = await db().select({ at: sql`MIN(${mailOutbox.nextAttemptAt})`.mapWith(Number) }).from(mailOutbox)
+    .where(eq(mailOutbox.status, "pending"));
+  return row?.at ?? null;
 }
 
 /** Envoie les e-mails en attente (appelé à chaque tour du worker). Renvoie le nombre d'e-mails traités. */

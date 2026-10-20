@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { housingSearches } from "@workspace/db";
 import { db } from "./database";
 
@@ -33,4 +33,14 @@ export async function claimSearch(id: number, owner: string, leaseMs: number, no
 export async function releaseSearch(id: number, owner: string, nextCheckAt = 0) {
   await db().update(t).set({ lockOwner: null, lockUntil: null, nextCheckAt })
     .where(and(eq(t.id, id), eq(t.lockOwner, owner)));
+}
+
+/**
+ * Plus proche échéance (ms) d'une recherche à traiter (« running » ou avec une tâche), bail compris ; null si aucune.
+ * Le worker dort jusque-là : la base (Neon) peut se mettre en veille entre deux passages.
+ */
+export async function nextClaimAt(): Promise<number | null> {
+  const [row] = await db().select({ at: sql`MIN(GREATEST(${t.nextCheckAt}, COALESCE(${t.lockUntil}, 0)))`.mapWith(Number) }).from(t)
+    .where(or(eq(t.status, "running"), isNotNull(t.task)));
+  return row?.at ?? null;
 }
