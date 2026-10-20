@@ -12,6 +12,8 @@
     "data:transit": "node ./scripts/build-transit.mjs",
     "mail:test": "node --import tsx ./scripts/mail-test.ts",
     "bench:jev": "node --import tsx ./scripts/jev-bench.ts",
+    "bench:pipeline": "node --import tsx --import ./src/test/offline.ts ./scripts/bench-pipeline.ts",
+    "bench:pipeline:live": "node --import tsx ./scripts/bench-pipeline.ts --live",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --import ./src/test/offline.ts --test \"src/**/*.test.ts\" \"src/**/*.test.mjs\"",
     "test:veille": "node --import tsx --import ./src/test/offline.ts --test src/routes/housing/veille-scenario.test.ts",

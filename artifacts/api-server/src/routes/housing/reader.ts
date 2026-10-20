@@ -230,6 +230,16 @@ async function finish(row: SearchRow, criteria: Criteria, state: PassState, trun
 }
 
 /**
+ * Annonce masquée après l'analyse IA : chambre ou local non habitable (citation à l'appui), ou prix, surface ou pièces
+ * contredits par la description. null : gardée.
+ */
+export function setAsideReason(observations: Pick<Awaited<ReturnType<typeof analyze>>[number], "offer" | "criterionResults">): "room" | "non_dwelling" | "mismatch" | null {
+  if (observations.offer && (observations.offer.kind === "room" || observations.offer.kind === "non_dwelling")) return observations.offer.kind;
+  if (observations.criterionResults.some(check => ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")) return "mismatch";
+  return null;
+}
+
+/**
  * Analyse IA d'annonces enregistrées : chambre ou local non habitable → masquée ; prix, surface ou pièces contredits par
  * la description → masquée ; sinon enrichie (résumé, critères, caractéristiques, position lue dans le texte).
  */
@@ -240,13 +250,10 @@ export async function analyzeListings(id: number, criteria: Criteria, listings: 
   for (const item of listings) {
     const observations = enriched.find(result => result.id === item.id);
     if (!observations) continue;
-    if (observations.offer && (observations.offer.kind === "room" || observations.offer.kind === "non_dwelling")) {
-      logger.info({ searchId: id, url: item.url, offer: observations.offer }, "Listing set aside: not an entire dwelling");
-      outcomes.push({ kind: "hidden", id: item.id, reason: observations.offer.kind });
-      continue;
-    }
-    if (observations.criterionResults.some(check => ["price", "area", "rooms"].includes(check.id) && check.status === "contradicted" && check.source === "description")) {
-      outcomes.push({ kind: "hidden", id: item.id, reason: "mismatch" });
+    const reason = setAsideReason(observations);
+    if (reason) {
+      if (reason !== "mismatch") logger.info({ searchId: id, url: item.url, offer: observations.offer }, "Listing set aside: not an entire dwelling");
+      outcomes.push({ kind: "hidden", id: item.id, reason });
       continue;
     }
     const position = await positionOf(item, observations.address ?? null, undefined);

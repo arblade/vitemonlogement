@@ -534,6 +534,16 @@ export const watchOffsetMs = (id: number, spread = watchSpreadSeconds()) => spre
 /** Jours sans visite après lesquels une veille quotidienne se met en pause (elle ne coûte plus rien). */
 export const watchIdleDays = () => Number.parseInt(process.env.WATCH_IDLE_DAYS ?? "", 10) || 7;
 
+/** Plus proche relève (ms, décalage compris) d'une veille quotidienne prête à partir ; null si aucune. */
+export async function nextWatchDueAt(): Promise<number | null> {
+  const t = housingSearches;
+  const spread = watchSpreadSeconds();
+  const at = spread ? sql`${t.nextWatchAt} + ((${t.id} * 37) % ${spread}) * 1000` : sql`${t.nextWatchAt}`;
+  const [row] = await db().select({ at: sql`MIN(${at})`.mapWith(Number) }).from(t)
+    .where(and(eq(t.watched, 1), isNull(t.task), eq(t.status, "completed")));
+  return row?.at ?? null;
+}
+
 /**
  * Appelé à chaque tour du worker : les veilles quotidiennes dont l'heure est passée reçoivent leur tâche « watch » ; celles
  * que leur propriétaire n'a pas ouvertes depuis `watchIdleDays` jours passent en pause. Un passage manqué (serveur
